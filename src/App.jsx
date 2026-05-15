@@ -76,7 +76,7 @@ function buildShareText(swaps, solved) {
       : `Solved in ${used} swap${used!==1?'s':''}! ${swaps} remaining`
     : `Could not solve today's puzzle`;
   const stars = solved ? '⭐'.repeat(Math.max(0, swaps)) || '—' : '💀';
-  return `${header}\n${result}\n${stars}\n\nPlay at: [your-url-here]`;
+  return `${header}\n${result}\n${stars}\n\nPlay at: [playstreakle.com]`;
 }
 
 const CS = 44, GAP = 4, TOTAL = CS + GAP;
