@@ -144,7 +144,7 @@ function seededShuffle(arr, seed) {
   return a;
 }
 
-const TILE_W = 80, TILE_H = 56, TILE_GAP = 6;
+const TILE_W = 86, TILE_H = 60, TILE_GAP = 8;
 const COLS = 4;
 
 const css = `
