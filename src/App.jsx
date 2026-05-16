@@ -402,6 +402,8 @@ function FlyingTile({num, fr, fc, tr, tc, cs, total}) {
       fontSize:20, fontWeight:700, color:'#fff',
       pointerEvents:'none', zIndex:10,
       boxShadow:'0 4px 20px #f5a62366', willChange:'transform',
-    }}>{num}</div>
+    }}>{num}<div style={{marginTop:24, fontSize:12, color:'#444', textAlign:'center'}}>
+  <a href="/privacy" style={{color:'#4a4a8a', textDecoration:'none'}}>Privacy Policy / Politique de confidentialité</a>
+</div></div>
   );
 }
