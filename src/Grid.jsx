@@ -144,7 +144,7 @@ function seededShuffle(arr, seed) {
   return a;
 }
 
-const TILE_W = 100, TILE_H = 68, TILE_GAP = 10;
+const TILE_GAP = 8;
 const COLS = 4;
 
 const css = `
@@ -374,8 +374,8 @@ export default function GridGame() {
         </div>
       )}
 
-      {/* Main grid container — flying tiles are positioned relative to this */}
-      <div ref={gridContainerRef} style={{ position: 'relative', width: COLS * (TILE_W + TILE_GAP) - TILE_GAP }}>
+      {/* Main grid container — fluid width, max 440px */}
+      <div ref={gridContainerRef} style={{ position: 'relative', width: '100%', maxWidth: 440, padding: '0 12px', boxSizing: 'border-box' }}>
 
         {/* Solved rows */}
         <div ref={solvedContainerRef} style={{ marginBottom: solved.length > 0 ? 6 : 0 }}>
@@ -387,8 +387,8 @@ export default function GridGame() {
           ))}
         </div>
 
-        {/* Word grid */}
-        <div style={{ display: 'grid', gridTemplateColumns: `repeat(${COLS}, ${TILE_W}px)`, gap: TILE_GAP, marginBottom: 16 }}>
+        {/* Word grid — fluid tiles */}
+        <div style={{ display: 'grid', gridTemplateColumns: `repeat(${COLS}, 1fr)`, gap: TILE_GAP, marginBottom: 16 }}>
           {remaining.map(word => {
             const isSel = selected.includes(word);
             const isShaking = shakeWords.includes(word);
@@ -399,7 +399,7 @@ export default function GridGame() {
                 ref={el => wordRefs.current[word] = el}
                 onClick={() => toggleWord(word)}
                 style={{
-                  width: TILE_W, height: TILE_H,
+                  aspectRatio: '5/3',
                   background: isSel ? '#4a4a8a' : '#16213e',
                   border: `2px solid ${isSel ? '#aaaaff' : '#0f3460'}`,
                   borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -460,7 +460,7 @@ export default function GridGame() {
 
       {/* Game over */}
       {gameOver && !won && (
-        <div style={{ textAlign: 'center', animation: 'slideUp 0.4s ease', width: COLS * (TILE_W + TILE_GAP) }}>
+        <div style={{ textAlign: 'center', animation: 'slideUp 0.4s ease', width: '100%', maxWidth: 440, padding: '0 12px', boxSizing: 'border-box' }}>
           <div style={{ fontSize: 20, fontWeight: 700, color: '#e94560', marginBottom: 8 }}>Game over!</div>
           <div style={{ fontSize: 13, color: '#aaa', marginBottom: 10 }}>The categories were:</div>
           {puzzle.categories.map((cat, i) => !solved.includes(i) && (
