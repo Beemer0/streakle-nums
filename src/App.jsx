@@ -73,7 +73,7 @@ function buildShareText(swaps, solved) {
            : `Solved in ${used} swap${used!==1?'s':''}! ${swaps} remaining`
     : `Still solving today's puzzle`;
   const stars = solved ? '⭐'.repeat(Math.max(0, swaps)) || '—' : '🔥';
-  return `${header}\n${result}\n${stars}\n\nPlay at: playstreakle.com`;
+  return `${header}\n${result}\n${stars}\n\nPlay at: playstreakle.com/nums`;
 }
 
 const CS = 44, GAP = 4, TOTAL = CS + GAP;
