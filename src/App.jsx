@@ -374,6 +374,11 @@ export default function App() {
           Selected <b style={{color:'#f5a623'}}>{board[sel[0]][sel[1]]}</b> — tap another or drag to swap
         </div>
       )}
+
+      <div style={{marginTop:32,fontSize:12,color:'#4a4a8a',textAlign:'center'}}>
+        <a href="/privacy" style={{color:'#4a4a8a',textDecoration:'none'}}>Privacy Policy / Politique de confidentialité</a>
+      </div>
+
     </div>
   );
 }
@@ -402,8 +407,6 @@ function FlyingTile({num, fr, fc, tr, tc, cs, total}) {
       fontSize:20, fontWeight:700, color:'#fff',
       pointerEvents:'none', zIndex:10,
       boxShadow:'0 4px 20px #f5a62366', willChange:'transform',
-    }}>{num}<div style={{marginTop:24, fontSize:12, color:'#444', textAlign:'center'}}>
-  <a href="/privacy" style={{color:'#4a4a8a', textDecoration:'none'}}>Privacy Policy / Politique de confidentialité</a>
-</div></div>
+    }}>{num}</div>
   );
 }
