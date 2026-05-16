@@ -24,6 +24,15 @@ const games = [
     accent: '#4caf50',
     badge: 'Words',
   },
+  {
+    path: '/words',
+    title: 'WORDS',
+    emoji: '🔤',
+    description: 'Guess the 5-letter word in 6 tries. Learn something new every day.',
+    color: '#9b59b6',
+    accent: '#b07fd4',
+    badge: 'Vocabulary',
+  },
 ];
 
 export default function Home() {
