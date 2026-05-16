@@ -76,7 +76,7 @@ function buildShareText(swaps, solved) {
   return `${header}\n${result}\n${stars}\n\nPlay at: playstreakle.com`;
 }
 
-const CS = 42, GAP = 14, TOTAL = CS + GAP;
+const CS = 44, GAP = 4, TOTAL = CS + GAP;
 
 const css = `
 @keyframes ripple{0%{transform:scale(0.5);opacity:.8}100%{transform:scale(2.4);opacity:0}}
