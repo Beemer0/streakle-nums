@@ -346,7 +346,7 @@ export default function GridGame() {
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 2 }}>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-          <div style={{ fontSize: 32, fontWeight: 900, letterSpacing: 2, color: '#fff' }}>GRID</div>
+          <div style={{ fontSize: 32, fontWeight: 900, letterSpacing: 2, color: '#fff' }}>LINK</div>
           <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: 3, color: '#f5a623', textTransform: 'uppercase', marginTop: -4 }}>by Streakle</div>
         </div>
         <button onClick={() => setShowHow(!showHow)} style={{ background: 'none', border: '1px solid #4a4a8a', borderRadius: 6, color: '#aaaaff', cursor: 'pointer', fontSize: 13, padding: '3px 10px', marginLeft: 8 }}>
