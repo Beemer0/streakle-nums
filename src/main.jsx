@@ -1,6 +1,7 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { Analytics } from '@vercel/analytics/react'
 import './index.css'
 import Home from './Home.jsx'
 import Nums from './Nums.jsx'
@@ -19,5 +20,6 @@ createRoot(document.getElementById('root')).render(
         <Route path="/privacy" element={<Privacy />} />
       </Routes>
     </BrowserRouter>
+    <Analytics />
   </StrictMode>,
 )
