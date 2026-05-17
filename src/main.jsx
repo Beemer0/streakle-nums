@@ -7,6 +7,7 @@ import Home from './Home.jsx'
 import Nums from './Nums.jsx'
 import Link from './Link.jsx'
 import Words from './Words.jsx'
+import Gridiron from './Gridiron.jsx'
 import Privacy from './Privacy.jsx'
 
 createRoot(document.getElementById('root')).render(
@@ -17,6 +18,7 @@ createRoot(document.getElementById('root')).render(
         <Route path="/nums" element={<Nums />} />
         <Route path="/link" element={<Link />} />
         <Route path="/words" element={<Words />} />
+        <Route path="/gridiron" element={<Gridiron />} />
         <Route path="/privacy" element={<Privacy />} />
       </Routes>
     </BrowserRouter>
