@@ -16,13 +16,13 @@ const games = [
     badge: 'Swap It',
   },
   {
-    path: '/grid',
-    title: 'GRID',
-    emoji: '🔡',
+    path: '/link',
+    title: 'LINK',
+    emoji: '🔗',
     description: 'Find 4 groups of 4 words that share something in common.',
     color: '#538d4e',
     accent: '#4caf50',
-    badge: 'Group It',
+    badge: 'Link It',
   },
   {
     path: '/words',
