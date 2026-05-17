@@ -157,7 +157,6 @@ const css = `
 @keyframes copied{0%{opacity:0;transform:translateY(4px)}20%{opacity:1;transform:translateY(0)}80%{opacity:1}100%{opacity:0}}
 `;
 
-// Flying tile that arcs from source to destination
 function FlyingTile({ word, fromX, fromY, toX, toY, color, delay = 0 }) {
   const ref = useRef(null);
   useEffect(() => {
@@ -178,15 +177,14 @@ function FlyingTile({ word, fromX, fromY, toX, toY, color, delay = 0 }) {
   return (
     <div ref={ref} style={{
       position: 'absolute', left: 0, top: 0,
-      width: TILE_W, height: TILE_H,
-      background: color, border: `2px solid ${color}`,
-      borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center',
+      width: '100%', height: 56,
+      background: color, borderRadius: 8,
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
       fontSize: word.length > 8 ? 10 : word.length > 6 ? 12 : 14,
       fontWeight: 700, color: '#fff',
       pointerEvents: 'none', zIndex: 20,
       boxShadow: `0 4px 20px ${color}88`,
-      willChange: 'transform',
-      padding: '0 4px', textAlign: 'center',
+      willChange: 'transform', padding: '0 4px', textAlign: 'center',
     }}>{word}</div>
   );
 }
@@ -214,9 +212,13 @@ export default function GridGame() {
   const [animating, setAnimating] = useState(false);
   const [hiddenWords, setHiddenWords] = useState([]);
 
-  const gridContainerRef = useRef(null);
-  const solvedContainerRef = useRef(null);
+  const gridRef = useRef(null);
+  const solvedRef = useRef(null);
   const wordRefs = useRef({});
+  const solvedRef2 = useRef([]); // always up to date ref
+
+  // Keep ref in sync with state
+  useEffect(() => { solvedRef2.current = solved; }, [solved]);
 
   const solvedWords = solved.flatMap(i => puzzle.categories[i].words);
   const remaining = puzzle.shuffled.filter(w => !solvedWords.includes(w));
@@ -227,7 +229,7 @@ export default function GridGame() {
     else if (selected.length < 4) setSelected(s => [...s, word]);
   };
 
-  const showMessage = (msg, dur = 1800) => {
+  const showMsg = (msg, dur = 1800) => {
     setMessage(msg);
     setTimeout(() => setMessage(null), dur);
   };
@@ -244,46 +246,41 @@ export default function GridGame() {
 
   const handleSubmit = () => {
     if (selected.length !== 4 || animating || won || gameOver) return;
+
     const catIdx = puzzle.categories.findIndex((c, i) =>
-      !solved.includes(i) &&
-      selected.length === 4 &&
-      c.words.length === 4 &&
+      !solvedRef2.current.includes(i) &&
       selected.every(w => c.words.includes(w))
     );
 
-    if (catIdx !== -1 && !solved.includes(catIdx)) {
-      // Correct! Trigger flying animation
+    if (catIdx !== -1) {
+      // Correct! Animate tiles flying to solved row
       const cat = puzzle.categories[catIdx];
-      const container = gridContainerRef.current;
-      const solvedContainer = solvedContainerRef.current;
-      if (!container || !solvedContainer) {
-        setSwapping(false);
-        setAnimating(false);
-        setSel(null);
-        commitSolve(catIdx);
+      const container = gridRef.current;
+
+      if (!container) {
+        // No animation fallback
+        setSolved(prev => {
+          const ns = [...prev, catIdx];
+          if (ns.length === 4) { setWon(true); spawnConfetti(); }
+          else showMsg(`✅ ${cat.label}!`);
+          return ns;
+        });
+        setGuessHistory(h => [...h, { correct: true }]);
+        setSelected([]);
         return;
       }
 
       const containerRect = container.getBoundingClientRect();
-      const solvedRect = solvedContainer?.getBoundingClientRect();
+      const solvedHeight = solvedRef2.current.length * 62;
+      const toY = solvedHeight;
 
-      // Target: center of where new solved row will appear
-      const newSolvedY = solvedRect
-        ? solvedRect.bottom - containerRect.top + (solved.length * 62)
-        : -80;
-
-      // Build flying tiles from current word positions
-      const tiles = selected.map((word, tileIdx) => {
+      const tiles = selected.map((word, ti) => {
         const el = wordRefs.current[word];
         const fromRect = el?.getBoundingClientRect();
         const fromX = fromRect ? fromRect.left - containerRect.left : 0;
         const fromY = fromRect ? fromRect.top - containerRect.top : 0;
-
-        // Target: spread across solved row
-        const toX = tileIdx * (TILE_W + TILE_GAP);
-        const toY = newSolvedY;
-
-        return { word, fromX, fromY, toX, toY, color: cat.color, delay: tileIdx * 60 };
+        const toX = ti * (containerRect.width / 4);
+        return { word, fromX, fromY, toX, toY, color: cat.color, delay: ti * 60 };
       });
 
       setHiddenWords([...selected]);
@@ -295,14 +292,23 @@ export default function GridGame() {
         setFlyingTiles([]);
         setHiddenWords([]);
         setAnimating(false);
-        setSwapping(false);
-        commitSolve(catIdx);
+        setGuessHistory(h => [...h, { correct: true }]);
+        setSolved(prev => {
+          const ns = [...prev, catIdx];
+          if (ns.length === 4) {
+            setWon(true);
+            spawnConfetti();
+          } else {
+            showMsg(`✅ ${cat.label}!`);
+          }
+          return ns;
+        });
       }, 420 + 3 * 60 + 100);
 
     } else {
       // Wrong
       const bestMatch = puzzle.categories
-        .filter((_, i) => !solved.includes(i))
+        .filter((_, i) => !solvedRef2.current.includes(i))
         .map(c => selected.filter(w => c.words.includes(w)).length)
         .reduce((a, b) => Math.max(a, b), 0);
 
@@ -313,26 +319,11 @@ export default function GridGame() {
       const newLives = lives - 1;
       setLives(newLives);
 
-      if (bestMatch === 3) { setOneAway(true); showMessage("One away! 👀", 2000); }
-      else { setOneAway(false); showMessage("Not quite! Try again."); }
+      if (bestMatch === 3) { setOneAway(true); showMsg("One away! 👀", 2000); }
+      else { setOneAway(false); showMsg("Not quite! Try again."); }
 
       if (newLives === 0) setTimeout(() => setGameOver(true), 600);
     }
-  };
-
-  const commitSolve = (catIdx) => {
-    setSolved(prev => {
-      const newSolved = [...prev, catIdx];
-      if (newSolved.length === 4) {
-        setWon(true);
-        spawnConfetti();
-      } else {
-        showMessage(`✅ ${puzzle.categories[catIdx].label}!`);
-      }
-      return newSolved;
-    });
-    setGuessHistory(h => [...h, { correct: true, color: puzzle.categories[catIdx].color }]);
-    setOneAway(false);
   };
 
   const handleShare = async () => {
@@ -348,13 +339,12 @@ export default function GridGame() {
   return (
     <div style={{ minHeight: '100vh', background: '#1a1a2e', display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: 24, fontFamily: "'Segoe UI', sans-serif", color: '#e0e0e0', position: 'relative', overflow: 'hidden' }}>
       <style>{css}</style>
-      <a href="/" style={{position:'absolute',left:16,top:24,color:'#aaaaff',textDecoration:'none',fontSize:13,fontWeight:600}}>← Back</a>
+      <a href="/" style={{ position: 'absolute', left: 16, top: 24, color: '#aaaaff', textDecoration: 'none', fontSize: 13, fontWeight: 600 }}>← Back</a>
 
       {confetti.map(c => (
         <div key={c.id} style={{ position: 'fixed', left: `${c.x}%`, top: '30%', width: c.size, height: c.size, background: c.color, borderRadius: c.size > 10 ? '50%' : 2, animation: `confetti 1.3s ${c.delay}ms ease forwards`, pointerEvents: 'none', zIndex: 100 }} />
       ))}
 
-      {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 2 }}>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
           <div style={{ fontSize: 32, fontWeight: 900, letterSpacing: 2, color: '#fff' }}>GRID</div>
@@ -377,25 +367,21 @@ export default function GridGame() {
         </div>
       )}
 
-      {/* Lives */}
       <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
         {Array.from({ length: 4 }, (_, i) => (
           <div key={i} style={{ width: 14, height: 14, borderRadius: '50%', background: i < lives ? '#f5a623' : '#333', transition: 'background 0.3s' }} />
         ))}
       </div>
 
-      {/* Message toast */}
       {message && (
         <div style={{ position: 'fixed', top: 80, left: '50%', transform: 'translateX(-50%)', background: '#16213e', border: '1px solid #4a4a8a', borderRadius: 8, padding: '8px 20px', fontSize: 14, fontWeight: 600, color: oneAway ? '#f5a623' : '#fff', zIndex: 50, animation: 'slideUp 0.3s ease', whiteSpace: 'nowrap' }}>
           {message}
         </div>
       )}
 
-      {/* Main grid container — fluid width, max 440px */}
-      <div ref={gridContainerRef} style={{ position: 'relative', width: '100%', maxWidth: 440, padding: '0 12px', boxSizing: 'border-box' }}>
-
+      <div ref={gridRef} style={{ position: 'relative', width: '100%', maxWidth: 440, padding: '0 12px', boxSizing: 'border-box' }}>
         {/* Solved rows */}
-        <div ref={solvedContainerRef} style={{ marginBottom: solved.length > 0 ? 6 : 0 }}>
+        <div ref={solvedRef} style={{ marginBottom: solved.length > 0 ? 6 : 0 }}>
           {solved.map(i => (
             <div key={i} style={{ background: puzzle.categories[i].color, borderRadius: 8, padding: '12px 16px', marginBottom: 6, textAlign: 'center', animation: 'revealRow 0.35s ease' }}>
               <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(0,0,0,0.55)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 2 }}>{puzzle.categories[i].label}</div>
@@ -404,44 +390,38 @@ export default function GridGame() {
           ))}
         </div>
 
-        {/* Word grid — fluid tiles */}
+        {/* Word grid */}
         <div style={{ display: 'grid', gridTemplateColumns: `repeat(${COLS}, 1fr)`, gap: TILE_GAP, marginBottom: 16 }}>
           {remaining.map(word => {
             const isSel = selected.includes(word);
             const isShaking = shakeWords.includes(word);
             const isHidden = hiddenWords.includes(word);
             return (
-              <div
-                key={word}
-                ref={el => wordRefs.current[word] = el}
-                onClick={() => toggleWord(word)}
-                style={{
-                  aspectRatio: '5/3',
-                  background: isSel ? '#4a4a8a' : '#16213e',
-                  border: `2px solid ${isSel ? '#aaaaff' : '#0f3460'}`,
-                  borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: word.length > 8 ? 10 : word.length > 6 ? 12 : 14,
-                  fontWeight: 700, color: isSel ? '#fff' : '#e0e0e0',
-                  cursor: gameOver || won || animating ? 'default' : 'pointer',
-                  userSelect: 'none', textAlign: 'center', padding: '0 4px',
-                  transition: 'background 0.15s, border-color 0.15s',
-                  animation: isShaking ? 'shake 0.45s ease' : isSel ? 'pop 0.3s ease' : 'none',
-                  boxShadow: isSel ? '0 0 0 3px #aaaaff33' : 'none',
-                  opacity: isHidden ? 0 : 1,
-                }}>
+              <div key={word} ref={el => wordRefs.current[word] = el} onClick={() => toggleWord(word)} style={{
+                aspectRatio: '5/3',
+                background: isSel ? '#4a4a8a' : '#16213e',
+                border: `2px solid ${isSel ? '#aaaaff' : '#0f3460'}`,
+                borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: word.length > 8 ? 10 : word.length > 6 ? 12 : 14,
+                fontWeight: 700, color: isSel ? '#fff' : '#e0e0e0',
+                cursor: gameOver || won || animating ? 'default' : 'pointer',
+                userSelect: 'none', textAlign: 'center', padding: '0 4px',
+                transition: 'background 0.15s, border-color 0.15s',
+                animation: isShaking ? 'shake 0.45s ease' : isSel ? 'pop 0.3s ease' : 'none',
+                boxShadow: isSel ? '0 0 0 3px #aaaaff33' : 'none',
+                opacity: isHidden ? 0 : 1,
+              }}>
                 {word}
               </div>
             );
           })}
         </div>
 
-        {/* Flying tiles overlay */}
         {flyingTiles.map((ft, i) => (
           <FlyingTile key={`${ft.word}-${i}`} {...ft} />
         ))}
       </div>
 
-      {/* Buttons */}
       {!gameOver && !won && (
         <div style={{ display: 'flex', gap: 10, marginBottom: 16 }}>
           <button onClick={() => setSelected([])} disabled={animating} style={{ background: 'none', border: '1px solid #4a4a8a', borderRadius: 8, color: '#aaaaff', cursor: 'pointer', fontSize: 14, padding: '8px 20px', fontWeight: 600 }}>
@@ -459,7 +439,6 @@ export default function GridGame() {
         </div>
       )}
 
-      {/* Win */}
       {won && (
         <div style={{ textAlign: 'center', animation: 'slideUp 0.5s ease' }}>
           <div style={{ fontSize: 22, fontWeight: 700, color: '#4caf50', marginBottom: 6 }}>🎉 Solved!</div>
@@ -475,7 +454,6 @@ export default function GridGame() {
         </div>
       )}
 
-      {/* Game over */}
       {gameOver && !won && (
         <div style={{ textAlign: 'center', animation: 'slideUp 0.4s ease', width: '100%', maxWidth: 440, padding: '0 12px', boxSizing: 'border-box' }}>
           <div style={{ fontSize: 20, fontWeight: 700, color: '#e94560', marginBottom: 8 }}>Game over!</div>
