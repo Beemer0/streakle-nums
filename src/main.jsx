@@ -5,7 +5,7 @@ import { Analytics } from '@vercel/analytics/react'
 import './index.css'
 import Home from './Home.jsx'
 import Nums from './Nums.jsx'
-import Grid from './Grid.jsx'
+import Link from './Link.jsx'
 import Words from './Words.jsx'
 import Privacy from './Privacy.jsx'
 
@@ -15,7 +15,7 @@ createRoot(document.getElementById('root')).render(
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/nums" element={<Nums />} />
-        <Route path="/grid" element={<Grid />} />
+        <Route path="/link" element={<Link />} />
         <Route path="/words" element={<Words />} />
         <Route path="/privacy" element={<Privacy />} />
       </Routes>
