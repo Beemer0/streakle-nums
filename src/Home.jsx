@@ -22,16 +22,7 @@ const games = [
     description: 'Find 4 groups of 4 words that share something in common.',
     color: '#538d4e',
     accent: '#4caf50',
-    badge: 'Words',
-  },
-  {
-    path: '/words',
-    title: 'WORDS',
-    emoji: '🔤',
-    description: 'Guess the 5-letter word in 6 tries. Learn something new every day.',
-    color: '#9b59b6',
-    accent: '#b07fd4',
-    badge: 'Vocabulary',
+    badge: 'Group It',
   },
 ];
 
