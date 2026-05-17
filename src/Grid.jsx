@@ -243,9 +243,12 @@ export default function GridGame() {
   };
 
   const handleSubmit = () => {
-    if (selected.length !== 4 || animating) return;
-    const catIdx = puzzle.categories.findIndex(c =>
-      selected.every(w => c.words.includes(w)) && c.words.every(w => selected.includes(w))
+    if (selected.length !== 4 || animating || won || gameOver) return;
+    const catIdx = puzzle.categories.findIndex((c, i) =>
+      !solved.includes(i) &&
+      selected.length === 4 &&
+      c.words.length === 4 &&
+      selected.every(w => c.words.includes(w))
     );
 
     if (catIdx !== -1 && !solved.includes(catIdx)) {
