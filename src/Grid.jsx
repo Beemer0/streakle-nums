@@ -148,8 +148,9 @@ const TILE_GAP = 8;
 const COLS = 4;
 
 const css = `
+@keyframes tileFlipOut{0%{transform:rotateY(0deg) scale(1)}100%{transform:rotateY(90deg) scale(0.8)}}
+@keyframes tileFlipIn{0%{transform:rotateY(-90deg) scale(0.8)}100%{transform:rotateY(0deg) scale(1)}}
 @keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-6px)}40%{transform:translateX(6px)}60%{transform:translateX(-4px)}80%{transform:translateX(4px)}}
-@keyframes pop{0%{transform:scale(1)}40%{transform:scale(1.12)}100%{transform:scale(1)}}
 @keyframes revealRow{0%{transform:scaleY(0);opacity:0}100%{transform:scaleY(1);opacity:1}}
 @keyframes slideUp{from{transform:translateY(16px);opacity:0}to{transform:translateY(0);opacity:1}}
 @keyframes fadeIn{from{opacity:0}to{opacity:1}}
@@ -162,22 +163,18 @@ function FlyingTile({ word, fromX, fromY, toX, toY, color, delay = 0 }) {
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
-    const dx = toX - fromX, dy = toY - fromY;
-    const dist = Math.sqrt(dx * dx + dy * dy);
-    const mx = (fromX + toX) / 2, my = (fromY + toY) / 2;
-    const perp = dist > 0 ? { x: -dy / dist, y: dx / dist } : { x: 0, y: -1 };
-    const arc = Math.min(dist * 0.4, 70);
     el.animate([
-      { transform: `translate(${fromX}px,${fromY}px) scale(1)`, opacity: 1, offset: 0 },
-      { transform: `translate(${mx + perp.x * arc}px,${my + perp.y * arc}px) scale(1.2)`, opacity: 1, offset: 0.45 },
-      { transform: `translate(${toX}px,${toY}px) scale(1)`, opacity: 1, offset: 1 },
-    ], { duration: 420, delay, easing: 'ease-in-out', fill: 'forwards' });
+      { transform: `translate(${fromX}px,${fromY}px) rotateY(0deg) scale(1)`, offset: 0 },
+      { transform: `translate(${fromX}px,${fromY}px) rotateY(90deg) scale(0.85)`, offset: 0.3 },
+      { transform: `translate(${toX}px,${toY}px) rotateY(-90deg) scale(0.85)`, offset: 0.6 },
+      { transform: `translate(${toX}px,${toY}px) rotateY(0deg) scale(1)`, offset: 1 },
+    ], { duration: 700, delay, easing: 'cubic-bezier(0.4, 0, 0.2, 1)', fill: 'forwards' });
   }, []);
 
   return (
     <div ref={ref} style={{
       position: 'absolute', left: 0, top: 0,
-      width: '100%', height: 56,
+      width: '23%', height: 56,
       background: color, borderRadius: 8,
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       fontSize: word.length > 8 ? 10 : word.length > 6 ? 12 : 14,
@@ -185,6 +182,8 @@ function FlyingTile({ word, fromX, fromY, toX, toY, color, delay = 0 }) {
       pointerEvents: 'none', zIndex: 20,
       boxShadow: `0 4px 20px ${color}88`,
       willChange: 'transform', padding: '0 4px', textAlign: 'center',
+      perspective: '400px',
+      transformStyle: 'preserve-3d',
     }}>{word}</div>
   );
 }
@@ -303,7 +302,7 @@ export default function GridGame() {
           }
           return ns;
         });
-      }, 420 + 3 * 60 + 100);
+      }, 700 + 3 * 60 + 100);
 
     } else {
       // Wrong
