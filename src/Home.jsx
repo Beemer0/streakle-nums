@@ -22,7 +22,7 @@ const games = [
     description: 'Find 4 groups of 4 words that share something in common.',
     color: '#538d4e',
     accent: '#4caf50',
-    badge: 'Link It',
+    badge: 'Group It',
   },
   {
     path: '/words',
@@ -32,6 +32,15 @@ const games = [
     color: '#9b59b6',
     accent: '#b07fd4',
     badge: 'Guess It',
+  },
+  {
+    path: '/gridiron',
+    title: 'GRIDIRON',
+    emoji: '🏈',
+    description: 'Test your NFL knowledge. Match players to teams and awards in the grid.',
+    color: '#e94560',
+    accent: '#ff6b6b',
+    badge: 'Know It',
   },
 ];
 
