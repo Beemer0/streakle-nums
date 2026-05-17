@@ -13,7 +13,7 @@ const games = [
     description: 'Swap numbers so every row and column contains 1–7.',
     color: '#3a7bd5',
     accent: '#4a9eff',
-    badge: 'Numbers',
+    badge: 'Swap It',
   },
   {
     path: '/grid',
@@ -23,6 +23,15 @@ const games = [
     color: '#538d4e',
     accent: '#4caf50',
     badge: 'Group It',
+  },
+  {
+    path: '/words',
+    title: 'WORDS',
+    emoji: '🔤',
+    description: 'Guess the 5-letter word in 6 tries. Learn something new every day.',
+    color: '#9b59b6',
+    accent: '#b07fd4',
+    badge: 'Guess It',
   },
 ];
 
@@ -61,7 +70,7 @@ export default function Home() {
       {/* Game cards */}
       <div style={{
         display: 'flex', gap: 20, flexWrap: 'wrap', justifyContent: 'center',
-        maxWidth: 600, width: '100%', marginBottom: 48,
+        maxWidth: 800, width: '100%', marginBottom: 48,
       }}>
         {games.map((g, i) => (
           <a key={g.path} href={g.path} style={{ textDecoration: 'none', animation: `fadeIn 0.5s ${i * 150}ms both ease` }}>
