@@ -73,7 +73,7 @@ function buildShareText(swaps, solved) {
            : `Solved in ${used} swap${used!==1?'s':''}! ${swaps} remaining`
     : `Still solving today's puzzle`;
   const stars = solved ? '⭐'.repeat(Math.max(0, swaps)) || '—' : '🔥';
-  return `${header}\n${result}\n${stars}\n\nPlay at: playstreakle.com/nums`;
+  return `${header}\n${result}\n${stars}\n\nPlay at: playstreakle.com`;
 }
 
 const CS = 44, GAP = 4, TOTAL = CS + GAP;
@@ -292,12 +292,14 @@ export default function App() {
   }
 
   return (
-    <div style={{minHeight:'100vh', background:'#1a1a2e', display:'flex', flexDirection:'column', alignItems:'center', paddingTop:24, fontFamily:"'Segoe UI',sans-serif", color:'#e0e0e0', position:'relative', overflow:'hidden'}}>
+    <div style={{minHeight:'100vh', background:'#1a1a2e', display:'flex', flexDirection:'column', alignItems:'center', paddingTop:24, position:'relative', fontFamily:"'Segoe UI',sans-serif", color:'#e0e0e0', position:'relative', overflow:'hidden'}}>
       <style>{css}</style>
 
       {confetti.map(c=>(
         <div key={c.id} style={{position:'fixed',left:`${c.x}%`,top:'28%',width:c.size,height:c.size,background:c.color,borderRadius:c.size>10?'50%':2,animation:`confetti 1.3s ${c.delay}ms ease forwards`,pointerEvents:'none',zIndex:100}}/>
       ))}
+
+      <a href="/" style={{position:'absolute',left:16,top:24,color:'#aaaaff',textDecoration:'none',fontSize:13,fontWeight:600}}>← Back</a>
 
       {/* Header */}
       <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:2}}>

@@ -253,7 +253,13 @@ export default function GridGame() {
       const cat = puzzle.categories[catIdx];
       const container = gridContainerRef.current;
       const solvedContainer = solvedContainerRef.current;
-      if (!container) { commitSolve(catIdx); return; }
+      if (!container || !solvedContainer) {
+        setSwapping(false);
+        setAnimating(false);
+        setSel(null);
+        commitSolve(catIdx);
+        return;
+      }
 
       const containerRect = container.getBoundingClientRect();
       const solvedRect = solvedContainer?.getBoundingClientRect();
@@ -286,8 +292,9 @@ export default function GridGame() {
         setFlyingTiles([]);
         setHiddenWords([]);
         setAnimating(false);
+        setSwapping(false);
         commitSolve(catIdx);
-      }, 420 + 3 * 60 + 80);
+      }, 420 + 3 * 60 + 100);
 
     } else {
       // Wrong
@@ -311,12 +318,18 @@ export default function GridGame() {
   };
 
   const commitSolve = (catIdx) => {
-    const newSolved = [...solved, catIdx];
-    setSolved(newSolved);
+    setSolved(prev => {
+      const newSolved = [...prev, catIdx];
+      if (newSolved.length === 4) {
+        setWon(true);
+        spawnConfetti();
+      } else {
+        showMessage(`✅ ${puzzle.categories[catIdx].label}!`);
+      }
+      return newSolved;
+    });
     setGuessHistory(h => [...h, { correct: true, color: puzzle.categories[catIdx].color }]);
     setOneAway(false);
-    if (newSolved.length === 4) { setWon(true); spawnConfetti(); }
-    else showMessage(`✅ ${puzzle.categories[catIdx].label}!`);
   };
 
   const handleShare = async () => {
@@ -332,6 +345,7 @@ export default function GridGame() {
   return (
     <div style={{ minHeight: '100vh', background: '#1a1a2e', display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: 24, fontFamily: "'Segoe UI', sans-serif", color: '#e0e0e0', position: 'relative', overflow: 'hidden' }}>
       <style>{css}</style>
+      <a href="/" style={{position:'absolute',left:16,top:24,color:'#aaaaff',textDecoration:'none',fontSize:13,fontWeight:600}}>← Back</a>
 
       {confetti.map(c => (
         <div key={c.id} style={{ position: 'fixed', left: `${c.x}%`, top: '30%', width: c.size, height: c.size, background: c.color, borderRadius: c.size > 10 ? '50%' : 2, animation: `confetti 1.3s ${c.delay}ms ease forwards`, pointerEvents: 'none', zIndex: 100 }} />

@@ -6,7 +6,7 @@ export default function Privacy() {
       background: '#1a1a2e', minHeight: '100vh', lineHeight: 1.8,
     }}>
       <a href="/" style={{color:'#f5a623', fontSize:14, textDecoration:'none'}}>
-        ← Back to game
+        ← Back to home
       </a>
 
       <h1 style={{color:'#fff', marginTop:24, fontSize:26}}>
