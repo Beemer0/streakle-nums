@@ -305,6 +305,7 @@ export default function App() {
       ))}
 
       <a href="/" style={{position:'absolute',left:16,top:24,color:'#aaaaff',textDecoration:'none',fontSize:13,fontWeight:600}}>← Back</a>
+      <UserMenu />
 
       {/* Header */}
       <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:2}}>
