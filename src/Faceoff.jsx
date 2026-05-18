@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import UserMenu from "./UserMenu";
 import { saveResult } from './saveResult';
+import { useStreak } from './useStreak';
 
 const TEAMS = {
   ANA:"Ducks",ARI:"Coyotes",ARZ:"Coyotes",BOS:"Bruins",BUF:"Sabres",
@@ -555,6 +556,7 @@ const css = `
 `;
 
 export default function FaceoffGame() {
+  const { streak } = useStreak('faceoff');
   const [puzzle] = useState(() => getDailyPuzzle());
   const [cells, setCells] = useState({});
   const [activeCell, setActiveCell] = useState(null);
@@ -692,6 +694,12 @@ export default function FaceoffGame() {
           {won?'Complete!':gameOver?'Game over':`${guessesLeft} guess${guessesLeft!==1?'es':''} left`}
         </div>
       </div>
+
+      {streak > 0 && (
+        <div style={{fontSize:13, color:'#f5a623', fontWeight:600, marginBottom:8}}>
+          🔥 {streak} day streak
+        </div>
+      )}
 
       {/* Grid */}
       <div style={{overflowX:'auto',width:'100%',display:'flex',justifyContent:'center'}}>

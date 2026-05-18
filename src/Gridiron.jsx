@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import UserMenu from "./UserMenu";
 import { saveResult } from './saveResult';
+import { useStreak } from './useStreak';
 
 const TEAMS = {
   ARI:"Cardinals",ATL:"Falcons",BAL:"Ravens",BUF:"Bills",CAR:"Panthers",
@@ -451,6 +452,7 @@ const css = `
 `;
 
 export default function GridironGame() {
+  const { streak } = useStreak('gridiron');
   const [puzzle] = useState(() => getDailyPuzzle());
   const [cells, setCells] = useState({});
   const [activeCell, setActiveCell] = useState(null);
@@ -600,6 +602,12 @@ export default function GridironGame() {
           {won?'Complete!':gameOver?'Game over':`${guessesLeft} guess${guessesLeft!==1?'es':''} left`}
         </div>
       </div>
+
+      {streak > 0 && (
+        <div style={{fontSize:13, color:'#f5a623', fontWeight:600, marginBottom:8}}>
+          🔥 {streak} day streak
+        </div>
+      )}
 
       {/* Grid */}
       <div style={{overflowX:'auto',width:'100%',display:'flex',justifyContent:'center'}}>

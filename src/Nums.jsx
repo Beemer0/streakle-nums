@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import UserMenu from "./UserMenu";
 import { saveResult } from './saveResult';
+import { useStreak } from './useStreak';
 
 const isActive = (r, c) => r % 2 === 0 || c % 2 === 0;
 
@@ -93,6 +94,7 @@ const css = `
 `;
 
 export default function App() {
+  const { streak } = useStreak('nums');
   const [pz] = useState(() => {
     const rng = mulberry32(dateToSeed());
     const sol = generateSolution(rng);
@@ -340,6 +342,12 @@ export default function App() {
                      : `${Math.abs(swaps)} swap${Math.abs(swaps)!==1?'s':''} over budget`
         }
       </div>
+
+      {streak > 0 && (
+        <div style={{fontSize:13, color:'#f5a623', fontWeight:600, marginBottom:8}}>
+          🔥 {streak} day streak
+        </div>
+      )}
 
       <div onDragOver={e=>e.preventDefault()} style={{position:'relative',width:gSize,height:gSize,marginBottom:20,flexShrink:0}}>
         {cells}

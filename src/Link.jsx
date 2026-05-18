@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import UserMenu from "./UserMenu";
 import { saveResult } from './saveResult';
+import { useStreak } from './useStreak';
 
 const PUZZLES = [
   {
@@ -191,6 +192,7 @@ function FlyingTile({ word, fr, fc, tr, tc, cs, total, color }) {
 }
 
 export default function GridGame() {
+  const { streak } = useStreak('link');
   const [puzzle] = useState(() => {
     const p = getDailyPuzzle();
     const seed = new Date().getFullYear() * 10000 + (new Date().getMonth() + 1) * 100 + new Date().getDate();
@@ -361,6 +363,12 @@ export default function GridGame() {
           <div key={i} style={{ width: 14, height: 14, borderRadius: '50%', background: i < lives ? '#f5a623' : '#333', transition: 'background 0.3s' }} />
         ))}
       </div>
+
+      {streak > 0 && (
+        <div style={{fontSize:13, color:'#f5a623', fontWeight:600, marginBottom:8}}>
+          🔥 {streak} day streak
+        </div>
+      )}
 
       {message && (
         <div style={{ position: 'fixed', top: 80, left: '50%', transform: 'translateX(-50%)', background: '#16213e', border: '1px solid #4a4a8a', borderRadius: 8, padding: '8px 20px', fontSize: 14, fontWeight: 600, color: oneAway ? '#f5a623' : '#fff', zIndex: 50, animation: 'slideUp 0.3s ease', whiteSpace: 'nowrap' }}>

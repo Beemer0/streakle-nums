@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import UserMenu from "./UserMenu";
 import { saveResult } from './saveResult';
+import { useStreak } from './useStreak';
 
 const WORDS = [
   { word: "BRINY", def: "Salty like the sea.", fact: "The ocean contains about 35 grams of salt per litre. Ancient sailors called the sea 'the briny deep', and the phrase stuck around for centuries." },
@@ -198,6 +199,7 @@ const css = `
 `;
 
 export default function WordsGame() {
+  const { streak } = useStreak('words');
   const [daily] = useState(() => getDailyWord());
   const [guesses, setGuesses] = useState(Array(ROWS).fill(''));
   const [current, setCurrent] = useState(0);
@@ -353,6 +355,12 @@ export default function WordsGame() {
       </div>
 
       <div style={{fontSize:13,color:'#6666aa',marginBottom:10,marginTop:6}}>{formatDate()}</div>
+
+      {streak > 0 && (
+        <div style={{fontSize:13, color:'#f5a623', fontWeight:600, marginBottom:8}}>
+          🔥 {streak} day streak
+        </div>
+      )}
 
       {showHow&&(
         <div style={{background:'#0f1535',border:'1px solid #4a4a8a',borderRadius:10,padding:16,maxWidth:320,marginBottom:12,fontSize:13,lineHeight:1.65,color:'#ccc',animation:'slideUp 0.3s ease'}}>
