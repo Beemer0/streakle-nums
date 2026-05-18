@@ -8,6 +8,7 @@ import Nums from './Nums.jsx'
 import Link from './Link.jsx'
 import Words from './Words.jsx'
 import Gridiron from './Gridiron.jsx'
+import Faceoff from './Faceoff.jsx'
 import Privacy from './Privacy.jsx'
 
 createRoot(document.getElementById('root')).render(
@@ -19,6 +20,7 @@ createRoot(document.getElementById('root')).render(
         <Route path="/link" element={<Link />} />
         <Route path="/words" element={<Words />} />
         <Route path="/gridiron" element={<Gridiron />} />
+        <Route path="/faceoff" element={<Faceoff />} />
         <Route path="/privacy" element={<Privacy />} />
       </Routes>
     </BrowserRouter>

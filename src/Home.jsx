@@ -42,6 +42,15 @@ const games = [
     accent: '#ff6b6b',
     badge: 'Know It',
   },
+  {
+    path: '/faceoff',
+    title: 'FACEOFF',
+    emoji: '🏒',
+    description: 'Test your NHL knowledge. Match players to teams and awards in the grid.',
+    color: '#4a9eff',
+    accent: '#7ab8ff',
+    badge: 'Know It',
+  },
 ];
 
 export default function Home() {

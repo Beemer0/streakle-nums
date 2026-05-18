@@ -182,6 +182,8 @@ export default function App() {
   // Drag handlers
   const handleDragStart = (e, r, c) => {
     if (!isActive(r,c) || swapping) return;
+    const isCorr = board[r][c] === pz.sol[r][c];
+    if (isCorr) { e.preventDefault(); return; } // locked
     setDragging([r,c]);
     setSel(null);
     e.dataTransfer.effectAllowed = 'move';
@@ -214,6 +216,8 @@ export default function App() {
   const handleDrop = (e, r, c) => {
     e.preventDefault();
     if (!dragging || !isActive(r,c)) { setDragging(null); setDragOver(null); return; }
+    const isCorr = board[r][c] === pz.sol[r][c];
+    if (isCorr) { setDragging(null); setDragOver(null); return; } // can't drop on locked cell
     const [dr, dc] = dragging;
     if (dr===r && dc===c) { setDragging(null); setDragOver(null); return; }
     doSwap(dr, dc, r, c);
@@ -262,7 +266,7 @@ export default function App() {
             position:'absolute', left:x, top:y, width:CS, height:CS,
             background:bg, border:`2px solid ${border}`, borderRadius:8,
             display:'flex', alignItems:'center', justifyContent:'center',
-            cursor: swapping ? 'default' : isDragging ? 'grabbing' : 'grab',
+            cursor: swapping ? 'default' : isCorr ? 'not-allowed' : isDragging ? 'grabbing' : 'grab',
             fontSize:20, fontWeight:700, color, userSelect:'none',
             transition:'background 0.15s, border-color 0.15s, transform 0.15s',
             animation: an ? `${an} ${an==='correctPulse'?'0.55s':'0.45s'} ease` : 'none',
