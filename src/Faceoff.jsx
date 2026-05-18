@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import UserMenu from "./UserMenu";
+import { saveResult } from './saveResult';
 
 const TEAMS = {
   ANA:"Ducks",ARI:"Coyotes",ARZ:"Coyotes",BOS:"Bruins",BUF:"Sabres",
@@ -632,14 +633,14 @@ export default function FaceoffGame() {
       setQuery('');
       setPendingPlayer(null);
       setSuggestions([]);
-      if (Object.keys(newCells).length === 9) { setWon(true); spawnConfetti(); }
-      else if (newGuesses === 0) setGameOver(true);
+      if (Object.keys(newCells).length === 9) { saveResult({ game: 'faceoff', completed: true, score: totalScore + score }); setWon(true); spawnConfetti(); }
+      else if (newGuesses === 0) { saveResult({ game: 'faceoff', completed: false, score: totalScore }); setGameOver(true); }
     } else {
       setShakeCell(key);
       setTimeout(()=>setShakeCell(null), 500);
       setPendingPlayer(null);
       setQuery('');
-      if (newGuesses === 0) { setActiveCell(null); setGameOver(true); }
+      if (newGuesses === 0) { setActiveCell(null); saveResult({ game: 'faceoff', completed: false, score: totalScore }); setGameOver(true); }
     }
   };
 

@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import UserMenu from "./UserMenu";
+import { saveResult } from './saveResult';
 
 const isActive = (r, c) => r % 2 === 0 || c % 2 === 0;
 
@@ -163,6 +164,7 @@ export default function App() {
 
       if (isSolved(nb)) {
         setSolved(true);
+        saveResult({ game: 'nums', completed: true, swaps_used: 20 - newSwaps });
         setTimeout(()=>{ spawnConfetti(); setStarsAnim(true); },100);
       }
     }, 380);

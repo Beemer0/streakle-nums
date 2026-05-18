@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import UserMenu from "./UserMenu";
+import { saveResult } from './saveResult';
 
 const WORDS = [
   { word: "BRINY", def: "Salty like the sea.", fact: "The ocean contains about 35 grams of salt per litre. Ancient sailors called the sea 'the briny deep', and the phrase stuck around for centuries." },
@@ -280,8 +281,10 @@ export default function WordsGame() {
       const isWin=result.every(s=>s===ST.correct);
       if (isWin) {
         setBounceRow(rowIdx); setTimeout(()=>setBounceRow(null),1000);
+        saveResult({ game: 'words', completed: true });
         setTimeout(()=>{setWon(true);setGameOver(true);spawnConfetti();setShowFact(true);},400);
       } else if (rowIdx+1>=ROWS) {
+        saveResult({ game: 'words', completed: false });
         setTimeout(()=>{setGameOver(true);setShowFact(true);showMsg(daily.word,3000);},200);
       } else {
         setCurrent(c=>c+1);

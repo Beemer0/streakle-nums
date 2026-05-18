@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import UserMenu from "./UserMenu";
+import { saveResult } from './saveResult';
 
 const PUZZLES = [
   {
@@ -254,7 +255,7 @@ export default function GridGame() {
       if (!container) {
         setSolved(prev => {
           const ns = [...prev, catIdx];
-          if (ns.length === 4) { setWon(true); spawnConfetti(); }
+          if (ns.length === 4) { saveResult({ game: 'link', completed: true }); setWon(true); spawnConfetti(); }
           else showMsg(`✅ ${cat.label}!`);
           return ns;
         });
@@ -288,7 +289,7 @@ export default function GridGame() {
         setGuessHistory(h => [...h, { correct: true }]);
         setSolved(prev => {
           const ns = [...prev, catIdx];
-          if (ns.length === 4) { setWon(true); spawnConfetti(); }
+          if (ns.length === 4) { saveResult({ game: 'link', completed: true }); setWon(true); spawnConfetti(); }
           else showMsg(`✅ ${cat.label}!`);
           return ns;
         });
@@ -309,7 +310,7 @@ export default function GridGame() {
       if (bestMatch === 3) { setOneAway(true); showMsg("One away! 👀", 2000); }
       else { setOneAway(false); showMsg("Not quite! Try again."); }
 
-      if (newLives === 0) setTimeout(() => setGameOver(true), 600);
+      if (newLives === 0) { saveResult({ game: 'link', completed: false }); setTimeout(() => setGameOver(true), 600); }
     }
   };
 

@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import UserMenu from "./UserMenu";
+import { saveResult } from './saveResult';
 
 const TEAMS = {
   ARI:"Cardinals",ATL:"Falcons",BAL:"Ravens",BUF:"Bills",CAR:"Panthers",
@@ -530,9 +531,11 @@ export default function GridironGame() {
       setPendingPlayer(null);
       setSuggestions([]);
       if (Object.keys(newCells).length === 9) {
+        saveResult({ game: 'gridiron', completed: true, score: totalScore + score });
         setWon(true);
         spawnConfetti();
       } else if (newGuesses === 0) {
+        saveResult({ game: 'gridiron', completed: false, score: totalScore });
         setGameOver(true);
       }
     } else {
@@ -542,6 +545,7 @@ export default function GridironGame() {
       setQuery('');
       if (newGuesses === 0) {
         setActiveCell(null);
+        saveResult({ game: 'gridiron', completed: false, score: totalScore });
         setGameOver(true);
       }
     }
