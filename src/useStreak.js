@@ -20,17 +20,15 @@ export function useStreak(game) {
 
       if (!data || data.length === 0) { setStreak(0); setLoading(false); return; }
 
-      // Calculate streak — count consecutive days back from today
-      let count = 0
-      const today = new Date()
-      today.setHours(0, 0, 0, 0)
+      // Get today as YYYY-MM-DD string in local time
+      const todayStr = new Date().toLocaleDateString('en-CA') // returns YYYY-MM-DD
 
+      let count = 0
       for (let i = 0; i < data.length; i++) {
-        const date = new Date(data[i].puzzle_date)
-        date.setHours(0, 0, 0, 0)
-        const expected = new Date(today)
-        expected.setDate(today.getDate() - i)
-        if (date.getTime() === expected.getTime()) {
+        const d = new Date()
+        d.setDate(d.getDate() - i)
+        const expected = d.toLocaleDateString('en-CA')
+        if (data[i].puzzle_date === expected) {
           count++
         } else {
           break
