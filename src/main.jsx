@@ -1,8 +1,9 @@
-import { StrictMode } from 'react'
+import { StrictMode, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { Analytics } from '@vercel/analytics/react'
 import { AuthProvider, useAuth } from './AuthContext.jsx'
+import { supabase } from './supabase.js'
 import './index.css'
 import Home from './Home.jsx'
 import Nums from './Nums.jsx'
@@ -17,48 +18,20 @@ function SignInBanner() {
   if (user) return null
 
   return (
-    <div style={{
-      position: 'fixed', bottom: 0, left: 0, right: 0,
-      background: '#0f1535', borderTop: '1px solid #2a2a6a',
-      padding: '12px 20px', display: 'flex', alignItems: 'center',
-      justifyContent: 'space-between', zIndex: 200, gap: 12,
-    }}>
-      <div style={{ fontSize: 13, color: '#aaaaff' }}>
-        🔥 Sign in to save your streak and track progress
-      </div>
-      <a href="/login" style={{
-        background: '#4a4a8a', color: '#fff', border: 'none',
-        borderRadius: 6, padding: '8px 16px', fontSize: 13,
-        fontWeight: 700, cursor: 'pointer', textDecoration: 'none',
-        whiteSpace: 'nowrap',
-      }}>Sign in</a>
-    </div>
-  )
-}
-
-function AppRoutes() {
-  const { loading } = useAuth()
-
-  if (loading) return (
-    <div style={{ minHeight: '100vh', background: '#1a1a2e', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#aaaaff', fontFamily: 'Segoe UI', fontSize: 18 }}>
-      Loading...
-    </div>
-  )
-
-  return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/nums" element={<Nums />} />
-        <Route path="/link" element={<Link />} />
-        <Route path="/words" element={<Words />} />
-        <Route path="/gridiron" element={<Gridiron />} />
-        <Route path="/faceoff" element={<Faceoff />} />
-        <Route path="/privacy" element={<Privacy />} />
-        <Route path="/login" element={<LoginPage />} />
-      </Routes>
-      <SignInBanner />
-    </BrowserRouter>
+    <a href="/login" style={{
+      position: 'fixed', top: 16, right: 16,
+      background: '#4a4a8a', color: '#fff',
+      borderRadius: 8, padding: '8px 16px',
+      fontSize: 13, fontWeight: 700,
+      textDecoration: 'none', zIndex: 200,
+      boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+      transition: 'background 0.2s',
+    }}
+      onMouseOver={e => e.currentTarget.style.background = '#6666bb'}
+      onMouseOut={e => e.currentTarget.style.background = '#4a4a8a'}
+    >
+      🔥 Sign in
+    </a>
   )
 }
 
@@ -66,7 +39,6 @@ function LoginPage() {
   const { user } = useAuth()
   const [loading, setLoading] = useState(false)
 
-  // If already logged in redirect to home
   if (user) {
     window.location.href = '/'
     return null
@@ -88,6 +60,7 @@ function LoginPage() {
       display: 'flex', flexDirection: 'column',
       alignItems: 'center', justifyContent: 'center',
       fontFamily: "'Segoe UI', sans-serif", color: '#e0e0e0', padding: 24,
+      position: 'relative',
     }}>
       <a href="/" style={{ position: 'absolute', left: 16, top: 24, color: '#aaaaff', textDecoration: 'none', fontSize: 13, fontWeight: 600 }}>← Back</a>
       <div style={{ fontSize: 48, fontWeight: 900, letterSpacing: 4, color: '#fff', marginBottom: 8 }}>STREAKLE</div>
@@ -121,8 +94,31 @@ function LoginPage() {
   )
 }
 
-import { useState } from 'react'
-import { supabase } from './supabase.js'
+function AppRoutes() {
+  const { loading } = useAuth()
+
+  if (loading) return (
+    <div style={{ minHeight: '100vh', background: '#1a1a2e', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#aaaaff', fontFamily: 'Segoe UI', fontSize: 18 }}>
+      Loading...
+    </div>
+  )
+
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route path="/nums" element={<Nums />} />
+        <Route path="/link" element={<Link />} />
+        <Route path="/words" element={<Words />} />
+        <Route path="/gridiron" element={<Gridiron />} />
+        <Route path="/faceoff" element={<Faceoff />} />
+        <Route path="/privacy" element={<Privacy />} />
+        <Route path="/login" element={<LoginPage />} />
+      </Routes>
+      <SignInBanner />
+    </BrowserRouter>
+  )
+}
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
