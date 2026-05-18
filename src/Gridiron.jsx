@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
+import UserMenu from "./UserMenu";
 
 const TEAMS = {
   ARI:"Cardinals",ATL:"Falcons",BAL:"Ravens",BUF:"Bills",CAR:"Panthers",
@@ -564,6 +565,7 @@ export default function GridironGame() {
         <div key={c.id} style={{position:'fixed',left:`${c.x}%`,top:'28%',width:c.size,height:c.size,background:c.color,borderRadius:c.size>10?'50%':2,animation:`confetti 1.3s ${c.delay}ms ease forwards`,pointerEvents:'none',zIndex:100}}/>
       ))}
 
+      <UserMenu />
       <a href="/" style={{position:'absolute',left:16,top:24,color:'#aaaaff',textDecoration:'none',fontSize:13,fontWeight:600}}>← Back</a>
 
       <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:2}}>

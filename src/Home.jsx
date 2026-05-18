@@ -1,3 +1,5 @@
+import UserMenu from "./UserMenu";
+
 const css = `
 @keyframes fadeIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.6}}
@@ -59,9 +61,10 @@ export default function Home() {
       minHeight: '100vh', background: '#1a1a2e',
       display: 'flex', flexDirection: 'column', alignItems: 'center',
       fontFamily: "'Segoe UI', sans-serif", color: '#e0e0e0',
-      padding: '48px 24px 32px',
+      padding: '48px 24px 32px', position: 'relative',
     }}>
       <style>{css}</style>
+      <UserMenu />
 
       {/* Logo */}
       <div style={{ textAlign: 'center', marginBottom: 8, animation: 'fadeIn 0.5s ease' }}>

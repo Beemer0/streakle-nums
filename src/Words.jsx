@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import UserMenu from "./UserMenu";
 
 const WORDS = [
   { word: "BRINY", def: "Salty like the sea.", fact: "The ocean contains about 35 grams of salt per litre. Ancient sailors called the sea 'the briny deep', and the phrase stuck around for centuries." },
@@ -146,22 +147,23 @@ const VALID_WORDS = new Set([
   "wedge","weedy","weird","whale","whack","whiff","whirl","whisk","white","whole",
   "whose","wield","wimpy","windy","witty","woody","woozy","wordy","world","wormy",
   "worst","wrath","wring","wrist","wrote","wryly","yacht","yearn","yield","young",
-  "yours","yucky","yummy","zappy","zebra","zesty","zippy","crane","grace","brave",
-  "bland","brake","price","twice","dense","tense","chess","brass","grass","fizzy",
-  "ditty","kitty","batty","catty","fatty","patty","ratty","natty","gabby","tabby",
-  "lobby","bobby","hobby","clamp","cramp","tramp","stamp","champ","swamp","clank",
-  "blank","plank","frank","prank","crank","drank","flank","snare","spare","share",
-  "stare","grout","clove","drove","grove","stove","blade","grade","trade","shade",
-  "evade","braid","trail","snail","frail","quail","pearl","early","girly","label",
-  "gavel","growl","howl","jowl","fowl","scowl","drawl","crawl","spawn","drawn",
-  "brawn","prawn","dream","cream","steam","gleam","drain","grain","brain","train",
-  "plain","frame","shame","whale","shale","scale","metal","petal","total","local",
-  "vocal","tonal","moral","coral","mural","viral","gloom","bloom","broom","swoon",
-  "croon","prune","crude","brood","blood","flood","stoop","droop","snoop","swoop",
-  "drool","stool","spool","bacon","wagon","mason","prism","chasm","spasm","realm",
-  "psalm","balmy","grimy","foamy","roomy","loamy","seamy","aphid","bliss","crypt",
-  "envoy","flint","glean","hefty","irony","knack","lusty","maxim","nymph","optic",
-  "plumb","qualm","relic","smirk","trawl","fjord","lucid","quirk","ember","axiom",
+  "yours","yucky","yummy","zappy","zebra","zesty","zippy","zombi","crane","grace",
+  "brave","bland","brake","price","twice","dense","tense","chess","brass","grass",
+  "fizzy","ditty","kitty","batty","catty","fatty","patty","ratty","natty","gabby",
+  "tabby","lobby","bobby","hobby","clamp","cramp","tramp","stamp","champ","swamp",
+  "clank","blank","plank","frank","prank","crank","drank","flank","snare","spare",
+  "share","stare","grout","clove","drove","grove","stove","blade","grade","trade",
+  "shade","evade","braid","trail","snail","frail","quail","pearl","early","girly",
+  "label","gavel","growl","howl","jowl","fowl","scowl","drawl","crawl","spawn",
+  "drawn","brawn","prawn","dream","cream","steam","gleam","drain","grain","brain",
+  "train","plain","frame","shame","whale","shale","scale","metal","petal","total",
+  "local","vocal","tonal","moral","coral","mural","viral","gloom","bloom","broom",
+  "swoon","croon","prune","crude","brood","blood","flood","stoop","droop","snoop",
+  "swoop","drool","stool","spool","bacon","wagon","mason","prism","chasm","spasm",
+  "realm","psalm","balmy","grimy","foamy","roomy","loamy","seamy","aphid","bliss",
+  "crypt","envoy","flint","glean","hefty","irony","knack","lusty","maxim","nymph",
+  "optic","plumb","qualm","relic","smirk","trawl","fjord","lucid","quirk","ember",
+  "axiom",
 ]);
 
 function getDailyWord() {
@@ -330,6 +332,7 @@ export default function WordsGame() {
   return (
     <div style={{minHeight:'100vh',background:'#1a1a2e',display:'flex',flexDirection:'column',alignItems:'center',paddingTop:24,paddingBottom:32,fontFamily:"'Segoe UI',sans-serif",color:'#e0e0e0',position:'relative',overflow:'hidden'}}>
       <style>{css}</style>
+      <UserMenu />
       <a href="/" style={{position:'absolute',left:16,top:24,color:'#aaaaff',textDecoration:'none',fontSize:13,fontWeight:600}}>← Back</a>
 
       {confetti.map(c=>(

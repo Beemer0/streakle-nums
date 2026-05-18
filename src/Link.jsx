@@ -1,4 +1,5 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
+import UserMenu from "./UserMenu";
 
 const PUZZLES = [
   {
@@ -148,9 +149,8 @@ const TILE_GAP = 8;
 const COLS = 4;
 
 const css = `
-@keyframes tileFlipOut{0%{transform:rotateY(0deg) scale(1)}100%{transform:rotateY(90deg) scale(0.8)}}
-@keyframes tileFlipIn{0%{transform:rotateY(-90deg) scale(0.8)}100%{transform:rotateY(0deg) scale(1)}}
 @keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-6px)}40%{transform:translateX(6px)}60%{transform:translateX(-4px)}80%{transform:translateX(4px)}}
+@keyframes pop{0%{transform:scale(1)}40%{transform:scale(1.12)}100%{transform:scale(1)}}
 @keyframes revealRow{0%{transform:scaleY(0);opacity:0}100%{transform:scaleY(1);opacity:1}}
 @keyframes slideUp{from{transform:translateY(16px);opacity:0}to{transform:translateY(0);opacity:1}}
 @keyframes fadeIn{from{opacity:0}to{opacity:1}}
@@ -158,17 +158,19 @@ const css = `
 @keyframes copied{0%{opacity:0;transform:translateY(4px)}20%{opacity:1;transform:translateY(0)}80%{opacity:1}100%{opacity:0}}
 `;
 
-function FlyingTile({ word, fromX, fromY, toX, toY, color, delay = 0 }) {
+function FlyingTile({ word, fr, fc, tr, tc, cs, total, color }) {
   const ref = useRef(null);
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
+    const fromX = fc * (cs + TILE_GAP), fromY = fr * (cs + TILE_GAP);
+    const toX = tc * (cs + TILE_GAP), toY = tr * (cs + TILE_GAP);
     el.animate([
       { transform: `translate(${fromX}px,${fromY}px) rotateY(0deg) scale(1)`, offset: 0 },
       { transform: `translate(${fromX}px,${fromY}px) rotateY(90deg) scale(0.85)`, offset: 0.3 },
       { transform: `translate(${toX}px,${toY}px) rotateY(-90deg) scale(0.85)`, offset: 0.6 },
       { transform: `translate(${toX}px,${toY}px) rotateY(0deg) scale(1)`, offset: 1 },
-    ], { duration: 700, delay, easing: 'cubic-bezier(0.4, 0, 0.2, 1)', fill: 'forwards' });
+    ], { duration: 700, easing: 'cubic-bezier(0.4, 0, 0.2, 1)', fill: 'forwards' });
   }, []);
 
   return (
@@ -182,8 +184,7 @@ function FlyingTile({ word, fromX, fromY, toX, toY, color, delay = 0 }) {
       pointerEvents: 'none', zIndex: 20,
       boxShadow: `0 4px 20px ${color}88`,
       willChange: 'transform', padding: '0 4px', textAlign: 'center',
-      perspective: '400px',
-      transformStyle: 'preserve-3d',
+      perspective: '400px', transformStyle: 'preserve-3d',
     }}>{word}</div>
   );
 }
@@ -214,9 +215,8 @@ export default function GridGame() {
   const gridRef = useRef(null);
   const solvedRef = useRef(null);
   const wordRefs = useRef({});
-  const solvedRef2 = useRef([]); // always up to date ref
+  const solvedRef2 = useRef([]);
 
-  // Keep ref in sync with state
   useEffect(() => { solvedRef2.current = solved; }, [solved]);
 
   const solvedWords = solved.flatMap(i => puzzle.categories[i].words);
@@ -228,10 +228,7 @@ export default function GridGame() {
     else if (selected.length < 4) setSelected(s => [...s, word]);
   };
 
-  const showMsg = (msg, dur = 1800) => {
-    setMessage(msg);
-    setTimeout(() => setMessage(null), dur);
-  };
+  const showMsg = (msg, dur = 1800) => { setMessage(msg); setTimeout(() => setMessage(null), dur); };
 
   const spawnConfetti = () => {
     const items = Array.from({ length: 30 }, (_, i) => ({
@@ -247,17 +244,14 @@ export default function GridGame() {
     if (selected.length !== 4 || animating || won || gameOver) return;
 
     const catIdx = puzzle.categories.findIndex((c, i) =>
-      !solvedRef2.current.includes(i) &&
-      selected.every(w => c.words.includes(w))
+      !solvedRef2.current.includes(i) && selected.every(w => c.words.includes(w))
     );
 
     if (catIdx !== -1) {
-      // Correct! Animate tiles flying to solved row
       const cat = puzzle.categories[catIdx];
       const container = gridRef.current;
 
       if (!container) {
-        // No animation fallback
         setSolved(prev => {
           const ns = [...prev, catIdx];
           if (ns.length === 4) { setWon(true); spawnConfetti(); }
@@ -279,7 +273,7 @@ export default function GridGame() {
         const fromX = fromRect ? fromRect.left - containerRect.left : 0;
         const fromY = fromRect ? fromRect.top - containerRect.top : 0;
         const toX = ti * (containerRect.width / 4);
-        return { word, fromX, fromY, toX, toY, color: cat.color, delay: ti * 60 };
+        return { word, fromX, fromY, toX, toY, color: cat.color };
       });
 
       setHiddenWords([...selected]);
@@ -294,18 +288,12 @@ export default function GridGame() {
         setGuessHistory(h => [...h, { correct: true }]);
         setSolved(prev => {
           const ns = [...prev, catIdx];
-          if (ns.length === 4) {
-            setWon(true);
-            spawnConfetti();
-          } else {
-            showMsg(`✅ ${cat.label}!`);
-          }
+          if (ns.length === 4) { setWon(true); spawnConfetti(); }
+          else showMsg(`✅ ${cat.label}!`);
           return ns;
         });
       }, 700 + 3 * 60 + 100);
-
     } else {
-      // Wrong
       const bestMatch = puzzle.categories
         .filter((_, i) => !solvedRef2.current.includes(i))
         .map(c => selected.filter(w => c.words.includes(w)).length)
@@ -327,8 +315,8 @@ export default function GridGame() {
 
   const handleShare = async () => {
     const lines = guessHistory.map(g => g.correct ? '🟩🟩🟩🟩' : '🟥🟥🟥🟥');
-    const result = won ? `Solved in ${guessHistory.length} guess${guessHistory.length !== 1 ? 'es' : ''}!` : `Could not solve today's Grid`;
-    const text = `GRID by Streakle 🔥 — ${formatDate()}\n${result}\n${lines.join('\n')}\n\nPlay at: playstreakle.com/grid`;
+    const result = won ? `Solved in ${guessHistory.length} guess${guessHistory.length !== 1 ? 'es' : ''}!` : `Could not solve today's Link`;
+    const text = `LINK by Streakle 🔥 — ${formatDate()}\n${result}\n${lines.join('\n')}\n\nPlay at: playstreakle.com/link`;
     try {
       if (navigator.share) await navigator.share({ text });
       else { await navigator.clipboard.writeText(text); setCopied(true); setTimeout(() => setCopied(false), 2000); }
@@ -338,6 +326,7 @@ export default function GridGame() {
   return (
     <div style={{ minHeight: '100vh', background: '#1a1a2e', display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: 24, fontFamily: "'Segoe UI', sans-serif", color: '#e0e0e0', position: 'relative', overflow: 'hidden' }}>
       <style>{css}</style>
+      <UserMenu />
       <a href="/" style={{ position: 'absolute', left: 16, top: 24, color: '#aaaaff', textDecoration: 'none', fontSize: 13, fontWeight: 600 }}>← Back</a>
 
       {confetti.map(c => (
@@ -379,7 +368,6 @@ export default function GridGame() {
       )}
 
       <div ref={gridRef} style={{ position: 'relative', width: '100%', maxWidth: 440, padding: '0 12px', boxSizing: 'border-box' }}>
-        {/* Solved rows */}
         <div ref={solvedRef} style={{ marginBottom: solved.length > 0 ? 6 : 0 }}>
           {solved.map(i => (
             <div key={i} style={{ background: puzzle.categories[i].color, borderRadius: 8, padding: '12px 16px', marginBottom: 6, textAlign: 'center', animation: 'revealRow 0.35s ease' }}>
@@ -389,7 +377,6 @@ export default function GridGame() {
           ))}
         </div>
 
-        {/* Word grid */}
         <div style={{ display: 'grid', gridTemplateColumns: `repeat(${COLS}, 1fr)`, gap: TILE_GAP, marginBottom: 16 }}>
           {remaining.map(word => {
             const isSel = selected.includes(word);
@@ -397,8 +384,7 @@ export default function GridGame() {
             const isHidden = hiddenWords.includes(word);
             return (
               <div key={word} ref={el => wordRefs.current[word] = el} onClick={() => toggleWord(word)} style={{
-                aspectRatio: '5/3',
-                background: isSel ? '#4a4a8a' : '#16213e',
+                aspectRatio: '5/3', background: isSel ? '#4a4a8a' : '#16213e',
                 border: `2px solid ${isSel ? '#aaaaff' : '#0f3460'}`,
                 borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center',
                 fontSize: word.length > 8 ? 10 : word.length > 6 ? 12 : 14,
@@ -417,7 +403,7 @@ export default function GridGame() {
         </div>
 
         {flyingTiles.map((ft, i) => (
-          <FlyingTile key={`${ft.word}-${i}`} {...ft} />
+          <FlyingTile key={`${ft.word}-${i}`} {...ft} cs={56} total={TILE_GAP} color={ft.color} />
         ))}
       </div>
 
