@@ -160,7 +160,8 @@ export default function Home() {
       {/* ── Game cards ── */}
       <div style={{
         display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))',
+        gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 260px))',
+        justifyContent: 'center',
         gap: 20, maxWidth: 900,
         width: '100%', marginBottom: 60,
       }}>
