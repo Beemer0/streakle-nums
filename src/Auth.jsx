@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { supabase } from './supabase'
 
 export default function Auth() {
@@ -18,26 +18,26 @@ export default function Auth() {
 
   return (
     <div style={{
-      minHeight: '100vh', background: '#1a1a2e',
+      minHeight: '100vh',
       display: 'flex', flexDirection: 'column',
       alignItems: 'center', justifyContent: 'center',
-      fontFamily: "'Segoe UI', sans-serif", color: '#e0e0e0',
+      color: '#F5F0E8',
       padding: 24,
     }}>
-      <div style={{ fontSize: 48, fontWeight: 900, letterSpacing: 4, color: '#fff', marginBottom: 8 }}>
+      <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 56, fontWeight: 800, letterSpacing: 6, color: '#fff', marginBottom: 6 }}>
         STREAKLE
       </div>
-      <div style={{ fontSize: 13, fontWeight: 600, letterSpacing: 2, color: '#f5a623', textTransform: 'uppercase', marginBottom: 48 }}>
+      <div style={{ fontSize: 13, fontWeight: 600, letterSpacing: 2, color: '#C9A84C', textTransform: 'uppercase', marginBottom: 48 }}>
         Start your day with a puzzle
       </div>
 
-      <div style={{ background: '#16213e', border: '1px solid #2a2a6a', borderRadius: 16, padding: '40px 32px', maxWidth: 340, width: '100%', textAlign: 'center' }}>
+      <div style={{ background: '#1C1A16', border: '1px solid #2C2820', borderRadius: 16, padding: '40px 32px', maxWidth: 340, width: '100%', textAlign: 'center' }}>
         <div style={{ fontSize: 18, fontWeight: 700, color: '#fff', marginBottom: 8 }}>Welcome back</div>
-        <div style={{ fontSize: 13, color: '#6666aa', marginBottom: 32 }}>Sign in to track your streaks and progress</div>
+        <div style={{ fontSize: 13, color: '#7A6E5F', marginBottom: 32 }}>Sign in to track your streaks and progress</div>
 
         <button onClick={handleGoogleLogin} disabled={loading} style={{
           width: '100%', background: '#fff', border: 'none', borderRadius: 8,
-          padding: '12px 24px', fontSize: 15, fontWeight: 600, color: '#1a1a2e',
+          padding: '12px 24px', fontSize: 15, fontWeight: 600, color: '#0F0E0C',
           cursor: loading ? 'default' : 'pointer', display: 'flex',
           alignItems: 'center', justifyContent: 'center', gap: 12,
           transition: 'opacity 0.2s', opacity: loading ? 0.7 : 1,
@@ -51,9 +51,9 @@ export default function Auth() {
           {loading ? 'Signing in...' : 'Continue with Google'}
         </button>
 
-        <div style={{ marginTop: 24, fontSize: 12, color: '#4a4a8a' }}>
+        <div style={{ marginTop: 24, fontSize: 12, color: '#5A5040' }}>
           By signing in you agree to our{' '}
-          <a href="/privacy" style={{ color: '#aaaaff', textDecoration: 'none' }}>Privacy Policy</a>
+          <a href="/privacy" style={{ color: '#C9A84C', textDecoration: 'none' }}>Privacy Policy</a>
         </div>
       </div>
     </div>

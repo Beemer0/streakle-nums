@@ -187,7 +187,7 @@ const KEYBOARD = [
 ];
 
 const ST = { empty:'empty', correct:'correct', present:'present', absent:'absent' };
-const CLR = { empty:'#16213e', active:'#1e2d4a', correct:'#538d4e', present:'#b59f3b', absent:'#3a3a4a' };
+const CLR = { empty:'#1C1A16', active:'#2C2418', correct:'#538d4e', present:'#b59f3b', absent:'#3a3a4a' };
 
 const css = `
 @keyframes shake{0%,100%{transform:translateX(0)}15%{transform:translateX(-6px)}30%{transform:translateX(6px)}45%{transform:translateX(-4px)}60%{transform:translateX(4px)}75%{transform:translateX(-2px)}90%{transform:translateX(2px)}}
@@ -225,7 +225,7 @@ export default function WordsGame() {
   const spawnConfetti = () => {
     const items = Array.from({length:30},(_,i)=>({
       id:i, x:20+Math.random()*60, delay:Math.random()*600,
-      color:['#538d4e','#b59f3b','#aaaaff','#f5a623','#fff'][i%5], size:5+Math.random()*8
+      color:['#538d4e','#b59f3b','#C9A84C','#C9A84C','#fff'][i%5], size:5+Math.random()*8
     }));
     setConfetti(items);
     setTimeout(()=>setConfetti([]),1600);
@@ -356,10 +356,10 @@ export default function WordsGame() {
   };
 
   return (
-    <div style={{minHeight:'100vh',background:'#1a1a2e',display:'flex',flexDirection:'column',alignItems:'center',paddingTop:24,paddingBottom:32,fontFamily:"'Segoe UI',sans-serif",color:'#e0e0e0',position:'relative',overflow:'hidden'}}>
+    <div style={{minHeight:'100vh',display:'flex',flexDirection:'column',alignItems:'center',paddingTop:24,paddingBottom:32,color:'#F5F0E8',position:'relative',overflow:'hidden'}}>
       <style>{css}</style>
       <UserMenu />
-      <a href="/" style={{position:'absolute',left:16,top:24,color:'#aaaaff',textDecoration:'none',fontSize:13,fontWeight:600}}>← Back</a>
+      <a href="/" style={{position:'absolute',left:16,top:24,color:'#C9A84C',textDecoration:'none',fontSize:13,fontWeight:600}}>← Back</a>
 
       {confetti.map(c=>(
         <div key={c.id} style={{position:'fixed',left:`${c.x}%`,top:'28%',width:c.size,height:c.size,background:c.color,borderRadius:c.size>10?'50%':2,animation:`confetti 1.3s ${c.delay}ms ease forwards`,pointerEvents:'none',zIndex:100}}/>
@@ -368,27 +368,27 @@ export default function WordsGame() {
       <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:2}}>
         <div style={{display:'flex',flexDirection:'column',alignItems:'center'}}>
           <div style={{fontSize:32,fontWeight:900,letterSpacing:2,color:'#fff'}}>WORDS</div>
-          <div style={{fontSize:11,fontWeight:600,letterSpacing:3,color:'#f5a623',textTransform:'uppercase',marginTop:-4}}>by Streakle</div>
+          <div style={{fontSize:11,fontWeight:600,letterSpacing:3,color:'#C9A84C',textTransform:'uppercase',marginTop:-4}}>by Streakle</div>
         </div>
-        <button onClick={()=>setShowHow(!showHow)} style={{background:'none',border:'1px solid #4a4a8a',borderRadius:6,color:'#aaaaff',cursor:'pointer',fontSize:13,padding:'3px 10px',marginLeft:8}}>
+        <button onClick={()=>setShowHow(!showHow)} style={{background:'none',border:'1px solid #2C2820',borderRadius:6,color:'#C9A84C',cursor:'pointer',fontSize:13,padding:'3px 10px',marginLeft:8}}>
           How to play
         </button>
-        <button onClick={() => setShowArchive(true)} style={{background:'none',border:'1px solid #4a4a8a',borderRadius:6,color:'#aaaaff',cursor:'pointer',fontSize:13,padding:'3px 10px'}}>
+        <button onClick={() => setShowArchive(true)} style={{background:'none',border:'1px solid #2C2820',borderRadius:6,color:'#C9A84C',cursor:'pointer',fontSize:13,padding:'3px 10px'}}>
           📅 Archive
         </button>
       </div>
 
-      <div style={{fontSize:13,color:'#6666aa',marginBottom:10,marginTop:6}}>{formatDate()}</div>
+      <div style={{fontSize:13,color:'#7A6E5F',marginBottom:10,marginTop:6}}>{formatDate()}</div>
 
       {streak > 0 && (
-        <div style={{fontSize:13, color:'#f5a623', fontWeight:600, marginBottom:8}}>
+        <div style={{fontSize:13, color:'#C9A84C', fontWeight:600, marginBottom:8}}>
           🔥 {streak} day streak
         </div>
       )}
 
       {showHow&&(
-        <div style={{background:'#0f1535',border:'1px solid #4a4a8a',borderRadius:10,padding:16,maxWidth:320,marginBottom:12,fontSize:13,lineHeight:1.65,color:'#ccc',animation:'slideUp 0.3s ease'}}>
-          <b style={{color:'#aaaaff'}}>How to play</b><br/>
+        <div style={{background:'#1C1A16',border:'1px solid #2C2820',borderRadius:10,padding:16,maxWidth:320,marginBottom:12,fontSize:13,lineHeight:1.65,color:'#ccc',animation:'slideUp 0.3s ease'}}>
+          <b style={{color:'#C9A84C'}}>How to play</b><br/>
           Guess the 5-letter word in 6 tries.<br/><br/>
           🟩 Right letter, right spot<br/>
           🟨 Right letter, wrong spot<br/>
@@ -398,7 +398,7 @@ export default function WordsGame() {
       )}
 
       {message&&(
-        <div style={{position:'fixed',top:80,left:'50%',transform:'translateX(-50%)',background:'#e0e0e0',borderRadius:8,padding:'8px 20px',fontSize:14,fontWeight:700,color:'#1a1a2e',zIndex:50,animation:'slideUp 0.2s ease',whiteSpace:'nowrap'}}>
+        <div style={{position:'fixed',top:80,left:'50%',transform:'translateX(-50%)',background:'#F5F0E8',borderRadius:8,padding:'8px 20px',fontSize:14,fontWeight:700,color:'#0F0E0C',zIndex:50,animation:'slideUp 0.2s ease',whiteSpace:'nowrap'}}>
           {message}
         </div>
       )}
@@ -426,7 +426,7 @@ export default function WordsGame() {
                         position:'absolute',inset:0,
                         backfaceVisibility:'hidden',WebkitBackfaceVisibility:'hidden',
                         background:letter?CLR.active:CLR.empty,
-                        border:`2px solid ${letter?'#aaaaff':'#2a3a5a'}`,
+                        border:`2px solid ${letter?'#C9A84C':'#2C2820'}`,
                         borderRadius:6,display:'flex',alignItems:'center',justifyContent:'center',
                         fontSize:22,fontWeight:800,color:'#fff',
                         animation:letter&&!colored?'letterPop 0.1s ease':'none',
@@ -449,21 +449,21 @@ export default function WordsGame() {
       </div>
 
       {showFact&&(
-        <div style={{background:'#0f1535',border:`1px solid ${won?'#538d4e':'#4a4a8a'}`,borderRadius:12,padding:'16px 20px',maxWidth:340,width:'90%',marginBottom:16,animation:'slideUp 0.5s ease'}}>
-          <div style={{fontSize:11,fontWeight:700,letterSpacing:2,color:won?'#4caf50':'#f5a623',textTransform:'uppercase',marginBottom:6}}>
+        <div style={{background:'#1C1A16',border:`1px solid ${won?'#538d4e':'#2C2820'}`,borderRadius:12,padding:'16px 20px',maxWidth:340,width:'90%',marginBottom:16,animation:'slideUp 0.5s ease'}}>
+          <div style={{fontSize:11,fontWeight:700,letterSpacing:2,color:won?'#4caf50':'#C9A84C',textTransform:'uppercase',marginBottom:6}}>
             {won?"✅ Today's word":"❌ Today's word was"}
           </div>
           <div style={{fontSize:28,fontWeight:900,letterSpacing:3,color:'#fff',marginBottom:4}}>{daily.word}</div>
-          <div style={{fontSize:13,color:'#aaaaff',fontStyle:'italic',marginBottom:10}}>{daily.def}</div>
+          <div style={{fontSize:13,color:'#C9A84C',fontStyle:'italic',marginBottom:10}}>{daily.def}</div>
           <div style={{fontSize:13,color:'#aaa',lineHeight:1.65}}>{daily.fact}</div>
         </div>
       )}
 
       {gameOver&&(
         <div style={{position:'relative',display:'inline-block',marginBottom:20}}>
-          <button onClick={handleShare} style={{background:'#4a4a8a',color:'#fff',border:'none',borderRadius:8,padding:'10px 28px',fontSize:15,fontWeight:700,cursor:'pointer',transition:'background 0.2s'}}
-            onMouseOver={e=>e.currentTarget.style.background='#6666bb'}
-            onMouseOut={e=>e.currentTarget.style.background='#4a4a8a'}>
+          <button onClick={handleShare} style={{background:'#C9A84C',color:'#0F0E0C',border:'none',borderRadius:8,padding:'10px 28px',fontSize:15,fontWeight:700,cursor:'pointer',transition:'background 0.2s'}}
+            onMouseOver={e=>e.currentTarget.style.background='#D4B45A'}
+            onMouseOut={e=>e.currentTarget.style.background='#C9A84C'}>
             📋 Share result
           </button>
           {copied&&<div style={{position:'absolute',top:-32,left:'50%',transform:'translateX(-50%)',background:'#2d6a30',color:'#fff',fontSize:12,fontWeight:600,padding:'4px 12px',borderRadius:6,whiteSpace:'nowrap',animation:'copied 2s ease forwards',pointerEvents:'none'}}>Copied!</div>}
@@ -480,7 +480,7 @@ export default function WordsGame() {
                 return (
                   <button key={key} onClick={()=>handleKey(key)} style={{
                     minWidth:wide?56:34,height:46,
-                    background:st===ST.correct?CLR.correct:st===ST.present?CLR.present:st===ST.absent?CLR.absent:'#2a3a5a',
+                    background:st===ST.correct?CLR.correct:st===ST.present?CLR.present:st===ST.absent?CLR.absent:'#2C2820',
                     border:'none',borderRadius:6,color:'#fff',
                     fontSize:wide?11:14,fontWeight:700,
                     cursor:'pointer',userSelect:'none',
@@ -493,8 +493,8 @@ export default function WordsGame() {
         </div>
       )}
 
-      <div style={{marginTop:32,fontSize:12,color:'#4a4a8a',textAlign:'center'}}>
-        <a href="/privacy" style={{color:'#4a4a8a',textDecoration:'none'}}>Privacy Policy / Politique de confidentialité</a>
+      <div style={{marginTop:32,fontSize:12,color:'#5A5040',textAlign:'center'}}>
+        <a href="/privacy" style={{color:'#5A5040',textDecoration:'none'}}>Privacy Policy / Politique de confidentialité</a>
       </div>
 
       {showArchive && (

@@ -48,20 +48,20 @@ function LoginPage() {
       minHeight: '100vh',
       display: 'flex', flexDirection: 'column',
       alignItems: 'center', justifyContent: 'center',
-      color: '#e0e0e0', padding: 24,
+      color: '#F5F0E8', padding: 24,
       position: 'relative',
     }}>
-      <a href="/" style={{ position: 'absolute', left: 16, top: 24, color: '#aaaaff', textDecoration: 'none', fontSize: 13, fontWeight: 600 }}>← Back</a>
+      <a href="/" style={{ position: 'absolute', left: 16, top: 24, color: '#C9A84C', textDecoration: 'none', fontSize: 13, fontWeight: 600 }}>← Back</a>
       <div style={{ fontFamily: "'Syne', sans-serif", fontSize: 48, fontWeight: 800, letterSpacing: 6, color: '#fff', marginBottom: 8 }}>STREAKLE</div>
-      <div style={{ fontSize: 13, fontWeight: 600, letterSpacing: 2, color: '#f5a623', textTransform: 'uppercase', marginBottom: 48 }}>
+      <div style={{ fontSize: 13, fontWeight: 600, letterSpacing: 2, color: '#C9A84C', textTransform: 'uppercase', marginBottom: 48 }}>
         Start your day with a puzzle
       </div>
-      <div style={{ background: '#16213e', border: '1px solid #2a2a6a', borderRadius: 16, padding: '40px 32px', maxWidth: 340, width: '100%', textAlign: 'center' }}>
+      <div style={{ background: '#1C1A16', border: '1px solid #2C2820', borderRadius: 16, padding: '40px 32px', maxWidth: 340, width: '100%', textAlign: 'center' }}>
         <div style={{ fontSize: 18, fontWeight: 700, color: '#fff', marginBottom: 8 }}>Save your progress</div>
-        <div style={{ fontSize: 13, color: '#6666aa', marginBottom: 32 }}>Sign in to track your streaks and unlock the archive</div>
+        <div style={{ fontSize: 13, color: '#7A6E5F', marginBottom: 32 }}>Sign in to track your streaks and unlock the archive</div>
         <button onClick={handleGoogleLogin} disabled={loading} style={{
           width: '100%', background: '#fff', border: 'none', borderRadius: 8,
-          padding: '12px 24px', fontSize: 15, fontWeight: 600, color: '#1a1a2e',
+          padding: '12px 24px', fontSize: 15, fontWeight: 600, color: '#0F0E0C',
           cursor: loading ? 'default' : 'pointer',
           display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12,
           opacity: loading ? 0.7 : 1,
@@ -74,9 +74,9 @@ function LoginPage() {
           </svg>
           {loading ? 'Signing in...' : 'Continue with Google'}
         </button>
-        <div style={{ marginTop: 24, fontSize: 12, color: '#4a4a8a' }}>
+        <div style={{ marginTop: 24, fontSize: 12, color: '#5A5040' }}>
           By signing in you agree to our{' '}
-          <a href="/privacy" style={{ color: '#aaaaff', textDecoration: 'none' }}>Privacy Policy</a>
+          <a href="/privacy" style={{ color: '#C9A84C', textDecoration: 'none' }}>Privacy Policy</a>
         </div>
       </div>
     </div>
