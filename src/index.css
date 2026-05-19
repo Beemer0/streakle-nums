@@ -47,6 +47,9 @@ body::before {
 ::-webkit-scrollbar-thumb        { background: rgba(255,255,255,0.09); border-radius: 99px; }
 ::-webkit-scrollbar-thumb:hover  { background: rgba(255,255,255,0.18); }
 
+/* ── Buttons inherit body font ───────────────────────────────────────────── */
+button, input, select, textarea { font-family: inherit; }
+
 /* ── Focus rings ─────────────────────────────────────────────────────────── */
 button:focus:not(:focus-visible),
 a:focus:not(:focus-visible)     { outline: none; }
