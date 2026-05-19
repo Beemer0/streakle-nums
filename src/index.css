@@ -53,3 +53,27 @@ button:focus:not(:focus-visible),
 a:focus:not(:focus-visible)     { outline: none; }
 button:focus-visible,
 a:focus-visible                 { outline: 2px solid rgba(99,102,241,0.7); outline-offset: 2px; }
+
+/* ── Global animations ───────────────────────────────────────────────────── */
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.45} }
+
+/* ── Sign-in banner ──────────────────────────────────────────────────────── */
+.sign-in-banner {
+  position: fixed; top: 16px; right: 16px;
+  background: #4a4a8a;
+  border: 1px solid rgba(170,170,255,0.2);
+  color: #fff; border-radius: 8px; padding: 8px 16px;
+  font-size: 13px; font-weight: 700;
+  text-decoration: none; z-index: 200;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  transition: background 0.2s, border-color 0.2s;
+}
+.sign-in-banner:hover {
+  background: #6666bb;
+  border-color: rgba(170,170,255,0.4);
+}
+
+/* ── Mobile ──────────────────────────────────────────────────────────────── */
+@media (max-width: 520px) {
+  .sign-in-banner { font-size: 11px; padding: 6px 12px; }
+}

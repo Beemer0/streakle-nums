@@ -18,18 +18,7 @@ function SignInBanner() {
   if (user) return null
 
   return (
-    <a href="/login" style={{
-      position: 'fixed', top: 16, right: 16,
-      background: '#4a4a8a', color: '#fff',
-      borderRadius: 8, padding: '8px 16px',
-      fontSize: 13, fontWeight: 700,
-      textDecoration: 'none', zIndex: 200,
-      boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
-      transition: 'background 0.2s',
-    }}
-      onMouseOver={e => e.currentTarget.style.background = '#6666bb'}
-      onMouseOut={e => e.currentTarget.style.background = '#4a4a8a'}
-    >
+    <a href="/login" className="sign-in-banner">
       🔥 Sign in
     </a>
   )
@@ -56,14 +45,14 @@ function LoginPage() {
 
   return (
     <div style={{
-      minHeight: '100vh', background: '#1a1a2e',
+      minHeight: '100vh',
       display: 'flex', flexDirection: 'column',
       alignItems: 'center', justifyContent: 'center',
-      fontFamily: "'Segoe UI', sans-serif", color: '#e0e0e0', padding: 24,
+      color: '#e0e0e0', padding: 24,
       position: 'relative',
     }}>
       <a href="/" style={{ position: 'absolute', left: 16, top: 24, color: '#aaaaff', textDecoration: 'none', fontSize: 13, fontWeight: 600 }}>← Back</a>
-      <div style={{ fontSize: 48, fontWeight: 900, letterSpacing: 4, color: '#fff', marginBottom: 8 }}>STREAKLE</div>
+      <div style={{ fontFamily: "'Syne', sans-serif", fontSize: 48, fontWeight: 800, letterSpacing: 6, color: '#fff', marginBottom: 8 }}>STREAKLE</div>
       <div style={{ fontSize: 13, fontWeight: 600, letterSpacing: 2, color: '#f5a623', textTransform: 'uppercase', marginBottom: 48 }}>
         Start your day with a puzzle
       </div>
@@ -98,8 +87,15 @@ function AppRoutes() {
   const { loading } = useAuth()
 
   if (loading) return (
-    <div style={{ minHeight: '100vh', background: '#1a1a2e', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#aaaaff', fontFamily: 'Segoe UI', fontSize: 18 }}>
-      Loading...
+    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{
+        fontFamily: "'Syne', sans-serif",
+        fontSize: 32, fontWeight: 800, letterSpacing: 6,
+        color: '#fff', opacity: 0.4,
+        animation: 'pulse 1.5s infinite',
+      }}>
+        STREAKLE
+      </div>
     </div>
   )
 
