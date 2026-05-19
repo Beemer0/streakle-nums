@@ -107,16 +107,11 @@ export default function Home() {
       position: 'relative',
     }}>
       <style>{`
-        @keyframes fadeIn { from { opacity:0; transform:translateY(14px) } to { opacity:1; transform:translateY(0) } }
+        @keyframes fadeIn { from { opacity:0; transform:translateY(10px) } to { opacity:1; transform:translateY(0) } }
         @keyframes pulse  { 0%,100%{opacity:1} 50%{opacity:0.4} }
-        .game-card-link { text-decoration: none; display: block; height: 100%; }
-        .game-card-inner {
-          transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
-        }
-        .game-card-link:hover .game-card-inner {
-          transform: translateY(-4px);
-          box-shadow: 0 16px 48px rgba(0,0,0,0.55), 0 0 0 1px rgba(201,168,76,0.22) !important;
-        }
+        .game-row { text-decoration: none; display: flex; align-items: center; transition: background 0.15s; }
+        .game-row:hover { background: #211F1A !important; }
+        .game-row:hover .game-row-cta { background: #D4B45A !important; }
       `}</style>
 
       <UserMenu />
@@ -155,12 +150,15 @@ export default function Home() {
         New puzzles every day
       </div>
 
-      {/* ── Game cards ── */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 20, maxWidth: 900, width: '100%', marginBottom: 60 }}>
-        {[games.slice(0, 3), games.slice(3)].map((row, rowIdx) => (
-          <div key={rowIdx} style={{ display: 'flex', gap: 20, justifyContent: 'center' }}>
-            {row.map((g, colIdx) => {
-          const i = rowIdx === 0 ? colIdx : 3 + colIdx
+      {/* ── Game list ── */}
+      <div style={{
+        width: '100%', maxWidth: 820,
+        border: '1px solid #2C2820',
+        borderRadius: 12, overflow: 'hidden',
+        marginBottom: 60,
+        boxShadow: '0 4px 24px rgba(0,0,0,0.35)',
+      }}>
+        {games.map((g, i) => {
           const played    = g.key in todayResults
           const completed = todayResults[g.key] === true
           const failed    = played && !completed
@@ -169,113 +167,75 @@ export default function Home() {
             <a
               key={g.path}
               href={g.path}
-              className="game-card-link"
-              style={{ animation: `fadeIn 0.5s ${i * 110}ms both ease`, width: 260, flexShrink: 0 }}
-            >
-              <div className="game-card-inner" style={{
+              className="game-row"
+              style={{
                 background: '#1C1A16',
-                border: '1px solid #2C2820',
-                borderTop: `3px solid ${g.color}`,
-                borderRadius: 12,
-                padding: '22px 20px 20px',
-                boxShadow: '0 2px 16px rgba(0,0,0,0.4)',
-                height: '100%',
-                position: 'relative',
-                overflow: 'hidden',
-                display: 'flex', flexDirection: 'column',
-              }}>
+                borderLeft: `4px solid ${g.color}`,
+                borderBottom: i < games.length - 1 ? '1px solid #2C2820' : 'none',
+                padding: '18px 24px',
+                gap: 20,
+                animation: `fadeIn 0.4s ${i * 70}ms both ease`,
+              }}
+            >
+              {/* Emoji */}
+              <div style={{ fontSize: 28, flexShrink: 0, width: 36, textAlign: 'center' }}>{g.emoji}</div>
 
-                {/* Emoji + badges row */}
-                <div style={{
-                  display: 'flex', justifyContent: 'space-between',
-                  alignItems: 'flex-start', marginBottom: 14,
-                }}>
-                  <div style={{ fontSize: 30 }}>{g.emoji}</div>
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 5 }}>
-                    <div style={{
-                      background: `${g.color}18`,
-                      border: `1px solid ${g.color}40`,
-                      borderRadius: 4, padding: '2px 8px',
-                      fontSize: 9, fontWeight: 700, color: g.accent,
-                      textTransform: 'uppercase', letterSpacing: 1.5,
-                      fontFamily: "'DM Sans', sans-serif",
-                    }}>{g.badge}</div>
-                    {user && streaks[g.key] > 0 && (
-                      <div style={{
-                        fontSize: 9, fontWeight: 700, color: '#C9A84C',
-                        background: 'rgba(201,168,76,0.1)',
-                        border: '1px solid rgba(201,168,76,0.28)',
-                        borderRadius: 4, padding: '2px 8px',
-                      }}>🔥 {streaks[g.key]}</div>
-                    )}
-                    {completed && (
-                      <div style={{
-                        fontSize: 9, fontWeight: 700, color: '#86EFAC',
-                        background: 'rgba(134,239,172,0.08)',
-                        border: '1px solid rgba(134,239,172,0.22)',
-                        borderRadius: 4, padding: '2px 8px',
-                      }}>✓ Done</div>
-                    )}
-                    {failed && (
-                      <div style={{
-                        fontSize: 9, fontWeight: 700, color: '#FCA5A5',
-                        background: 'rgba(252,165,165,0.08)',
-                        border: '1px solid rgba(252,165,165,0.22)',
-                        borderRadius: 4, padding: '2px 8px',
-                      }}>✗ Tried</div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Title */}
+              {/* Name + badge */}
+              <div style={{ width: 148, flexShrink: 0 }}>
                 <div style={{
                   fontFamily: "'Barlow Condensed', sans-serif",
-                  fontSize: 30, fontWeight: 800,
-                  letterSpacing: 1.5, color: '#F5F0E8', marginBottom: 8,
-                  lineHeight: 1,
-                }}>
-                  {g.title}
-                </div>
-
-                {/* Description */}
+                  fontSize: 28, fontWeight: 800, letterSpacing: 1.5,
+                  color: '#F5F0E8', lineHeight: 1,
+                }}>{g.title}</div>
                 <div style={{
-                  fontSize: 13, color: '#7A6E5F',
-                  lineHeight: 1.6, marginBottom: 20, flexGrow: 1,
-                }}>
-                  {g.description}
-                </div>
+                  marginTop: 6,
+                  display: 'inline-block',
+                  background: `${g.color}18`,
+                  border: `1px solid ${g.color}40`,
+                  borderRadius: 4, padding: '2px 8px',
+                  fontSize: 9, fontWeight: 700, color: g.accent,
+                  textTransform: 'uppercase', letterSpacing: 1.5,
+                }}>{g.badge}</div>
+              </div>
 
-                {/* CTA button */}
-                {completed ? (
-                  <div style={{
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-                    background: 'rgba(134,239,172,0.08)',
-                    border: '1px solid rgba(134,239,172,0.22)',
-                    borderRadius: 6, padding: '10px 0',
-                    fontSize: 12, fontWeight: 700, color: '#86EFAC',
-                    letterSpacing: 0.3,
-                  }}>
-                    ✓ Completed · Play Again?
-                  </div>
-                ) : (
-                  <div style={{
-                    background: failed ? 'transparent' : '#C9A84C',
-                    border: failed ? '1px solid rgba(252,165,165,0.3)' : 'none',
-                    borderRadius: 6, padding: '10px 0',
-                    textAlign: 'center',
-                    fontSize: 12, fontWeight: 700,
-                    color: failed ? '#FCA5A5' : '#0F0E0C',
-                    letterSpacing: 0.5,
-                  }}>
-                    {failed ? 'Try Archive →' : "Play Today's Puzzle →"}
-                  </div>
+              {/* Description */}
+              <div style={{
+                flex: 1,
+                fontSize: 13, color: '#7A6E5F', lineHeight: 1.55,
+              }}>{g.description}</div>
+
+              {/* Status + streak */}
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4, flexShrink: 0, minWidth: 60 }}>
+                {completed && (
+                  <div style={{ fontSize: 11, fontWeight: 700, color: '#86EFAC', letterSpacing: 0.3 }}>✓ Done</div>
                 )}
+                {failed && (
+                  <div style={{ fontSize: 11, fontWeight: 700, color: '#FCA5A5', letterSpacing: 0.3 }}>✗ Tried</div>
+                )}
+                {user && streaks[g.key] > 0 && (
+                  <div style={{ fontSize: 11, fontWeight: 700, color: '#C9A84C' }}>🔥 {streaks[g.key]}</div>
+                )}
+              </div>
+
+              {/* CTA */}
+              <div
+                className={completed ? '' : 'game-row-cta'}
+                style={{
+                  flexShrink: 0,
+                  background: completed ? 'rgba(134,239,172,0.08)' : failed ? 'transparent' : '#C9A84C',
+                  border: completed ? '1px solid rgba(134,239,172,0.22)' : failed ? '1px solid rgba(252,165,165,0.3)' : 'none',
+                  borderRadius: 6, padding: '8px 16px',
+                  fontSize: 12, fontWeight: 700, letterSpacing: 0.4,
+                  color: completed ? '#86EFAC' : failed ? '#FCA5A5' : '#0F0E0C',
+                  whiteSpace: 'nowrap',
+                  transition: 'background 0.15s',
+                }}
+              >
+                {completed ? 'Play Again →' : failed ? 'Archive →' : 'Play →'}
               </div>
             </a>
           )
         })}
-          </div>
-        ))}
       </div>
 
       {/* ── Footer ── */}
