@@ -10,15 +10,18 @@ const GAME_LABELS = {
   faceoff:   { emoji: '🥊', label: 'Faceoff' },
 }
 
-const FREE_DAYS  = 7
-const TOTAL_DAYS = 30
+const LAUNCH_DATE = '2026-05-16'
+const FREE_DAYS   = 7
 
 function getDayList() {
-  return Array.from({ length: TOTAL_DAYS }, (_, i) => {
-    const d = new Date()
-    d.setDate(d.getDate() - i)
-    return d.toLocaleDateString('en-CA') // YYYY-MM-DD, local time
-  })
+  const days = []
+  const launch = new Date(LAUNCH_DATE + 'T00:00:00')
+  const d = new Date()
+  while (d >= launch) {
+    days.push(d.toLocaleDateString('en-CA'))
+    d.setDate(d.getDate() - 1)
+  }
+  return days
 }
 
 function formatLabel(dateStr, index) {
@@ -208,7 +211,7 @@ export default function Archive({ game, onSelectDate, onClose }) {
               </h2>
               <p style={styles.subtitle}>
                 {user
-                  ? `Showing last ${TOTAL_DAYS} days`
+                  ? `All puzzles since launch`
                   : `Sign in to unlock full history`}
               </p>
             </div>
@@ -223,7 +226,7 @@ export default function Archive({ game, onSelectDate, onClose }) {
           {/* Sign-in nudge */}
           {!user && (
             <div style={styles.banner}>
-              🔓 Sign in to track ✅/❌ and unlock all {TOTAL_DAYS} days.
+              🔒 You're only seeing the last 7 days. Sign in to play every puzzle since launch.
               Free players get the last {FREE_DAYS} puzzles.
             </div>
           )}
