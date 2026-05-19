@@ -1,14 +1,11 @@
-import UserMenu from "./UserMenu";
-
-const css = `
-@keyframes fadeIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.6}}
-.game-card{transition:transform 0.2s,box-shadow 0.2s;}
-.game-card:hover{transform:translateY(-4px);box-shadow:0 12px 40px rgba(0,0,0,0.4)!important;}
-`;
+import { useState, useEffect } from 'react'
+import { useAuth } from './AuthContext'
+import { supabase } from './supabase'
+import UserMenu from './UserMenu'
 
 const games = [
   {
+    key: 'nums',
     path: '/nums',
     title: 'NUMS',
     emoji: '🔢',
@@ -18,6 +15,7 @@ const games = [
     badge: 'Swap It',
   },
   {
+    key: 'link',
     path: '/link',
     title: 'LINK',
     emoji: '🔗',
@@ -27,6 +25,7 @@ const games = [
     badge: 'Group It',
   },
   {
+    key: 'words',
     path: '/words',
     title: 'WORDS',
     emoji: '🔤',
@@ -36,6 +35,7 @@ const games = [
     badge: 'Guess It',
   },
   {
+    key: 'gridiron',
     path: '/gridiron',
     title: 'GRIDIRON',
     emoji: '🏈',
@@ -45,6 +45,7 @@ const games = [
     badge: 'Know It',
   },
   {
+    key: 'faceoff',
     path: '/faceoff',
     title: 'FACEOFF',
     emoji: '🏒',
@@ -53,100 +54,215 @@ const games = [
     accent: '#7ab8ff',
     badge: 'Know It',
   },
-];
+]
 
 export default function Home() {
+  const { user } = useAuth()
+  const [todayResults, setTodayResults] = useState({})
+
+  // Fetch today's completion status for all games
+  useEffect(() => {
+    if (!user) return
+    const today = new Date().toLocaleDateString('en-CA')
+    supabase
+      .from('game_results')
+      .select('game, completed')
+      .eq('user_id', user.id)
+      .eq('puzzle_date', today)
+      .then(({ data }) => {
+        if (data) {
+          const map = {}
+          data.forEach(r => { map[r.game] = r.completed })
+          setTodayResults(map)
+        }
+      })
+  }, [user])
+
   return (
     <div style={{
-      minHeight: '100vh', background: '#1a1a2e',
+      minHeight: '100vh',
       display: 'flex', flexDirection: 'column', alignItems: 'center',
-      fontFamily: "'Segoe UI', sans-serif", color: '#e0e0e0',
-      padding: '48px 24px 32px', position: 'relative',
+      padding: '48px 24px 48px',
+      position: 'relative',
     }}>
-      <style>{css}</style>
+      <style>{`
+        @keyframes fadeIn { from { opacity:0; transform:translateY(14px) } to { opacity:1; transform:translateY(0) } }
+        @keyframes pulse  { 0%,100%{opacity:1} 50%{opacity:0.45} }
+        .game-card-link { text-decoration: none; display: block; }
+        .game-card-inner {
+          transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .game-card-link:hover .game-card-inner {
+          transform: translateY(-6px);
+          box-shadow: 0 20px 48px rgba(0,0,0,0.45) !important;
+        }
+      `}</style>
+
       <UserMenu />
 
-      {/* Logo */}
-      <div style={{ textAlign: 'center', marginBottom: 8, animation: 'fadeIn 0.5s ease' }}>
-        <div style={{ fontSize: 48, fontWeight: 900, letterSpacing: 4, color: '#fff', lineHeight: 1 }}>
+      {/* ── Logo ── */}
+      <div style={{ textAlign: 'center', marginBottom: 10, animation: 'fadeIn 0.5s ease' }}>
+        <div style={{
+          fontFamily: "'Syne', sans-serif",
+          fontSize: 52, fontWeight: 800, letterSpacing: 6,
+          color: '#fff', lineHeight: 1,
+          textShadow: '0 0 80px rgba(99,102,241,0.5)',
+        }}>
           STREAKLE
         </div>
-        <div style={{ fontSize: 13, fontWeight: 600, letterSpacing: 2, color: '#f5a623', textTransform: 'uppercase', marginTop: 6 }}>
+        <div style={{
+          fontSize: 12, fontWeight: 600, letterSpacing: 3,
+          color: '#f5a623', textTransform: 'uppercase', marginTop: 10,
+        }}>
           Start your day with a puzzle
         </div>
       </div>
 
-      {/* Daily badge */}
+      {/* ── Live badge ── */}
       <div style={{
-        background: '#0f1535', border: '1px solid #2a2a6a',
-        borderRadius: 20, padding: '6px 16px', fontSize: 12,
-        color: '#aaaaff', fontWeight: 600, marginBottom: 48,
-        animation: 'fadeIn 0.6s ease',
-        display: 'flex', alignItems: 'center', gap: 6,
+        background: 'rgba(15,21,53,0.55)',
+        border: '1px solid rgba(99,102,241,0.22)',
+        borderRadius: 20, padding: '6px 16px',
+        fontSize: 12, color: '#aaaaff', fontWeight: 600,
+        marginBottom: 52, animation: 'fadeIn 0.65s ease',
+        display: 'flex', alignItems: 'center', gap: 7,
+        backdropFilter: 'blur(8px)',
       }}>
-        <span style={{ display: 'inline-block', width: 7, height: 7, borderRadius: '50%', background: '#4caf50', animation: 'pulse 2s infinite' }} />
+        <span style={{
+          display: 'inline-block', width: 7, height: 7,
+          borderRadius: '50%', background: '#4caf50',
+          animation: 'pulse 2s infinite',
+        }} />
         New puzzles every day
       </div>
 
-      {/* Game cards */}
+      {/* ── Game cards ── */}
       <div style={{
-        display: 'flex', gap: 20, flexWrap: 'wrap', justifyContent: 'center',
-        maxWidth: 800, width: '100%', marginBottom: 48,
+        display: 'flex', gap: 20, flexWrap: 'wrap',
+        justifyContent: 'center', maxWidth: 840,
+        width: '100%', marginBottom: 60,
       }}>
-        {games.map((g, i) => (
-          <a key={g.path} href={g.path} style={{ textDecoration: 'none', animation: `fadeIn 0.5s ${i * 150}ms both ease` }}>
-            <div className="game-card" style={{
-              width: 240, background: '#16213e',
-              border: `2px solid ${g.color}44`,
-              borderRadius: 16, padding: '28px 24px',
-              boxShadow: `0 4px 24px ${g.color}22`,
-              cursor: 'pointer',
-            }}>
-              {/* Emoji + badge */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
-                <div style={{ fontSize: 36 }}>{g.emoji}</div>
-                <div style={{
-                  background: `${g.color}22`, border: `1px solid ${g.color}66`,
-                  borderRadius: 10, padding: '3px 10px',
-                  fontSize: 11, fontWeight: 700, color: g.accent,
-                  textTransform: 'uppercase', letterSpacing: 1,
-                }}>{g.badge}</div>
-              </div>
+        {games.map((g, i) => {
+          const played    = g.key in todayResults
+          const completed = todayResults[g.key] === true
+          const failed    = played && !completed
 
-              {/* Title */}
-              <div style={{ fontSize: 28, fontWeight: 900, letterSpacing: 2, color: '#fff', marginBottom: 8 }}>
-                {g.title}
-              </div>
-              <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: 2, color: '#f5a623', textTransform: 'uppercase', marginBottom: 12 }}>
-                by Streakle
-              </div>
-
-              {/* Description */}
-              <div style={{ fontSize: 13, color: '#8888aa', lineHeight: 1.6, marginBottom: 20 }}>
-                {g.description}
-              </div>
-
-              {/* Play button */}
-              <div style={{
-                background: g.color, borderRadius: 8,
-                padding: '10px 0', textAlign: 'center',
-                fontSize: 14, fontWeight: 700, color: '#fff',
-                letterSpacing: 1,
+          return (
+            <a
+              key={g.path}
+              href={g.path}
+              className="game-card-link"
+              style={{ animation: `fadeIn 0.5s ${i * 110}ms both ease`, width: 248 }}
+            >
+              <div className="game-card-inner" style={{
+                background: 'rgba(18,26,58,0.75)',
+                backdropFilter: 'blur(14px)',
+                border: '1px solid rgba(255,255,255,0.07)',
+                borderTop: `3px solid ${g.color}`,
+                borderRadius: 16,
+                padding: '24px 22px 22px',
+                boxShadow: '0 4px 24px rgba(0,0,0,0.3)',
+                height: '100%',
+                position: 'relative',
+                overflow: 'hidden',
               }}>
-                Play Today's Puzzle →
+
+                {/* Corner glow */}
+                <div style={{
+                  position: 'absolute', top: -30, left: -30,
+                  width: 120, height: 120, borderRadius: '50%',
+                  background: `radial-gradient(circle, ${g.color}20 0%, transparent 70%)`,
+                  pointerEvents: 'none',
+                }} />
+
+                {/* Emoji + mechanic badge */}
+                <div style={{
+                  display: 'flex', justifyContent: 'space-between',
+                  alignItems: 'flex-start', marginBottom: 16,
+                }}>
+                  <div style={{ fontSize: 32 }}>{g.emoji}</div>
+                  <div style={{
+                    display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6,
+                  }}>
+                    <div style={{
+                      background: `${g.color}22`,
+                      border: `1px solid ${g.color}55`,
+                      borderRadius: 8, padding: '3px 9px',
+                      fontSize: 10, fontWeight: 700, color: g.accent,
+                      textTransform: 'uppercase', letterSpacing: 1,
+                    }}>{g.badge}</div>
+                    {/* Today's status badge */}
+                    {completed && (
+                      <div style={{
+                        fontSize: 10, fontWeight: 700, color: '#4ade80',
+                        background: 'rgba(74,222,128,0.1)',
+                        border: '1px solid rgba(74,222,128,0.25)',
+                        borderRadius: 8, padding: '2px 8px',
+                      }}>✅ Done</div>
+                    )}
+                    {failed && (
+                      <div style={{
+                        fontSize: 10, fontWeight: 700, color: '#f87171',
+                        background: 'rgba(248,113,113,0.1)',
+                        border: '1px solid rgba(248,113,113,0.25)',
+                        borderRadius: 8, padding: '2px 8px',
+                      }}>❌ Tried</div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Title */}
+                <div style={{
+                  fontFamily: "'Syne', sans-serif",
+                  fontSize: 26, fontWeight: 800,
+                  letterSpacing: 2, color: '#fff', marginBottom: 10,
+                }}>
+                  {g.title}
+                </div>
+
+                {/* Description */}
+                <div style={{
+                  fontSize: 13, color: '#6e6e99',
+                  lineHeight: 1.65, marginBottom: 22,
+                }}>
+                  {g.description}
+                </div>
+
+                {/* CTA button */}
+                {completed ? (
+                  <div style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                    background: 'rgba(74,222,128,0.1)',
+                    border: '1px solid rgba(74,222,128,0.28)',
+                    borderRadius: 8, padding: '10px 0',
+                    fontSize: 13, fontWeight: 700, color: '#4ade80',
+                  }}>
+                    ✅ Completed · Play Again?
+                  </div>
+                ) : (
+                  <div style={{
+                    background: g.color,
+                    borderRadius: 8, padding: '10px 0',
+                    textAlign: 'center',
+                    fontSize: 13, fontWeight: 700, color: '#fff',
+                    letterSpacing: 0.3,
+                  }}>
+                    {failed ? 'Try Archive →' : "Play Today's Puzzle →"}
+                  </div>
+                )}
               </div>
-            </div>
-          </a>
-        ))}
+            </a>
+          )
+        })}
       </div>
 
-      {/* Footer */}
-      <div style={{ textAlign: 'center', color: '#333', fontSize: 12 }}>
-        <a href="/privacy" style={{ color: '#4a4a8a', textDecoration: 'none' }}>
+      {/* ── Footer ── */}
+      <div style={{ textAlign: 'center', fontSize: 12 }}>
+        <a href="/privacy" style={{ color: '#363660', textDecoration: 'none' }}>
           Privacy Policy / Politique de confidentialité
         </a>
-        <div style={{ marginTop: 8, color: '#2a2a4a' }}>© 2026 Streakle. All rights reserved.</div>
+        <div style={{ marginTop: 6, color: '#2a2a4a' }}>© 2026 Streakle. All rights reserved.</div>
       </div>
     </div>
-  );
+  )
 }
