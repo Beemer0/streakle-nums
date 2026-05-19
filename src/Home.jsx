@@ -158,14 +158,11 @@ export default function Home() {
       </div>
 
       {/* ── Game cards ── */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 260px))',
-        justifyContent: 'center',
-        gap: 20, maxWidth: 900,
-        width: '100%', marginBottom: 60,
-      }}>
-        {games.map((g, i) => {
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 20, maxWidth: 900, width: '100%', marginBottom: 60 }}>
+        {[games.slice(0, 3), games.slice(3)].map((row, rowIdx) => (
+          <div key={rowIdx} style={{ display: 'flex', gap: 20, justifyContent: 'center' }}>
+            {row.map((g, colIdx) => {
+          const i = rowIdx === 0 ? colIdx : 3 + colIdx
           const played    = g.key in todayResults
           const completed = todayResults[g.key] === true
           const failed    = played && !completed
@@ -175,7 +172,7 @@ export default function Home() {
               key={g.path}
               href={g.path}
               className="game-card-link"
-              style={{ animation: `fadeIn 0.5s ${i * 110}ms both ease` }}
+              style={{ animation: `fadeIn 0.5s ${i * 110}ms both ease`, width: 260, flexShrink: 0 }}
             >
               <div className="game-card-inner" style={{
                 background: 'rgba(18,26,58,0.75)',
@@ -286,6 +283,8 @@ export default function Home() {
             </a>
           )
         })}
+          </div>
+        ))}
       </div>
 
       {/* ── Footer ── */}
