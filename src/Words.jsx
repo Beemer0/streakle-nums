@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
+import Archive from './Archive'
 import UserMenu from "./UserMenu";
 import { saveResult } from './saveResult';
 import { useStreak } from './useStreak';
@@ -168,10 +169,10 @@ const VALID_WORDS = new Set([
   "axiom",
 ]);
 
-function getDailyWord() {
-  const now = new Date();
-  const seed = now.getFullYear() * 10000 + (now.getMonth() + 1) * 100 + now.getDate();
-  return WORDS[seed % WORDS.length];
+function getDailyWord(dateStr) {
+  const seedDate = dateStr ?? new Date().toLocaleDateString('en-CA')
+  const seed = parseInt(seedDate.replace(/-/g, ''))
+  return WORDS[seed % WORDS.length]
 }
 
 function formatDate() {
@@ -200,7 +201,9 @@ const css = `
 
 export default function WordsGame() {
   const { streak } = useStreak('words');
-  const [daily] = useState(() => getDailyWord());
+  const [showArchive, setShowArchive] = useState(false)
+  const [puzzleDate, setPuzzleDate] = useState(null)
+  const daily = useMemo(() => getDailyWord(puzzleDate), [puzzleDate])
   const [guesses, setGuesses] = useState(Array(ROWS).fill(''));
   const [current, setCurrent] = useState(0);
   const [input, setInput] = useState('');
@@ -307,6 +310,24 @@ export default function WordsGame() {
     return ()=>window.removeEventListener('keydown',handler);
   }, [handleKey]);
 
+  useEffect(() => {
+    if (!puzzleDate) return
+    setGuesses(Array(ROWS).fill(''))
+    setCurrent(0)
+    setInput('')
+    setTileStates({})
+    setKeyStates({})
+    setShakeRow(null)
+    setBounceRow(null)
+    setGameOver(false)
+    setWon(false)
+    setMessage(null)
+    setConfetti([])
+    setCopied(false)
+    setShowFact(false)
+    setRevealingTiles({})
+  }, [puzzleDate])
+
   const getLetter=(r,c)=>{
     if (guesses[r]) return guesses[r][c]||'';
     if (r===current) return input[c]||'';
@@ -351,6 +372,9 @@ export default function WordsGame() {
         </div>
         <button onClick={()=>setShowHow(!showHow)} style={{background:'none',border:'1px solid #4a4a8a',borderRadius:6,color:'#aaaaff',cursor:'pointer',fontSize:13,padding:'3px 10px',marginLeft:8}}>
           How to play
+        </button>
+        <button onClick={() => setShowArchive(true)} style={{background:'none',border:'1px solid #4a4a8a',borderRadius:6,color:'#aaaaff',cursor:'pointer',fontSize:13,padding:'3px 10px'}}>
+          📅 Archive
         </button>
       </div>
 
@@ -472,6 +496,14 @@ export default function WordsGame() {
       <div style={{marginTop:32,fontSize:12,color:'#4a4a8a',textAlign:'center'}}>
         <a href="/privacy" style={{color:'#4a4a8a',textDecoration:'none'}}>Privacy Policy / Politique de confidentialité</a>
       </div>
+
+      {showArchive && (
+        <Archive
+          game="words"
+          onSelectDate={(date) => setPuzzleDate(date)}
+          onClose={() => setShowArchive(false)}
+        />
+      )}
     </div>
   );
 }

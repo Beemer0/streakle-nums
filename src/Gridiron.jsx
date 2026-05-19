@@ -1,4 +1,5 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useMemo } from "react";
+import Archive from './Archive'
 import UserMenu from "./UserMenu";
 import { saveResult } from './saveResult';
 import { useStreak } from './useStreak';
@@ -424,10 +425,10 @@ const PUZZLES = [
   { rows: ["NYG","ATL","SB_CHAMP"],     cols: ["CAR","PRO_BOWL","OPOY"] },
 ];
 
-function getDailyPuzzle() {
-  const now = new Date();
-  const seed = now.getFullYear() * 10000 + (now.getMonth() + 1) * 100 + now.getDate();
-  return PUZZLES[seed % PUZZLES.length];
+function getDailyPuzzle(dateStr) {
+  const seedDate = dateStr ?? new Date().toLocaleDateString('en-CA')
+  const seed = parseInt(seedDate.replace(/-/g, ''))
+  return PUZZLES[seed % PUZZLES.length]
 }
 
 function formatDate() {
@@ -453,7 +454,9 @@ const css = `
 
 export default function GridironGame() {
   const { streak } = useStreak('gridiron');
-  const [puzzle] = useState(() => getDailyPuzzle());
+  const [showArchive, setShowArchive] = useState(false)
+  const [puzzleDate, setPuzzleDate] = useState(null)
+  const puzzle = useMemo(() => getDailyPuzzle(puzzleDate), [puzzleDate])
   const [cells, setCells] = useState({});
   const [activeCell, setActiveCell] = useState(null);
   const [query, setQuery] = useState('');
@@ -468,6 +471,22 @@ export default function GridironGame() {
   const [copied, setCopied] = useState(false);
   const [totalScore, setTotalScore] = useState(0);
   const inputRef = useRef(null);
+
+  useEffect(() => {
+    if (!puzzleDate) return
+    setCells({})
+    setActiveCell(null)
+    setQuery('')
+    setSuggestions([])
+    setPendingPlayer(null)
+    setGuessesLeft(9)
+    setShakeCell(null)
+    setWon(false)
+    setGameOver(false)
+    setConfetti([])
+    setCopied(false)
+    setTotalScore(0)
+  }, [puzzleDate])
 
   const rowHeaders = puzzle.rows;
   const colHeaders = puzzle.cols;
@@ -581,6 +600,9 @@ export default function GridironGame() {
         </div>
         <button onClick={()=>setShowHow(!showHow)} style={{background:'none',border:'1px solid #4a4a8a',borderRadius:6,color:'#aaaaff',cursor:'pointer',fontSize:13,padding:'3px 10px',marginLeft:8}}>
           How to play
+        </button>
+        <button onClick={() => setShowArchive(true)} style={{background:'none',border:'1px solid #4a4a8a',borderRadius:6,color:'#aaaaff',cursor:'pointer',fontSize:13,padding:'3px 10px'}}>
+          📅 Archive
         </button>
       </div>
 
@@ -721,6 +743,14 @@ export default function GridironGame() {
       <div style={{marginTop:32,fontSize:12,color:'#4a4a8a',textAlign:'center'}}>
         <a href="/privacy" style={{color:'#4a4a8a',textDecoration:'none'}}>Privacy Policy / Politique de confidentialité</a>
       </div>
+
+      {showArchive && (
+        <Archive
+          game="gridiron"
+          onSelectDate={(date) => setPuzzleDate(date)}
+          onClose={() => setShowArchive(false)}
+        />
+      )}
     </div>
   );
 }

@@ -1,4 +1,5 @@
-import React, { useState, useRef, useEffect, useCallback } from "react";
+import React, { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import Archive from './Archive'
 import UserMenu from "./UserMenu";
 import { saveResult } from './saveResult';
 import { useStreak } from './useStreak';
@@ -126,10 +127,10 @@ const PUZZLES = [
   },
 ];
 
-function getDailyPuzzle() {
-  const now = new Date();
-  const seed = now.getFullYear() * 10000 + (now.getMonth() + 1) * 100 + now.getDate();
-  return PUZZLES[seed % PUZZLES.length];
+function getDailyPuzzle(dateStr) {
+  const seedDate = dateStr ?? new Date().toLocaleDateString('en-CA')
+  const seed = parseInt(seedDate.replace(/-/g, ''))
+  return PUZZLES[seed % PUZZLES.length]
 }
 
 function formatDate() {
@@ -193,11 +194,15 @@ function FlyingTile({ word, fr, fc, tr, tc, cs, total, color }) {
 
 export default function GridGame() {
   const { streak } = useStreak('link');
-  const [puzzle] = useState(() => {
-    const p = getDailyPuzzle();
-    const seed = new Date().getFullYear() * 10000 + (new Date().getMonth() + 1) * 100 + new Date().getDate();
-    return { ...p, shuffled: seededShuffle(p.categories.flatMap(c => c.words), seed) };
-  });
+  const [showArchive, setShowArchive] = useState(false)
+  const [puzzleDate, setPuzzleDate] = useState(null)
+
+  const puzzle = useMemo(() => {
+    const seedDate = puzzleDate ?? new Date().toLocaleDateString('en-CA')
+    const seed = parseInt(seedDate.replace(/-/g, ''))
+    const p = getDailyPuzzle(puzzleDate)
+    return { ...p, shuffled: seededShuffle(p.categories.flatMap(c => c.words), seed) }
+  }, [puzzleDate])
 
   const [selected, setSelected] = useState([]);
   const [solved, setSolved] = useState([]);
@@ -221,6 +226,24 @@ export default function GridGame() {
   const solvedRef2 = useRef([]);
 
   useEffect(() => { solvedRef2.current = solved; }, [solved]);
+
+  useEffect(() => {
+    if (!puzzleDate) return
+    setSelected([])
+    setSolved([])
+    setLives(4)
+    setGameOver(false)
+    setWon(false)
+    setShakeWords([])
+    setMessage(null)
+    setGuessHistory([])
+    setConfetti([])
+    setCopied(false)
+    setOneAway(false)
+    setFlyingTiles([])
+    setAnimating(false)
+    setHiddenWords([])
+  }, [puzzleDate])
 
   const solvedWords = solved.flatMap(i => puzzle.categories[i].words);
   const remaining = puzzle.shuffled.filter(w => !solvedWords.includes(w));
@@ -343,6 +366,9 @@ export default function GridGame() {
         </div>
         <button onClick={() => setShowHow(!showHow)} style={{ background: 'none', border: '1px solid #4a4a8a', borderRadius: 6, color: '#aaaaff', cursor: 'pointer', fontSize: 13, padding: '3px 10px', marginLeft: 8 }}>
           How to play
+        </button>
+        <button onClick={() => setShowArchive(true)} style={{ background: 'none', border: '1px solid #4a4a8a', borderRadius: 6, color: '#aaaaff', cursor: 'pointer', fontSize: 13, padding: '3px 10px' }}>
+          📅 Archive
         </button>
       </div>
 
@@ -470,6 +496,14 @@ export default function GridGame() {
       <div style={{ marginTop: 32, fontSize: 12, color: '#4a4a8a', textAlign: 'center' }}>
         <a href="/privacy" style={{ color: '#4a4a8a', textDecoration: 'none' }}>Privacy Policy / Politique de confidentialité</a>
       </div>
+
+      {showArchive && (
+        <Archive
+          game="link"
+          onSelectDate={(date) => setPuzzleDate(date)}
+          onClose={() => setShowArchive(false)}
+        />
+      )}
     </div>
   );
 }

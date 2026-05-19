@@ -1,4 +1,5 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
+import Archive from './Archive'
 import UserMenu from "./UserMenu";
 import { saveResult } from './saveResult';
 import { useStreak } from './useStreak';
@@ -12,11 +13,6 @@ function mulberry32(seed) {
     t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
     return ((t ^ t >>> 14) >>> 0) / 4294967296;
   };
-}
-
-function dateToSeed() {
-  const now = new Date();
-  return now.getFullYear() * 10000 + (now.getMonth() + 1) * 100 + now.getDate();
 }
 
 function seededShuffle(arr, rng) {
@@ -95,11 +91,16 @@ const css = `
 
 export default function App() {
   const { streak } = useStreak('nums');
-  const [pz] = useState(() => {
-    const rng = mulberry32(dateToSeed());
-    const sol = generateSolution(rng);
-    return { sol, cl: computeClues(sol), sc: scramble(sol, rng) };
-  });
+  const [showArchive, setShowArchive] = useState(false)
+  const [puzzleDate, setPuzzleDate] = useState(null)
+
+  const pz = useMemo(() => {
+    const seedDate = puzzleDate ?? new Date().toLocaleDateString('en-CA')
+    const seed = parseInt(seedDate.replace(/-/g, ''))
+    const rng = mulberry32(seed)
+    const sol = generateSolution(rng)
+    return { sol, cl: computeClues(sol), sc: scramble(sol, rng) }
+  }, [puzzleDate])
 
   const [board, setBoard] = useState(() => pz.sc.map(r => [...r]));
   const [sel, setSel] = useState(null);
@@ -115,6 +116,22 @@ export default function App() {
   const [dragOver, setDragOver] = useState(null); // [r,c] being hovered
   const [dragging, setDragging] = useState(null); // [r,c] being dragged
   const animIdRef = useRef(0);
+
+  useEffect(() => {
+    if (!puzzleDate) return
+    setBoard(pz.sc.map(r => [...r]))
+    setSwaps(20)
+    setSolved(false)
+    setSel(null)
+    setStarsAnim(false)
+    setConfetti([])
+    setCellAnim({})
+    setFlyingTiles([])
+    setSwapping(false)
+    setCopied(false)
+    setDragOver(null)
+    setDragging(null)
+  }, [puzzleDate])
 
   const triggerCellAnim = (keys, name, dur=500) => {
     setCellAnim(a => { const n={...a}; keys.forEach(k=>n[k]=name); return n; });
@@ -320,6 +337,9 @@ export default function App() {
         <button onClick={()=>setShowHow(!showHow)} style={{background:'none',border:'1px solid #4a4a8a',borderRadius:6,color:'#aaaaff',cursor:'pointer',fontSize:13,padding:'3px 10px',marginLeft:8}}>
           How to play
         </button>
+        <button onClick={() => setShowArchive(true)} style={{background:'none',border:'1px solid #4a4a8a',borderRadius:6,color:'#aaaaff',cursor:'pointer',fontSize:13,padding:'3px 10px'}}>
+          📅 Archive
+        </button>
       </div>
 
       <div style={{fontSize:13,color:'#6666aa',marginBottom:10,marginTop:6}}>{formatDate()}</div>
@@ -397,6 +417,13 @@ export default function App() {
         <a href="/privacy" style={{color:'#4a4a8a',textDecoration:'none'}}>Privacy Policy / Politique de confidentialité</a>
       </div>
 
+      {showArchive && (
+        <Archive
+          game="nums"
+          onSelectDate={(date) => setPuzzleDate(date)}
+          onClose={() => setShowArchive(false)}
+        />
+      )}
     </div>
   );
 }
