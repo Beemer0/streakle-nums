@@ -29,11 +29,19 @@ const AWARDS = {
   TED_LINDSAY:"Ted Lindsay Award",
 };
 
-const AWARD_EMOJI = {
-  SC_CHAMP:"🏒",CONN_SMYTHE:"🎖️",HART:"🏅",ALL_STAR:"⭐",
-  VEZINA:"🥅",NORRIS:"🛡️",ART_ROSS:"🎯",CALDER:"🌟",
-  SELKE:"🔰",TED_LINDSAY:"🔥",
+const NHL_AWARD_IMG = {
+  SC_CHAMP:'https://upload.wikimedia.org/wikipedia/commons/thumb/4/47/Stanley_Cup%2C_2015.jpg/100px-Stanley_Cup%2C_2015.jpg',
+  CONN_SMYTHE:'https://upload.wikimedia.org/wikipedia/commons/thumb/3/39/ConnSmytheTrophy.jpg/100px-ConnSmytheTrophy.jpg',
+  HART:'https://upload.wikimedia.org/wikipedia/commons/thumb/e/e7/Hhof_hart.jpg/100px-Hhof_hart.jpg',
+  VEZINA:'https://upload.wikimedia.org/wikipedia/commons/thumb/c/cc/Hhof_vezina.jpg/100px-Hhof_vezina.jpg',
+  NORRIS:'https://upload.wikimedia.org/wikipedia/commons/thumb/3/34/Hhof_norris.jpg/100px-Hhof_norris.jpg',
+  ART_ROSS:'https://upload.wikimedia.org/wikipedia/commons/thumb/8/89/Artrosstrophy.jpg/100px-Artrosstrophy.jpg',
+  CALDER:'https://upload.wikimedia.org/wikipedia/commons/thumb/6/6f/Hhof_calder.jpg/100px-Hhof_calder.jpg',
+  SELKE:'https://upload.wikimedia.org/wikipedia/commons/thumb/d/d3/Hhof_selke.jpg/100px-Hhof_selke.jpg',
+  TED_LINDSAY:'https://upload.wikimedia.org/wikipedia/commons/thumb/e/eb/Ted-lindsay-award.jpg/100px-Ted-lindsay-award.jpg',
 };
+
+const AWARD_BADGE = { ALL_STAR:'ALL STAR' };
 
 const NHL_LOGO = {
   ANA:'ana',ARI:'ari',BOS:'bos',BUF:'buf',CAR:'car',
@@ -613,9 +621,9 @@ export default function FaceoffGame() {
   };
 
   const getHeaderContent = (key) => {
-    if (AWARDS[key]) return { emoji: AWARD_EMOJI[key], label: AWARDS[key], color: '#C9A84C', logoUrl: null };
+    if (AWARDS[key]) return { badge: AWARD_BADGE[key] || null, label: AWARDS[key], color: '#C9A84C', logoUrl: NHL_AWARD_IMG[key] || null };
     const abbr = NHL_LOGO[key];
-    return { emoji: '🏒', label: TEAMS[key] || key, color: '#C9A84C', logoUrl: abbr ? `https://a.espncdn.com/i/teamlogos/nhl/500/${abbr}.png` : null };
+    return { badge: null, label: TEAMS[key] || key, color: '#C9A84C', logoUrl: abbr ? `https://a.espncdn.com/i/teamlogos/nhl/500/${abbr}.png` : null };
   };
 
   const handleCellClick = (r, c) => {
@@ -740,11 +748,11 @@ export default function FaceoffGame() {
           <div style={{background:'transparent'}}/>
 
           {colHeaders.map((col,ci)=>{
-            const {emoji,label,color,logoUrl}=getHeaderContent(col);
+            const {badge,label,color,logoUrl}=getHeaderContent(col);
             return (
               <div key={ci} style={{background:'#1C1A16',border:'1px solid #2C2820',borderRadius:8,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:'4px 6px',textAlign:'center'}}>
-                {logoUrl ? <img src={logoUrl} alt={label} width={38} height={38} style={{objectFit:'contain'}} onError={e=>{e.target.style.display='none'}}/> : <div style={{fontSize:18}}>{emoji}</div>}
-                <div style={{fontSize:9,fontWeight:700,color,lineHeight:1.2}}>{label}</div>
+                {logoUrl ? <img src={logoUrl} alt={label} width={38} height={38} style={{objectFit:'contain'}} onError={e=>{e.target.style.display='none'}}/> : <div style={{background:'#C9A84C',color:'#0F0E0C',borderRadius:4,padding:'2px 6px',fontSize:9,fontWeight:800,letterSpacing:0.5}}>{badge}</div>}
+                <div style={{fontSize:9,fontWeight:700,color,lineHeight:1.2,marginTop:3}}>{label}</div>
               </div>
             );
           })}
@@ -752,7 +760,7 @@ export default function FaceoffGame() {
           {rowHeaders.map((row,ri)=>(
             <React.Fragment key={`row-${ri}`}>
               <div style={{background:'#1C1A16',border:'1px solid #2C2820',borderRadius:8,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:'4px 6px',textAlign:'center'}}>
-                {(()=>{const{emoji,label,color,logoUrl}=getHeaderContent(row);return(<>{logoUrl?<img src={logoUrl} alt={label} width={38} height={38} style={{objectFit:'contain'}} onError={e=>{e.target.style.display='none'}}/>:<div style={{fontSize:20}}>{emoji}</div>}<div style={{fontSize:9,fontWeight:700,color,lineHeight:1.2}}>{label}</div></>);})()}
+                {(()=>{const{badge,label,color,logoUrl}=getHeaderContent(row);return(<>{logoUrl?<img src={logoUrl} alt={label} width={38} height={38} style={{objectFit:'contain'}} onError={e=>{e.target.style.display='none'}}/>:<div style={{background:'#C9A84C',color:'#0F0E0C',borderRadius:4,padding:'2px 6px',fontSize:9,fontWeight:800,letterSpacing:0.5}}>{badge}</div>}<div style={{fontSize:9,fontWeight:700,color,lineHeight:1.2,marginTop:3}}>{label}</div></>);})()}
               </div>
               {colHeaders.map((col,ci)=>{
                 const key=`${ri}-${ci}`;
