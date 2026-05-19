@@ -37,12 +37,12 @@ export default function UserMenu() {
           <div style={{ fontSize: 11, color: '#7A6E5F', marginBottom: 12 }}>{user.email}</div>
           <div style={{ borderTop: '1px solid #2C2820', paddingTop: 10 }}>
             <button onClick={signOut} style={{
-              width: '100%', background: 'none', border: '1px solid #e94560',
-              borderRadius: 6, color: '#e94560', cursor: 'pointer',
+              width: '100%', background: 'none', border: '1px solid rgba(252,165,165,0.25)',
+              borderRadius: 6, color: '#FCA5A5', cursor: 'pointer',
               fontSize: 13, fontWeight: 600, padding: '8px',
               transition: 'background 0.2s',
             }}
-              onMouseOver={e => e.currentTarget.style.background = '#e9456022'}
+              onMouseOver={e => e.currentTarget.style.background = 'rgba(252,165,165,0.07)'}
               onMouseOut={e => e.currentTarget.style.background = 'none'}
             >
               Sign out
