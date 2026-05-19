@@ -301,7 +301,7 @@ const PLAYERS = [
   {n:"Bryan Little",t:["ATL","WPG"],a:[],f:52},
   {n:"Patrik Berglund",t:["STL"],a:[],f:45},
   {n:"David Perron",t:["STL","EDM","PIT","VGK","BUF","DET"],a:["SC_CHAMP","ALL_STAR"],f:62},
-  {n:"Ryan O'Reilly",t:["COL","BUF","STL","TOR"],a:["SC_CHAMP","CONN_SMYTHE","ALL_STAR","SELKE","TED_LINDSAY"],f:85},
+  {n:"Ryan O'Reilly",t:["COL","BUF","STL","TOR","NSH"],a:["SC_CHAMP","CONN_SMYTHE","ALL_STAR","SELKE","TED_LINDSAY"],f:85},
   {n:"Vladimir Tarasenko",t:["STL","NYR","OTT","FLA"],a:["SC_CHAMP","ALL_STAR"],f:82},
   {n:"Colton Parayko",t:["STL"],a:["SC_CHAMP","ALL_STAR"],f:65},
   {n:"Jaden Schwartz",t:["STL","SEA"],a:["SC_CHAMP","ALL_STAR"],f:62},
