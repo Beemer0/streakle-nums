@@ -30,15 +30,15 @@ const AWARDS = {
 };
 
 const NHL_AWARD_IMG = {
-  SC_CHAMP:'https://upload.wikimedia.org/wikipedia/commons/thumb/4/47/Stanley_Cup%2C_2015.jpg/100px-Stanley_Cup%2C_2015.jpg',
-  CONN_SMYTHE:'https://upload.wikimedia.org/wikipedia/commons/thumb/3/39/ConnSmytheTrophy.jpg/100px-ConnSmytheTrophy.jpg',
-  HART:'https://upload.wikimedia.org/wikipedia/commons/thumb/e/e7/Hhof_hart.jpg/100px-Hhof_hart.jpg',
-  VEZINA:'https://upload.wikimedia.org/wikipedia/commons/thumb/c/cc/Hhof_vezina.jpg/100px-Hhof_vezina.jpg',
-  NORRIS:'https://upload.wikimedia.org/wikipedia/commons/thumb/3/34/Hhof_norris.jpg/100px-Hhof_norris.jpg',
-  ART_ROSS:'https://upload.wikimedia.org/wikipedia/commons/thumb/8/89/Artrosstrophy.jpg/100px-Artrosstrophy.jpg',
-  CALDER:'https://upload.wikimedia.org/wikipedia/commons/thumb/6/6f/Hhof_calder.jpg/100px-Hhof_calder.jpg',
-  SELKE:'https://upload.wikimedia.org/wikipedia/commons/thumb/d/d3/Hhof_selke.jpg/100px-Hhof_selke.jpg',
-  TED_LINDSAY:'https://upload.wikimedia.org/wikipedia/commons/thumb/e/eb/Ted-lindsay-award.jpg/100px-Ted-lindsay-award.jpg',
+  SC_CHAMP:'https://upload.wikimedia.org/wikipedia/commons/thumb/4/47/Stanley_Cup%2C_2015.jpg/250px-Stanley_Cup%2C_2015.jpg',
+  CONN_SMYTHE:'https://upload.wikimedia.org/wikipedia/commons/thumb/3/39/ConnSmytheTrophy.jpg/250px-ConnSmytheTrophy.jpg',
+  HART:'https://upload.wikimedia.org/wikipedia/commons/thumb/e/e7/Hhof_hart.jpg/250px-Hhof_hart.jpg',
+  VEZINA:'https://upload.wikimedia.org/wikipedia/commons/thumb/c/cc/Hhof_vezina.jpg/250px-Hhof_vezina.jpg',
+  NORRIS:'https://upload.wikimedia.org/wikipedia/commons/thumb/3/34/Hhof_norris.jpg/250px-Hhof_norris.jpg',
+  ART_ROSS:'https://upload.wikimedia.org/wikipedia/commons/thumb/8/89/Artrosstrophy.jpg/250px-Artrosstrophy.jpg',
+  CALDER:'https://upload.wikimedia.org/wikipedia/commons/thumb/6/6f/Hhof_calder.jpg/250px-Hhof_calder.jpg',
+  SELKE:'https://upload.wikimedia.org/wikipedia/commons/thumb/d/d3/Hhof_selke.jpg/250px-Hhof_selke.jpg',
+  TED_LINDSAY:'https://upload.wikimedia.org/wikipedia/commons/thumb/e/eb/Ted-lindsay-award.jpg/250px-Ted-lindsay-award.jpg',
 };
 
 const AWARD_BADGE = { ALL_STAR:'ALL STAR' };
