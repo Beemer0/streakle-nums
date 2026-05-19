@@ -246,8 +246,8 @@ export default function Home() {
                 {/* Title */}
                 <div style={{
                   fontFamily: "'Syne', sans-serif",
-                  fontSize: 26, fontWeight: 800,
-                  letterSpacing: 2, color: '#fff', marginBottom: 10,
+                  fontSize: 22, fontWeight: 800,
+                  letterSpacing: 1, color: '#fff', marginBottom: 10,
                 }}>
                   {g.title}
                 </div>
