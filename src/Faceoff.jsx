@@ -35,6 +35,16 @@ const AWARD_EMOJI = {
   SELKE:"🔰",TED_LINDSAY:"🔥",
 };
 
+const NHL_LOGO = {
+  ANA:'ana',ARI:'ari',BOS:'bos',BUF:'buf',CAR:'car',
+  CBJ:'cbj',CGY:'cgy',CHI:'chi',COL:'col',DAL:'dal',
+  DET:'det',EDM:'edm',FLA:'fla',LAK:'la',MIN:'min',
+  MTL:'mtl',NJD:'nj',NSH:'nsh',NYI:'nyi',NYR:'nyr',
+  OTT:'ott',PHI:'phi',PIT:'pit',SEA:'sea',SJS:'sj',
+  STL:'stl',TBL:'tb',TOR:'tor',VAN:'van',VGK:'vgk',
+  WPG:'wpg',WSH:'wsh',
+};
+
 const PLAYERS = [
   // ── LEGENDS ──
   {n:"Wayne Gretzky",t:["EDM","LAK","STL","NYR"],a:["SC_CHAMP","HART","ALL_STAR","ART_ROSS","TED_LINDSAY"],f:99},
@@ -603,8 +613,9 @@ export default function FaceoffGame() {
   };
 
   const getHeaderContent = (key) => {
-    if (AWARDS[key]) return { emoji: AWARD_EMOJI[key], label: AWARDS[key], color: '#C9A84C' };
-    return { emoji: '🏒', label: TEAMS[key] || key, color: '#C9A84C' };
+    if (AWARDS[key]) return { emoji: AWARD_EMOJI[key], label: AWARDS[key], color: '#C9A84C', logoUrl: null };
+    const abbr = NHL_LOGO[key];
+    return { emoji: '🏒', label: TEAMS[key] || key, color: '#C9A84C', logoUrl: abbr ? `https://a.espncdn.com/i/teamlogos/nhl/500/${abbr}.png` : null };
   };
 
   const handleCellClick = (r, c) => {
@@ -729,10 +740,10 @@ export default function FaceoffGame() {
           <div style={{background:'transparent'}}/>
 
           {colHeaders.map((col,ci)=>{
-            const {emoji,label,color}=getHeaderContent(col);
+            const {emoji,label,color,logoUrl}=getHeaderContent(col);
             return (
               <div key={ci} style={{background:'#1C1A16',border:'1px solid #2C2820',borderRadius:8,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:'4px 6px',textAlign:'center'}}>
-                <div style={{fontSize:18}}>{emoji}</div>
+                {logoUrl ? <img src={logoUrl} alt={label} width={38} height={38} style={{objectFit:'contain'}} onError={e=>{e.target.style.display='none'}}/> : <div style={{fontSize:18}}>{emoji}</div>}
                 <div style={{fontSize:9,fontWeight:700,color,lineHeight:1.2}}>{label}</div>
               </div>
             );
@@ -741,7 +752,7 @@ export default function FaceoffGame() {
           {rowHeaders.map((row,ri)=>(
             <React.Fragment key={`row-${ri}`}>
               <div style={{background:'#1C1A16',border:'1px solid #2C2820',borderRadius:8,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:'4px 6px',textAlign:'center'}}>
-                {(()=>{const{emoji,label,color}=getHeaderContent(row);return(<><div style={{fontSize:20}}>{emoji}</div><div style={{fontSize:9,fontWeight:700,color,lineHeight:1.2}}>{label}</div></>);})()}
+                {(()=>{const{emoji,label,color,logoUrl}=getHeaderContent(row);return(<>{logoUrl?<img src={logoUrl} alt={label} width={38} height={38} style={{objectFit:'contain'}} onError={e=>{e.target.style.display='none'}}/>:<div style={{fontSize:20}}>{emoji}</div>}<div style={{fontSize:9,fontWeight:700,color,lineHeight:1.2}}>{label}</div></>);})()}
               </div>
               {colHeaders.map((col,ci)=>{
                 const key=`${ri}-${ci}`;

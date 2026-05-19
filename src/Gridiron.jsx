@@ -27,6 +27,16 @@ const AWARD_EMOJI = {
   OROY:"🌟",DROY:"🔰",
 };
 
+const NFL_LOGO = {
+  ARI:'ari',ATL:'atl',BAL:'bal',BUF:'buf',CAR:'car',
+  CHI:'chi',CIN:'cin',CLE:'cle',DAL:'dal',DEN:'den',
+  DET:'det',GB:'gb',HOU:'hou',IND:'ind',JAX:'jax',
+  KC:'kc',LAC:'lac',LAR:'lar',LV:'lv',MIA:'mia',
+  MIN:'min',NE:'ne',NO:'no',NYG:'nyg',NYJ:'nyj',
+  PHI:'phi',PIT:'pit',SEA:'sea',SF:'sf',STL:'stl',
+  TB:'tb',TEN:'ten',WAS:'wsh',OAK:'oak',SD:'sd',
+};
+
 const PLAYERS = [
   {n:"Tom Brady",t:["NE","TB"],a:["SB_CHAMP","SB_MVP","NFL_MVP","PRO_BOWL","OPOY","PASS_TITLE"],f:99},
   {n:"Peyton Manning",t:["IND","DEN"],a:["SB_CHAMP","SB_MVP","NFL_MVP","PRO_BOWL","OPOY","PASS_TITLE"],f:98},
@@ -499,8 +509,9 @@ export default function GridironGame() {
   };
 
   const getHeaderContent = (key) => {
-    if (AWARDS[key]) return { emoji: AWARD_EMOJI[key], label: AWARDS[key], color: '#C9A84C' };
-    return { emoji: '🏈', label: TEAMS[key] || key, color: '#C9A84C' };
+    if (AWARDS[key]) return { emoji: AWARD_EMOJI[key], label: AWARDS[key], color: '#C9A84C', logoUrl: null };
+    const abbr = NFL_LOGO[key];
+    return { emoji: '🏈', label: TEAMS[key] || key, color: '#C9A84C', logoUrl: abbr ? `https://a.espncdn.com/i/teamlogos/nfl/500/${abbr}.png` : null };
   };
 
   const handleCellClick = (r, c) => {
@@ -638,10 +649,10 @@ export default function GridironGame() {
           <div style={{background:'transparent'}}/>
 
           {colHeaders.map((col,ci)=>{
-            const {emoji,label,color}=getHeaderContent(col);
+            const {emoji,label,color,logoUrl}=getHeaderContent(col);
             return (
               <div key={ci} style={{background:'#1C1A16',border:'1px solid #2C2820',borderRadius:8,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:'4px 6px',textAlign:'center'}}>
-                <div style={{fontSize:18}}>{emoji}</div>
+                {logoUrl ? <img src={logoUrl} alt={label} width={38} height={38} style={{objectFit:'contain'}} onError={e=>{e.target.style.display='none'}}/> : <div style={{fontSize:18}}>{emoji}</div>}
                 <div style={{fontSize:9,fontWeight:700,color,lineHeight:1.2}}>{label}</div>
               </div>
             );
@@ -650,7 +661,7 @@ export default function GridironGame() {
           {rowHeaders.map((row,ri)=>(
             <React.Fragment key={`row-${ri}`}>
               <div style={{background:'#1C1A16',border:'1px solid #2C2820',borderRadius:8,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:'4px 6px',textAlign:'center'}}>
-                {(()=>{const{emoji,label,color}=getHeaderContent(row);return(<><div style={{fontSize:20}}>{emoji}</div><div style={{fontSize:9,fontWeight:700,color,lineHeight:1.2}}>{label}</div></>);})()}
+                {(()=>{const{emoji,label,color,logoUrl}=getHeaderContent(row);return(<>{logoUrl?<img src={logoUrl} alt={label} width={38} height={38} style={{objectFit:'contain'}} onError={e=>{e.target.style.display='none'}}/>:<div style={{fontSize:20}}>{emoji}</div>}<div style={{fontSize:9,fontWeight:700,color,lineHeight:1.2}}>{label}</div></>);})()}
               </div>
               {colHeaders.map((col,ci)=>{
                 const key=`${ri}-${ci}`;
