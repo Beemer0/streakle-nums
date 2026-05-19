@@ -147,7 +147,7 @@ export default function App() {
   const spawnConfetti = () => {
     const items = Array.from({length:30},(_,i)=>({
       id:i, x:20+Math.random()*60, delay:Math.random()*700,
-      color:['#4caf50','#f5a623','#aaaaff','#e94560','#ffd700','#fff'][i%6],
+      color:['#4caf50','#C9A84C','#C9A84C','#e94560','#ffd700','#fff'][i%6],
       size:5+Math.random()*8
     }));
     setConfetti(items);
@@ -215,11 +215,11 @@ export default function App() {
     ghost.textContent = board[r][c];
     Object.assign(ghost.style, {
       width:`${CS}px`, height:`${CS}px`,
-      background:'#7a4d00', border:'2px solid #f5a623',
+      background:'#2C1F00', border:'2px solid #C9A84C',
       borderRadius:'8px', display:'flex', alignItems:'center',
       justifyContent:'center', fontSize:'20px', fontWeight:'700',
       color:'#fff', position:'fixed', top:'-200px', left:'-200px',
-      boxShadow:'0 4px 20px #f5a62366',
+      boxShadow:'0 4px 20px #C9A84C66',
     });
     document.body.appendChild(ghost);
     e.dataTransfer.setDragImage(ghost, CS/2, CS/2);
@@ -269,10 +269,10 @@ export default function App() {
     const an = cellAnim[key];
 
     if (isActive(r,c)) {
-      let bg='#16213e', border='#0f3460', color='#e0e0e0';
+      let bg='#1C1A16', border='#2C2820', color='#e0e0e0';
       if (isCorr)     { bg='#2d6a30'; border='#4caf50'; color='#fff'; }
-      if (isSel)      { bg='#7a4d00'; border='#f5a623'; color='#fff'; }
-      if (isDragging) { bg='#4a3000'; border='#f5a623'; color='#fff'; }
+      if (isSel)      { bg='#2C1F00'; border='#C9A84C'; color='#fff'; }
+      if (isDragging) { bg='#1a1200'; border='#C9A84C'; color='#fff'; }
       if (isDragOver) { bg='#1a3a6a'; border='#4a9eff'; color='#fff'; }
 
       cells.push(
@@ -295,10 +295,10 @@ export default function App() {
             opacity: isFlying ? 0 : isDragging ? 0.5 : 1,
             transform: isDragOver ? 'scale(1.08)' : 'scale(1)',
             overflow:'hidden',
-            boxShadow: isDragOver ? '0 0 0 3px #4a9eff44' : isSel ? '0 0 0 3px #f5a62344' : 'none',
+            boxShadow: isDragOver ? '0 0 0 3px #4a9eff44' : isSel ? '0 0 0 3px #C9A84C44' : 'none',
           }}>
           {board[r][c]}
-          {isSel&&<div style={{position:'absolute',inset:0,borderRadius:6,border:'2px solid #f5a623',animation:'ripple 0.5s ease forwards',pointerEvents:'none'}}/>}
+          {isSel&&<div style={{position:'absolute',inset:0,borderRadius:6,border:'2px solid #C9A84C',animation:'ripple 0.5s ease forwards',pointerEvents:'none'}}/>}
           {isDragOver&&<div style={{position:'absolute',inset:0,borderRadius:6,border:'2px solid #4a9eff',animation:'ripple 0.5s ease forwards',pointerEvents:'none'}}/>}
         </div>
       );
@@ -309,44 +309,44 @@ export default function App() {
           onDragOver={e=>e.preventDefault()}
           style={{
             position:'absolute', left:x+2, top:y+2, width:CS-4, height:CS-4,
-            background:'#2a2a4a', border:'1.5px solid #4a4a8a', borderRadius:'50%',
+            background:'#1C1A16', border:'1.5px solid #2C2820', borderRadius:'50%',
             display:'flex', alignItems:'center', justifyContent:'center',
-            fontSize:12, fontWeight:600, color:'#aaaaff', userSelect:'none',
+            fontSize:12, fontWeight:600, color:'#C9A84C', userSelect:'none',
           }}>{cl?.sum}</div>
       );
     }
   }
 
   return (
-    <div style={{minHeight:'100vh', background:'#1a1a2e', display:'flex', flexDirection:'column', alignItems:'center', paddingTop:24, position:'relative', fontFamily:"'Segoe UI',sans-serif", color:'#e0e0e0', position:'relative', overflow:'hidden'}}>
+    <div style={{minHeight:'100vh', display:'flex', flexDirection:'column', alignItems:'center', paddingTop:24, position:'relative', color:'#F5F0E8', overflow:'hidden'}}>
       <style>{css}</style>
 
       {confetti.map(c=>(
         <div key={c.id} style={{position:'fixed',left:`${c.x}%`,top:'28%',width:c.size,height:c.size,background:c.color,borderRadius:c.size>10?'50%':2,animation:`confetti 1.3s ${c.delay}ms ease forwards`,pointerEvents:'none',zIndex:100}}/>
       ))}
 
-      <a href="/" style={{position:'absolute',left:16,top:24,color:'#aaaaff',textDecoration:'none',fontSize:13,fontWeight:600}}>← Back</a>
+      <a href="/" style={{position:'absolute',left:16,top:24,color:'#C9A84C',textDecoration:'none',fontSize:13,fontWeight:600}}>← Back</a>
       <UserMenu />
 
       {/* Header */}
       <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:2}}>
         <div style={{display:'flex',flexDirection:'column',alignItems:'center'}}>
           <div style={{fontSize:32,fontWeight:900,letterSpacing:2,color:'#fff'}}>NUMS</div>
-          <div style={{fontSize:11,fontWeight:600,letterSpacing:3,color:'#f5a623',textTransform:'uppercase',marginTop:-4}}>by Streakle</div>
+          <div style={{fontSize:11,fontWeight:600,letterSpacing:3,color:'#C9A84C',textTransform:'uppercase',marginTop:-4}}>by Streakle</div>
         </div>
-        <button onClick={()=>setShowHow(!showHow)} style={{background:'none',border:'1px solid #4a4a8a',borderRadius:6,color:'#aaaaff',cursor:'pointer',fontSize:13,padding:'3px 10px',marginLeft:8}}>
+        <button onClick={()=>setShowHow(!showHow)} style={{background:'none',border:'1px solid #2C2820',borderRadius:6,color:'#C9A84C',cursor:'pointer',fontSize:13,padding:'3px 10px',marginLeft:8}}>
           How to play
         </button>
-        <button onClick={() => setShowArchive(true)} style={{background:'none',border:'1px solid #4a4a8a',borderRadius:6,color:'#aaaaff',cursor:'pointer',fontSize:13,padding:'3px 10px'}}>
+        <button onClick={() => setShowArchive(true)} style={{background:'none',border:'1px solid #2C2820',borderRadius:6,color:'#C9A84C',cursor:'pointer',fontSize:13,padding:'3px 10px'}}>
           📅 Archive
         </button>
       </div>
 
-      <div style={{fontSize:13,color:'#6666aa',marginBottom:10,marginTop:6}}>{formatDate()}</div>
+      <div style={{fontSize:13,color:'#7A6E5F',marginBottom:10,marginTop:6}}>{formatDate()}</div>
 
       {showHow&&(
-        <div style={{background:'#0f1535',border:'1px solid #4a4a8a',borderRadius:10,padding:16,maxWidth:340,marginBottom:12,fontSize:13,lineHeight:1.65,color:'#ccc',animation:'slideUp 0.3s ease'}}>
-          <b style={{color:'#aaaaff'}}>How to play</b><br/>
+        <div style={{background:'#1C1A16',border:'1px solid #2C2820',borderRadius:10,padding:16,maxWidth:340,marginBottom:12,fontSize:13,lineHeight:1.65,color:'#ccc',animation:'slideUp 0.3s ease'}}>
+          <b style={{color:'#C9A84C'}}>How to play</b><br/>
           Rearrange numbers so every <b>row</b> and <b>column</b> contains <b>1–7</b> once each.<br/><br/>
           <b>Tap</b> a cell to select then tap another to swap — or <b>drag</b> a tile directly onto another. 🟢 Green = correct position.<br/><br/>
           Circles show the <b>sum</b> of the 4 surrounding numbers — use them as clues!<br/><br/>
@@ -355,7 +355,7 @@ export default function App() {
       )}
 
       <div style={{marginBottom:14,fontSize:15,fontWeight:600,transition:'color 0.4s',
-        color: solved?'#4caf50': swaps<0?'#e94560': swaps<=5?'#f5a623':'#aaaaff'}}>
+        color: solved?'#4caf50': swaps<0?'#e94560': swaps<=5?'#C9A84C':'#C9A84C'}}>
         {solved
           ? swaps>=0 ? `Solved with ${swaps} swap${swaps!==1?'s':''} to spare!` : `Solved — ${Math.abs(swaps)} over budget`
           : swaps>=0 ? `${swaps} swap${swaps!==1?'s':''} remaining`
@@ -364,7 +364,7 @@ export default function App() {
       </div>
 
       {streak > 0 && (
-        <div style={{fontSize:13, color:'#f5a623', fontWeight:600, marginBottom:8}}>
+        <div style={{fontSize:13, color:'#C9A84C', fontWeight:600, marginBottom:8}}>
           🔥 {streak} day streak
         </div>
       )}
@@ -388,9 +388,9 @@ export default function App() {
             {20-swaps} swap{20-swaps!==1?'s':''} used{swaps<0?` (${Math.abs(swaps)} over budget)`:''}
           </div>
           <div style={{position:'relative',display:'inline-block'}}>
-            <button onClick={handleShare} style={{background:'#4a4a8a',color:'#fff',border:'none',borderRadius:8,padding:'10px 28px',fontSize:15,fontWeight:700,cursor:'pointer',transition:'background 0.2s'}}
-              onMouseOver={e=>e.currentTarget.style.background='#6666bb'}
-              onMouseOut={e=>e.currentTarget.style.background='#4a4a8a'}>
+            <button onClick={handleShare} style={{background:'#C9A84C',color:'#0F0E0C',border:'none',borderRadius:8,padding:'10px 28px',fontSize:15,fontWeight:700,cursor:'pointer',transition:'background 0.2s'}}
+              onMouseOver={e=>e.currentTarget.style.background='#D4B45A'}
+              onMouseOut={e=>e.currentTarget.style.background='#C9A84C'}>
               📋 Share result
             </button>
             {copied&&<div style={{position:'absolute',top:-32,left:'50%',transform:'translateX(-50%)',background:'#2d6a30',color:'#fff',fontSize:12,fontWeight:600,padding:'4px 12px',borderRadius:6,whiteSpace:'nowrap',animation:'copied 2s ease forwards',pointerEvents:'none'}}>Copied!</div>}
@@ -400,7 +400,7 @@ export default function App() {
 
       {!solved&&swaps<0&&(
         <div style={{position:'relative',display:'inline-block',marginTop:4}}>
-          <button onClick={handleShare} style={{background:'#2a2a4a',color:'#aaaaff',border:'1px solid #4a4a8a',borderRadius:8,padding:'8px 20px',fontSize:13,fontWeight:600,cursor:'pointer'}}>
+          <button onClick={handleShare} style={{background:'#1C1A16',color:'#C9A84C',border:'1px solid #2C2820',borderRadius:8,padding:'8px 20px',fontSize:13,fontWeight:600,cursor:'pointer'}}>
             📋 Share progress
           </button>
           {copied&&<div style={{position:'absolute',top:-32,left:'50%',transform:'translateX(-50%)',background:'#2d6a30',color:'#fff',fontSize:12,fontWeight:600,padding:'4px 12px',borderRadius:6,whiteSpace:'nowrap',animation:'copied 2s ease forwards',pointerEvents:'none'}}>Copied!</div>}
@@ -409,12 +409,12 @@ export default function App() {
 
       {!solved&&sel&&!dragging&&(
         <div style={{fontSize:13,color:'#aaa',marginTop:8,animation:'fadeIn 0.3s ease'}}>
-          Selected <b style={{color:'#f5a623'}}>{board[sel[0]][sel[1]]}</b> — tap another or drag to swap
+          Selected <b style={{color:'#C9A84C'}}>{board[sel[0]][sel[1]]}</b> — tap another or drag to swap
         </div>
       )}
 
-      <div style={{marginTop:32,fontSize:12,color:'#4a4a8a',textAlign:'center'}}>
-        <a href="/privacy" style={{color:'#4a4a8a',textDecoration:'none'}}>Privacy Policy / Politique de confidentialité</a>
+      <div style={{marginTop:32,fontSize:12,color:'#5A5040',textAlign:'center'}}>
+        <a href="/privacy" style={{color:'#5A5040',textDecoration:'none'}}>Privacy Policy / Politique de confidentialité</a>
       </div>
 
       {showArchive && (
@@ -447,11 +447,11 @@ function FlyingTile({num, fr, fc, tr, tc, cs, total}) {
   return (
     <div ref={ref} style={{
       position:'absolute', left:0, top:0, width:cs, height:cs,
-      background:'#7a4d00', border:'2px solid #f5a623', borderRadius:8,
+      background:'#2C1F00', border:'2px solid #C9A84C', borderRadius:8,
       display:'flex', alignItems:'center', justifyContent:'center',
       fontSize:20, fontWeight:700, color:'#fff',
       pointerEvents:'none', zIndex:10,
-      boxShadow:'0 4px 20px #f5a62366', willChange:'transform',
+      boxShadow:'0 4px 20px #C9A84C66', willChange:'transform',
     }}>{num}</div>
   );
 }

@@ -171,7 +171,7 @@ export default function Archive({ game, onSelectDate, onClose }) {
       >
         {/* ── Panel ── */}
         <div style={{
-          background: 'rgba(18,18,30,0.95)',
+          background: 'rgba(15,14,12,0.97)',
           backdropFilter: 'blur(30px)',
           border: '1px solid rgba(255,255,255,0.09)',
           borderRadius: 24,
@@ -217,7 +217,7 @@ export default function Archive({ game, onSelectDate, onClose }) {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
                   <span style={{ fontSize: 22 }}>🔥</span>
-                  <span style={{ fontSize: 24, fontWeight: 800, color: '#f5a623', lineHeight: 1 }}>
+                  <span style={{ fontSize: 24, fontWeight: 800, color: '#C9A84C', lineHeight: 1 }}>
                     {streak}
                   </span>
                   <span style={{ fontSize: 13, color: '#777' }}>day streak</span>
@@ -248,10 +248,10 @@ export default function Archive({ game, onSelectDate, onClose }) {
           {/* ── Sign-in nudge (guest) ── */}
           {!user && (
             <div style={{
-              background: 'rgba(245,166,35,0.08)',
-              border: '1px solid rgba(245,166,35,0.18)',
+              background: 'rgba(201,168,76,0.08)',
+              border: '1px solid rgba(201,168,76,0.18)',
               borderRadius: 12, padding: '11px 14px',
-              fontSize: 13, color: '#f5a623', lineHeight: 1.5,
+              fontSize: 13, color: '#C9A84C', lineHeight: 1.5,
             }}>
               🔒 You're only seeing the last 7 days. Sign in to play every puzzle since launch.
             </div>
@@ -331,7 +331,7 @@ export default function Archive({ game, onSelectDate, onClose }) {
                   if (!avail) {
                     bg = 'transparent'; borderColor = 'transparent'; borderLeft = 'none'
                   } else if (isSel) {
-                    bg = 'rgba(245,166,35,0.2)'; borderColor = 'rgba(245,166,35,0.55)'
+                    bg = 'rgba(201,168,76,0.2)'; borderColor = 'rgba(201,168,76,0.55)'
                   } else if (isToday) {
                     bg = 'rgba(255,255,255,0.09)'; borderColor = 'rgba(255,255,255,0.22)'
                   }

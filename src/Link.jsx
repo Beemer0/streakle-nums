@@ -350,10 +350,10 @@ export default function GridGame() {
   };
 
   return (
-    <div style={{ minHeight: '100vh', background: '#1a1a2e', display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: 24, fontFamily: "'Segoe UI', sans-serif", color: '#e0e0e0', position: 'relative', overflow: 'hidden' }}>
+    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: 24, color: '#F5F0E8', position: 'relative', overflow: 'hidden' }}>
       <style>{css}</style>
       <UserMenu />
-      <a href="/" style={{ position: 'absolute', left: 16, top: 24, color: '#aaaaff', textDecoration: 'none', fontSize: 13, fontWeight: 600 }}>← Back</a>
+      <a href="/" style={{ position: 'absolute', left: 16, top: 24, color: '#C9A84C', textDecoration: 'none', fontSize: 13, fontWeight: 600 }}>← Back</a>
 
       {confetti.map(c => (
         <div key={c.id} style={{ position: 'fixed', left: `${c.x}%`, top: '30%', width: c.size, height: c.size, background: c.color, borderRadius: c.size > 10 ? '50%' : 2, animation: `confetti 1.3s ${c.delay}ms ease forwards`, pointerEvents: 'none', zIndex: 100 }} />
@@ -362,21 +362,21 @@ export default function GridGame() {
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 2 }}>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
           <div style={{ fontSize: 32, fontWeight: 900, letterSpacing: 2, color: '#fff' }}>LINK</div>
-          <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: 3, color: '#f5a623', textTransform: 'uppercase', marginTop: -4 }}>by Streakle</div>
+          <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: 3, color: '#C9A84C', textTransform: 'uppercase', marginTop: -4 }}>by Streakle</div>
         </div>
-        <button onClick={() => setShowHow(!showHow)} style={{ background: 'none', border: '1px solid #4a4a8a', borderRadius: 6, color: '#aaaaff', cursor: 'pointer', fontSize: 13, padding: '3px 10px', marginLeft: 8 }}>
+        <button onClick={() => setShowHow(!showHow)} style={{ background: 'none', border: '1px solid #2C2820', borderRadius: 6, color: '#C9A84C', cursor: 'pointer', fontSize: 13, padding: '3px 10px', marginLeft: 8 }}>
           How to play
         </button>
-        <button onClick={() => setShowArchive(true)} style={{ background: 'none', border: '1px solid #4a4a8a', borderRadius: 6, color: '#aaaaff', cursor: 'pointer', fontSize: 13, padding: '3px 10px' }}>
+        <button onClick={() => setShowArchive(true)} style={{ background: 'none', border: '1px solid #2C2820', borderRadius: 6, color: '#C9A84C', cursor: 'pointer', fontSize: 13, padding: '3px 10px' }}>
           📅 Archive
         </button>
       </div>
 
-      <div style={{ fontSize: 13, color: '#6666aa', marginBottom: 10, marginTop: 6 }}>{formatDate()}</div>
+      <div style={{ fontSize: 13, color: '#7A6E5F', marginBottom: 10, marginTop: 6 }}>{formatDate()}</div>
 
       {showHow && (
-        <div style={{ background: '#0f1535', border: '1px solid #4a4a8a', borderRadius: 10, padding: 16, maxWidth: 340, marginBottom: 12, fontSize: 13, lineHeight: 1.65, color: '#ccc', animation: 'slideUp 0.3s ease' }}>
-          <b style={{ color: '#aaaaff' }}>How to play</b><br />
+        <div style={{ background: '#1C1A16', border: '1px solid #2C2820', borderRadius: 10, padding: 16, maxWidth: 340, marginBottom: 12, fontSize: 13, lineHeight: 1.65, color: '#ccc', animation: 'slideUp 0.3s ease' }}>
+          <b style={{ color: '#C9A84C' }}>How to play</b><br />
           Find 4 groups of 4 words that share something in common.<br /><br />
           Select 4 words and tap <b>Submit</b>. Each correct group flies into place.<br /><br />
           🟨 Easiest → 🟩 → 🟦 → 🟪 Trickiest<br /><br />
@@ -386,18 +386,18 @@ export default function GridGame() {
 
       <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
         {Array.from({ length: 4 }, (_, i) => (
-          <div key={i} style={{ width: 14, height: 14, borderRadius: '50%', background: i < lives ? '#f5a623' : '#333', transition: 'background 0.3s' }} />
+          <div key={i} style={{ width: 14, height: 14, borderRadius: '50%', background: i < lives ? '#C9A84C' : '#333', transition: 'background 0.3s' }} />
         ))}
       </div>
 
       {streak > 0 && (
-        <div style={{fontSize:13, color:'#f5a623', fontWeight:600, marginBottom:8}}>
+        <div style={{fontSize:13, color:'#C9A84C', fontWeight:600, marginBottom:8}}>
           🔥 {streak} day streak
         </div>
       )}
 
       {message && (
-        <div style={{ position: 'fixed', top: 80, left: '50%', transform: 'translateX(-50%)', background: '#16213e', border: '1px solid #4a4a8a', borderRadius: 8, padding: '8px 20px', fontSize: 14, fontWeight: 600, color: oneAway ? '#f5a623' : '#fff', zIndex: 50, animation: 'slideUp 0.3s ease', whiteSpace: 'nowrap' }}>
+        <div style={{ position: 'fixed', top: 80, left: '50%', transform: 'translateX(-50%)', background: '#1C1A16', border: '1px solid #2C2820', borderRadius: 8, padding: '8px 20px', fontSize: 14, fontWeight: 600, color: oneAway ? '#C9A84C' : '#fff', zIndex: 50, animation: 'slideUp 0.3s ease', whiteSpace: 'nowrap' }}>
           {message}
         </div>
       )}
@@ -419,16 +419,16 @@ export default function GridGame() {
             const isHidden = hiddenWords.includes(word);
             return (
               <div key={word} ref={el => wordRefs.current[word] = el} onClick={() => toggleWord(word)} style={{
-                aspectRatio: '5/3', background: isSel ? '#4a4a8a' : '#16213e',
-                border: `2px solid ${isSel ? '#aaaaff' : '#0f3460'}`,
+                aspectRatio: '5/3', background: isSel ? '#C9A84C' : '#1C1A16',
+                border: `2px solid ${isSel ? '#C9A84C' : '#2C2820'}`,
                 borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center',
                 fontSize: word.length > 8 ? 10 : word.length > 6 ? 12 : 14,
-                fontWeight: 700, color: isSel ? '#fff' : '#e0e0e0',
+                fontWeight: 700, color: isSel ? '#0F0E0C' : '#F5F0E8',
                 cursor: gameOver || won || animating ? 'default' : 'pointer',
                 userSelect: 'none', textAlign: 'center', padding: '0 4px',
                 transition: 'background 0.15s, border-color 0.15s',
                 animation: isShaking ? 'shake 0.45s ease' : isSel ? 'pop 0.3s ease' : 'none',
-                boxShadow: isSel ? '0 0 0 3px #aaaaff33' : 'none',
+                boxShadow: isSel ? '0 0 0 3px #C9A84C33' : 'none',
                 opacity: isHidden ? 0 : 1,
               }}>
                 {word}
@@ -444,13 +444,13 @@ export default function GridGame() {
 
       {!gameOver && !won && (
         <div style={{ display: 'flex', gap: 10, marginBottom: 16 }}>
-          <button onClick={() => setSelected([])} disabled={animating} style={{ background: 'none', border: '1px solid #4a4a8a', borderRadius: 8, color: '#aaaaff', cursor: 'pointer', fontSize: 14, padding: '8px 20px', fontWeight: 600 }}>
+          <button onClick={() => setSelected([])} disabled={animating} style={{ background: 'none', border: '1px solid #2C2820', borderRadius: 8, color: '#C9A84C', cursor: 'pointer', fontSize: 14, padding: '8px 20px', fontWeight: 600 }}>
             Deselect
           </button>
           <button onClick={handleSubmit} disabled={selected.length !== 4 || animating} style={{
-            background: selected.length === 4 && !animating ? '#aaaaff' : '#2a2a4a',
+            background: selected.length === 4 && !animating ? '#C9A84C' : '#1C1A16',
             border: 'none', borderRadius: 8,
-            color: selected.length === 4 && !animating ? '#1a1a2e' : '#555',
+            color: selected.length === 4 && !animating ? '#0F0E0C' : '#555',
             cursor: selected.length === 4 && !animating ? 'pointer' : 'default',
             fontSize: 14, padding: '8px 28px', fontWeight: 700, transition: 'background 0.2s',
           }}>
@@ -464,9 +464,9 @@ export default function GridGame() {
           <div style={{ fontSize: 22, fontWeight: 700, color: '#4caf50', marginBottom: 6 }}>🎉 Solved!</div>
           <div style={{ fontSize: 13, color: '#aaa', marginBottom: 16 }}>{guessHistory.length} guess{guessHistory.length !== 1 ? 'es' : ''} · {lives} life{lives !== 1 ? 's' : ''} remaining</div>
           <div style={{ position: 'relative', display: 'inline-block' }}>
-            <button onClick={handleShare} style={{ background: '#4a4a8a', color: '#fff', border: 'none', borderRadius: 8, padding: '10px 28px', fontSize: 15, fontWeight: 700, cursor: 'pointer' }}
-              onMouseOver={e => e.currentTarget.style.background = '#6666bb'}
-              onMouseOut={e => e.currentTarget.style.background = '#4a4a8a'}>
+            <button onClick={handleShare} style={{ background: '#C9A84C', color: '#0F0E0C', border: 'none', borderRadius: 8, padding: '10px 28px', fontSize: 15, fontWeight: 700, cursor: 'pointer' }}
+              onMouseOver={e => e.currentTarget.style.background = '#D4B45A'}
+              onMouseOut={e => e.currentTarget.style.background = '#C9A84C'}>
               📋 Share result
             </button>
             {copied && <div style={{ position: 'absolute', top: -32, left: '50%', transform: 'translateX(-50%)', background: '#2d6a30', color: '#fff', fontSize: 12, fontWeight: 600, padding: '4px 12px', borderRadius: 6, whiteSpace: 'nowrap', animation: 'copied 2s ease forwards', pointerEvents: 'none' }}>Copied!</div>}
@@ -485,7 +485,7 @@ export default function GridGame() {
             </div>
           ))}
           <div style={{ position: 'relative', display: 'inline-block', marginTop: 12 }}>
-            <button onClick={handleShare} style={{ background: '#2a2a4a', color: '#aaaaff', border: '1px solid #4a4a8a', borderRadius: 8, padding: '8px 20px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+            <button onClick={handleShare} style={{ background: '#1C1A16', color: '#C9A84C', border: '1px solid #2C2820', borderRadius: 8, padding: '8px 20px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
               📋 Share result
             </button>
             {copied && <div style={{ position: 'absolute', top: -32, left: '50%', transform: 'translateX(-50%)', background: '#2d6a30', color: '#fff', fontSize: 12, fontWeight: 600, padding: '4px 12px', borderRadius: 6, whiteSpace: 'nowrap', animation: 'copied 2s ease forwards', pointerEvents: 'none' }}>Copied!</div>}
@@ -493,8 +493,8 @@ export default function GridGame() {
         </div>
       )}
 
-      <div style={{ marginTop: 32, fontSize: 12, color: '#4a4a8a', textAlign: 'center' }}>
-        <a href="/privacy" style={{ color: '#4a4a8a', textDecoration: 'none' }}>Privacy Policy / Politique de confidentialité</a>
+      <div style={{ marginTop: 32, fontSize: 12, color: '#5A5040', textAlign: 'center' }}>
+        <a href="/privacy" style={{ color: '#5A5040', textDecoration: 'none' }}>Privacy Policy / Politique de confidentialité</a>
       </div>
 
       {showArchive && (
