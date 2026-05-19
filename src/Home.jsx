@@ -10,8 +10,8 @@ const games = [
     title: 'NUMS',
     emoji: '🔢',
     description: 'Swap numbers so every row and column contains 1–7.',
-    color: '#3a7bd5',
-    accent: '#4a9eff',
+    color: '#1E40AF',
+    accent: '#93C5FD',
     badge: 'Swap It',
   },
   {
@@ -20,8 +20,8 @@ const games = [
     title: 'LINK',
     emoji: '🔗',
     description: 'Find 4 groups of 4 words that share something in common.',
-    color: '#538d4e',
-    accent: '#4caf50',
+    color: '#166534',
+    accent: '#86EFAC',
     badge: 'Group It',
   },
   {
@@ -30,8 +30,8 @@ const games = [
     title: 'WORDS',
     emoji: '🔤',
     description: 'Guess the 5-letter word in 6 tries. Learn something new every day.',
-    color: '#9b59b6',
-    accent: '#b07fd4',
+    color: '#5B21B6',
+    accent: '#C4B5FD',
     badge: 'Guess It',
   },
   {
@@ -40,8 +40,8 @@ const games = [
     title: 'GRIDIRON',
     emoji: '🏈',
     description: 'Test your NFL knowledge. Match players to teams and awards in the grid.',
-    color: '#e94560',
-    accent: '#ff6b6b',
+    color: '#991B1B',
+    accent: '#FCA5A5',
     badge: 'Know It',
   },
   {
@@ -50,8 +50,8 @@ const games = [
     title: 'FACEOFF',
     emoji: '🏒',
     description: 'Test your NHL knowledge. Match players to teams and awards in the grid.',
-    color: '#4a9eff',
-    accent: '#7ab8ff',
+    color: '#0C4A6E',
+    accent: '#7DD3FC',
     badge: 'Know It',
   },
 ]
@@ -108,32 +108,31 @@ export default function Home() {
     }}>
       <style>{`
         @keyframes fadeIn { from { opacity:0; transform:translateY(14px) } to { opacity:1; transform:translateY(0) } }
-        @keyframes pulse  { 0%,100%{opacity:1} 50%{opacity:0.45} }
-        .game-card-link { text-decoration: none; display: block; }
+        @keyframes pulse  { 0%,100%{opacity:1} 50%{opacity:0.4} }
+        .game-card-link { text-decoration: none; display: block; height: 100%; }
         .game-card-inner {
-          transition: transform 0.2s ease, box-shadow 0.2s ease;
+          transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
         }
         .game-card-link:hover .game-card-inner {
-          transform: translateY(-6px);
-          box-shadow: 0 20px 48px rgba(0,0,0,0.45) !important;
+          transform: translateY(-4px);
+          box-shadow: 0 16px 48px rgba(0,0,0,0.55), 0 0 0 1px rgba(201,168,76,0.22) !important;
         }
       `}</style>
 
       <UserMenu />
 
       {/* ── Logo ── */}
-      <div style={{ textAlign: 'center', marginBottom: 10, animation: 'fadeIn 0.5s ease' }}>
+      <div style={{ textAlign: 'center', marginBottom: 12, animation: 'fadeIn 0.5s ease' }}>
         <div style={{
-          fontFamily: "'Syne', sans-serif",
-          fontSize: 52, fontWeight: 800, letterSpacing: 6,
-          color: '#fff', lineHeight: 1,
-          textShadow: '0 0 80px rgba(99,102,241,0.5)',
+          fontFamily: "'Barlow Condensed', sans-serif",
+          fontSize: 72, fontWeight: 800, letterSpacing: 10,
+          color: '#F5F0E8', lineHeight: 1,
         }}>
           STREAKLE
         </div>
         <div style={{
-          fontSize: 12, fontWeight: 600, letterSpacing: 3,
-          color: '#f5a623', textTransform: 'uppercase', marginTop: 10,
+          fontSize: 11, fontWeight: 600, letterSpacing: 4,
+          color: '#C9A84C', textTransform: 'uppercase', marginTop: 12,
         }}>
           Start your day with a puzzle
         </div>
@@ -141,17 +140,16 @@ export default function Home() {
 
       {/* ── Live badge ── */}
       <div style={{
-        background: 'rgba(15,21,53,0.55)',
-        border: '1px solid rgba(99,102,241,0.22)',
+        background: 'rgba(201,168,76,0.07)',
+        border: '1px solid rgba(201,168,76,0.22)',
         borderRadius: 20, padding: '6px 16px',
-        fontSize: 12, color: '#aaaaff', fontWeight: 600,
+        fontSize: 12, color: '#C9A84C', fontWeight: 600,
         marginBottom: 52, animation: 'fadeIn 0.65s ease',
         display: 'flex', alignItems: 'center', gap: 7,
-        backdropFilter: 'blur(8px)',
       }}>
         <span style={{
           display: 'inline-block', width: 7, height: 7,
-          borderRadius: '50%', background: '#4caf50',
+          borderRadius: '50%', background: '#C9A84C',
           animation: 'pulse 2s infinite',
         }} />
         New puzzles every day
@@ -175,84 +173,74 @@ export default function Home() {
               style={{ animation: `fadeIn 0.5s ${i * 110}ms both ease`, width: 260, flexShrink: 0 }}
             >
               <div className="game-card-inner" style={{
-                background: 'rgba(18,26,58,0.75)',
-                backdropFilter: 'blur(14px)',
-                border: '1px solid rgba(255,255,255,0.07)',
+                background: '#1C1A16',
+                border: '1px solid #2C2820',
                 borderTop: `3px solid ${g.color}`,
-                borderRadius: 16,
-                padding: '24px 22px 22px',
-                boxShadow: '0 4px 24px rgba(0,0,0,0.3)',
+                borderRadius: 12,
+                padding: '22px 20px 20px',
+                boxShadow: '0 2px 16px rgba(0,0,0,0.4)',
                 height: '100%',
                 position: 'relative',
                 overflow: 'hidden',
+                display: 'flex', flexDirection: 'column',
               }}>
 
-                {/* Corner glow */}
-                <div style={{
-                  position: 'absolute', top: -30, left: -30,
-                  width: 120, height: 120, borderRadius: '50%',
-                  background: `radial-gradient(circle, ${g.color}20 0%, transparent 70%)`,
-                  pointerEvents: 'none',
-                }} />
-
-                {/* Emoji + mechanic badge */}
+                {/* Emoji + badges row */}
                 <div style={{
                   display: 'flex', justifyContent: 'space-between',
-                  alignItems: 'flex-start', marginBottom: 16,
+                  alignItems: 'flex-start', marginBottom: 14,
                 }}>
-                  <div style={{ fontSize: 32 }}>{g.emoji}</div>
-                  <div style={{
-                    display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6,
-                  }}>
+                  <div style={{ fontSize: 30 }}>{g.emoji}</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 5 }}>
                     <div style={{
-                      background: `${g.color}22`,
-                      border: `1px solid ${g.color}55`,
-                      borderRadius: 8, padding: '3px 9px',
-                      fontSize: 10, fontWeight: 700, color: g.accent,
-                      textTransform: 'uppercase', letterSpacing: 1,
+                      background: `${g.color}18`,
+                      border: `1px solid ${g.color}40`,
+                      borderRadius: 4, padding: '2px 8px',
+                      fontSize: 9, fontWeight: 700, color: g.accent,
+                      textTransform: 'uppercase', letterSpacing: 1.5,
+                      fontFamily: "'DM Sans', sans-serif",
                     }}>{g.badge}</div>
-                    {/* Streak badge */}
                     {user && streaks[g.key] > 0 && (
                       <div style={{
-                        fontSize: 10, fontWeight: 700, color: '#fbbf24',
-                        background: 'rgba(251,191,36,0.1)',
-                        border: '1px solid rgba(251,191,36,0.25)',
-                        borderRadius: 8, padding: '2px 8px',
+                        fontSize: 9, fontWeight: 700, color: '#C9A84C',
+                        background: 'rgba(201,168,76,0.1)',
+                        border: '1px solid rgba(201,168,76,0.28)',
+                        borderRadius: 4, padding: '2px 8px',
                       }}>🔥 {streaks[g.key]}</div>
                     )}
-                    {/* Today's status badge */}
                     {completed && (
                       <div style={{
-                        fontSize: 10, fontWeight: 700, color: '#4ade80',
-                        background: 'rgba(74,222,128,0.1)',
-                        border: '1px solid rgba(74,222,128,0.25)',
-                        borderRadius: 8, padding: '2px 8px',
-                      }}>✅ Done</div>
+                        fontSize: 9, fontWeight: 700, color: '#86EFAC',
+                        background: 'rgba(134,239,172,0.08)',
+                        border: '1px solid rgba(134,239,172,0.22)',
+                        borderRadius: 4, padding: '2px 8px',
+                      }}>✓ Done</div>
                     )}
                     {failed && (
                       <div style={{
-                        fontSize: 10, fontWeight: 700, color: '#f87171',
-                        background: 'rgba(248,113,113,0.1)',
-                        border: '1px solid rgba(248,113,113,0.25)',
-                        borderRadius: 8, padding: '2px 8px',
-                      }}>❌ Tried</div>
+                        fontSize: 9, fontWeight: 700, color: '#FCA5A5',
+                        background: 'rgba(252,165,165,0.08)',
+                        border: '1px solid rgba(252,165,165,0.22)',
+                        borderRadius: 4, padding: '2px 8px',
+                      }}>✗ Tried</div>
                     )}
                   </div>
                 </div>
 
                 {/* Title */}
                 <div style={{
-                  fontFamily: "'Syne', sans-serif",
-                  fontSize: 22, fontWeight: 800,
-                  letterSpacing: 1, color: '#fff', marginBottom: 10,
+                  fontFamily: "'Barlow Condensed', sans-serif",
+                  fontSize: 30, fontWeight: 800,
+                  letterSpacing: 1.5, color: '#F5F0E8', marginBottom: 8,
+                  lineHeight: 1,
                 }}>
                   {g.title}
                 </div>
 
                 {/* Description */}
                 <div style={{
-                  fontSize: 13, color: '#6e6e99',
-                  lineHeight: 1.65, marginBottom: 22,
+                  fontSize: 13, color: '#7A6E5F',
+                  lineHeight: 1.6, marginBottom: 20, flexGrow: 1,
                 }}>
                   {g.description}
                 </div>
@@ -261,20 +249,23 @@ export default function Home() {
                 {completed ? (
                   <div style={{
                     display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-                    background: 'rgba(74,222,128,0.1)',
-                    border: '1px solid rgba(74,222,128,0.28)',
-                    borderRadius: 8, padding: '10px 0',
-                    fontSize: 13, fontWeight: 700, color: '#4ade80',
+                    background: 'rgba(134,239,172,0.08)',
+                    border: '1px solid rgba(134,239,172,0.22)',
+                    borderRadius: 6, padding: '10px 0',
+                    fontSize: 12, fontWeight: 700, color: '#86EFAC',
+                    letterSpacing: 0.3,
                   }}>
-                    ✅ Completed · Play Again?
+                    ✓ Completed · Play Again?
                   </div>
                 ) : (
                   <div style={{
-                    background: g.color,
-                    borderRadius: 8, padding: '10px 0',
+                    background: failed ? 'transparent' : '#C9A84C',
+                    border: failed ? '1px solid rgba(252,165,165,0.3)' : 'none',
+                    borderRadius: 6, padding: '10px 0',
                     textAlign: 'center',
-                    fontSize: 13, fontWeight: 700, color: '#fff',
-                    letterSpacing: 0.3,
+                    fontSize: 12, fontWeight: 700,
+                    color: failed ? '#FCA5A5' : '#0F0E0C',
+                    letterSpacing: 0.5,
                   }}>
                     {failed ? 'Try Archive →' : "Play Today's Puzzle →"}
                   </div>
@@ -289,10 +280,13 @@ export default function Home() {
 
       {/* ── Footer ── */}
       <div style={{ textAlign: 'center', fontSize: 12 }}>
-        <a href="/privacy" style={{ color: '#6666aa', textDecoration: 'none' }}>
+        <a href="/privacy" style={{ color: '#5A5040', textDecoration: 'none', transition: 'color 0.15s' }}
+          onMouseOver={e => e.currentTarget.style.color = '#C9A84C'}
+          onMouseOut={e => e.currentTarget.style.color = '#5A5040'}
+        >
           Privacy Policy / Politique de confidentialité
         </a>
-        <div style={{ marginTop: 6, color: '#44446a' }}>© 2026 Streakle. All rights reserved.</div>
+        <div style={{ marginTop: 6, color: '#3A3228' }}>© 2026 Streakle. All rights reserved.</div>
       </div>
     </div>
   )
