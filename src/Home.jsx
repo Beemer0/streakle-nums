@@ -56,25 +56,46 @@ const games = [
   },
 ]
 
+function calcStreaks(allResults) {
+  const byGame = {}
+  allResults.forEach(r => {
+    if (!byGame[r.game]) byGame[r.game] = []
+    byGame[r.game].push(r.puzzle_date)
+  })
+  const streaks = {}
+  Object.entries(byGame).forEach(([game, dates]) => {
+    dates.sort().reverse()
+    let count = 0
+    for (let i = 0; i < dates.length; i++) {
+      const d = new Date()
+      d.setDate(d.getDate() - i)
+      if (dates[i] === d.toLocaleDateString('en-CA')) count++
+      else break
+    }
+    streaks[game] = count
+  })
+  return streaks
+}
+
 export default function Home() {
   const { user } = useAuth()
   const [todayResults, setTodayResults] = useState({})
+  const [streaks, setStreaks] = useState({})
 
-  // Fetch today's completion status for all games
   useEffect(() => {
     if (!user) return
     const today = new Date().toLocaleDateString('en-CA')
     supabase
       .from('game_results')
-      .select('game, completed')
+      .select('game, puzzle_date, completed')
       .eq('user_id', user.id)
-      .eq('puzzle_date', today)
       .then(({ data }) => {
-        if (data) {
-          const map = {}
-          data.forEach(r => { map[r.game] = r.completed })
-          setTodayResults(map)
-        }
+        if (!data) return
+        const map = {}
+        data.forEach(r => { if (r.puzzle_date === today) map[r.game] = r.completed })
+        setTodayResults(map)
+        const completed = data.filter(r => r.completed)
+        setStreaks(calcStreaks(completed))
       })
   }, [user])
 
@@ -138,8 +159,9 @@ export default function Home() {
 
       {/* ── Game cards ── */}
       <div style={{
-        display: 'flex', gap: 20, flexWrap: 'wrap',
-        justifyContent: 'center', maxWidth: 840,
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))',
+        gap: 20, maxWidth: 900,
         width: '100%', marginBottom: 60,
       }}>
         {games.map((g, i) => {
@@ -152,7 +174,7 @@ export default function Home() {
               key={g.path}
               href={g.path}
               className="game-card-link"
-              style={{ animation: `fadeIn 0.5s ${i * 110}ms both ease`, width: 248 }}
+              style={{ animation: `fadeIn 0.5s ${i * 110}ms both ease` }}
             >
               <div className="game-card-inner" style={{
                 background: 'rgba(18,26,58,0.75)',
@@ -191,6 +213,15 @@ export default function Home() {
                       fontSize: 10, fontWeight: 700, color: g.accent,
                       textTransform: 'uppercase', letterSpacing: 1,
                     }}>{g.badge}</div>
+                    {/* Streak badge */}
+                    {user && streaks[g.key] > 0 && (
+                      <div style={{
+                        fontSize: 10, fontWeight: 700, color: '#fbbf24',
+                        background: 'rgba(251,191,36,0.1)',
+                        border: '1px solid rgba(251,191,36,0.25)',
+                        borderRadius: 8, padding: '2px 8px',
+                      }}>🔥 {streaks[g.key]}</div>
+                    )}
                     {/* Today's status badge */}
                     {completed && (
                       <div style={{
@@ -258,10 +289,10 @@ export default function Home() {
 
       {/* ── Footer ── */}
       <div style={{ textAlign: 'center', fontSize: 12 }}>
-        <a href="/privacy" style={{ color: '#363660', textDecoration: 'none' }}>
+        <a href="/privacy" style={{ color: '#6666aa', textDecoration: 'none' }}>
           Privacy Policy / Politique de confidentialité
         </a>
-        <div style={{ marginTop: 6, color: '#2a2a4a' }}>© 2026 Streakle. All rights reserved.</div>
+        <div style={{ marginTop: 6, color: '#44446a' }}>© 2026 Streakle. All rights reserved.</div>
       </div>
     </div>
   )
