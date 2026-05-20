@@ -4,6 +4,7 @@ import UserMenu from "./UserMenu";
 import { saveResult } from './saveResult';
 import { useStreak } from './useStreak';
 import AwardIcon from './AwardIcon';
+import { clickableProps } from './a11y';
 
 const TEAMS = {
   ANA:"Ducks",ARI:"Coyotes",BOS:"Bruins",BUF:"Sabres",
@@ -708,7 +709,7 @@ export default function FaceoffGame() {
                 const isActive=activeCell&&activeCell[0]===ri&&activeCell[1]===ci;
                 const isShaking=shakeCell===key;
                 return (
-                  <div key={key} onClick={()=>handleCellClick(ri,ci)} style={{
+                  <div key={key} {...clickableProps(()=>handleCellClick(ri,ci), filled||gameOver||won)} style={{
                     background:filled?'#1a3a2a':isActive?'#2C2418':'#1C1A16',
                     border:`2px solid ${filled?'#4caf50':isActive?'#C9A84C':'#2C2820'}`,
                     borderRadius:8,cursor:filled||gameOver||won?'default':'pointer',
@@ -747,7 +748,7 @@ export default function FaceoffGame() {
           {suggestions.length>0&&(
             <div style={{background:'#1C1A16',border:'1px solid #2C2820',borderRadius:8,marginTop:4,overflow:'hidden'}}>
               {suggestions.map((p,i)=>(
-                <div key={i} onClick={()=>handleSelect(p)} style={{
+                <div key={i} {...clickableProps(()=>handleSelect(p))} style={{
                   padding:'10px 14px',cursor:'pointer',fontSize:13,
                   borderBottom:i<suggestions.length-1?'1px solid #2C2820':'none',
                   background:pendingPlayer?.n===p.n?'#1a3a2a':'transparent',

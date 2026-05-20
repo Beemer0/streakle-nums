@@ -1,9 +1,17 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useAuth } from './AuthContext'
+import { clickableProps } from './a11y'
 
 export default function UserMenu() {
   const { user, signOut } = useAuth()
   const [open, setOpen] = useState(false)
+
+  useEffect(() => {
+    if (!open) return
+    const onKey = (e) => { if (e.key === 'Escape') setOpen(false) }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [open])
 
   if (!user) return null
 
@@ -12,7 +20,7 @@ export default function UserMenu() {
 
   return (
     <div style={{ position: 'absolute', right: 16, top: 20, zIndex: 50 }}>
-      <div onClick={() => setOpen(!open)} style={{
+      <div {...clickableProps(() => setOpen(!open))} aria-haspopup="menu" aria-expanded={open} aria-label="Account menu" style={{
         width: 36, height: 36, borderRadius: '50%',
         background: '#1C1A16', border: '2px solid #2C2820',
         cursor: 'pointer', overflow: 'hidden',

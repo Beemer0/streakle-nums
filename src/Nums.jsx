@@ -3,6 +3,7 @@ import Archive from './Archive'
 import UserMenu from "./UserMenu";
 import { saveResult } from './saveResult';
 import { useStreak } from './useStreak';
+import { clickableProps } from './a11y';
 
 const isActive = (r, c) => r % 2 === 0 || c % 2 === 0;
 
@@ -279,7 +280,7 @@ export default function App() {
 
       cells.push(
         <div key={key}
-          onClick={()=>handleClick(r,c)}
+          {...clickableProps(()=>handleClick(r,c), swapping||isCorr)}
           draggable={!swapping}
           onDragStart={e=>handleDragStart(e,r,c)}
           onDragOver={e=>handleDragOver(e,r,c)}

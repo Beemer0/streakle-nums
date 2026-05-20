@@ -3,6 +3,7 @@ import Archive from './Archive'
 import UserMenu from "./UserMenu";
 import { saveResult } from './saveResult';
 import { useStreak } from './useStreak';
+import { clickableProps } from './a11y';
 
 const PUZZLES = [
   {
@@ -422,7 +423,7 @@ export default function GridGame() {
             const isShaking = shakeWords.includes(word);
             const isHidden = hiddenWords.includes(word);
             return (
-              <div key={word} ref={el => wordRefs.current[word] = el} onClick={() => toggleWord(word)} style={{
+              <div key={word} ref={el => wordRefs.current[word] = el} {...clickableProps(() => toggleWord(word), gameOver || won || animating)} style={{
                 aspectRatio: '5/3', background: isSel ? '#C9A84C' : '#1C1A16',
                 border: `2px solid ${isSel ? '#C9A84C' : '#2C2820'}`,
                 borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center',
