@@ -94,6 +94,15 @@ export default function WordsGame() {
   const [copied, setCopied] = useState(false);
   const [showFact, setShowFact] = useState(false);
   const [revealingTiles, setRevealingTiles] = useState({});
+  const [hc, setHc] = useState(() => {
+    try { return localStorage.getItem('streakle-hc') === '1' } catch { return false }
+  });
+  const palette = hc ? { ...CLR, correct: '#f5793a', present: '#85c0f9' } : CLR;
+  const toggleHc = () => setHc(v => {
+    const n = !v;
+    try { localStorage.setItem('streakle-hc', n ? '1' : '0') } catch { /* storage unavailable */ }
+    return n;
+  });
   const revealingRef = useRef(false);
 
   const showMsg = (msg, dur=1800) => { setMessage(msg); setTimeout(()=>setMessage(null), dur); };
@@ -218,11 +227,11 @@ export default function WordsGame() {
 
   const getTileColor=(r,c)=>{
     const st=tileStates[`${r}-${c}`];
-    return st?CLR[st]:CLR.empty;
+    return st?palette[st]:palette.empty;
   };
 
   const buildShare=()=>{
-    const emoji={[ST.correct]:'🟩',[ST.present]:'🟨',[ST.absent]:'⬛'};
+    const emoji=hc?{[ST.correct]:'🟧',[ST.present]:'🟦',[ST.absent]:'⬛'}:{[ST.correct]:'🟩',[ST.present]:'🟨',[ST.absent]:'⬛'};
     const rows=guesses.slice(0,won?current+1:ROWS).filter(g=>g)
       .map((_,i)=>Array.from({length:COLS},(__,j)=>emoji[tileStates[`${i}-${j}`]]||'⬛').join(''));
     const result=won?`${current+1}/${ROWS}`:'X/6';
@@ -274,10 +283,22 @@ export default function WordsGame() {
         <div style={{background:'#1C1A16',border:'1px solid #2C2820',borderRadius:10,padding:16,maxWidth:320,marginBottom:12,fontSize:13,lineHeight:1.65,color:'#ccc',animation:'slideUp 0.3s ease'}}>
           <b style={{color:'#C9A84C'}}>How to play</b><br/>
           Guess the 5-letter word in 6 tries.<br/><br/>
-          🟩 Right letter, right spot<br/>
-          🟨 Right letter, wrong spot<br/>
+          {hc?'🟧':'🟩'} Right letter, right spot<br/>
+          {hc?'🟦':'🟨'} Right letter, wrong spot<br/>
           ⬛ Letter not in the word<br/><br/>
           After the game, discover something fascinating about the word!
+          <div style={{marginTop:14,paddingTop:12,borderTop:'1px solid #2C2820',display:'flex',alignItems:'center',justifyContent:'space-between',gap:12}}>
+            <span>High contrast colours</span>
+            <button onClick={toggleHc} role="switch" aria-checked={hc} aria-label="High contrast colours" style={{
+              background:hc?'#f5793a':'#2C2820',border:'none',borderRadius:11,width:44,height:22,
+              cursor:'pointer',position:'relative',transition:'background 0.2s',flexShrink:0,
+            }}>
+              <span style={{
+                position:'absolute',top:2,left:hc?24:2,width:18,height:18,borderRadius:'50%',
+                background:'#fff',transition:'left 0.2s',
+              }}/>
+            </button>
+          </div>
         </div>
       )}
 
@@ -364,7 +385,7 @@ export default function WordsGame() {
                 return (
                   <button key={key} onClick={()=>handleKey(key)} style={{
                     minWidth:wide?56:34,height:46,
-                    background:st===ST.correct?CLR.correct:st===ST.present?CLR.present:st===ST.absent?CLR.absent:'#4A433A',
+                    background:st===ST.correct?palette.correct:st===ST.present?palette.present:st===ST.absent?palette.absent:'#4A433A',
                     border:'none',borderRadius:6,
                     color:st===ST.absent?'#5A5248':'#fff',
                     fontSize:wide?11:14,fontWeight:700,
