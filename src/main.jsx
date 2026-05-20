@@ -11,6 +11,7 @@ import Link from './Link.jsx'
 import Words from './Words.jsx'
 import Gridiron from './Gridiron.jsx'
 import Faceoff from './Faceoff.jsx'
+import Knockout from './Knockout.jsx'
 import Privacy from './Privacy.jsx'
 
 function SignInBanner() {
@@ -108,6 +109,7 @@ function AppRoutes() {
         <Route path="/words" element={<Words />} />
         <Route path="/gridiron" element={<Gridiron />} />
         <Route path="/faceoff" element={<Faceoff />} />
+        <Route path="/knockout" element={<Knockout />} />
         <Route path="/privacy" element={<Privacy />} />
         <Route path="/login" element={<LoginPage />} />
       </Routes>

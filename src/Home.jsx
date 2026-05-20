@@ -54,6 +54,16 @@ const games = [
     accent: '#93C5FD',
     badge: 'Swap It',
   },
+  {
+    key: 'knockout',
+    path: '/knockout',
+    title: 'KNOCKOUT',
+    emoji: '🥊',
+    description: 'Name MMA fighters by promotion, weight class, and achievement.',
+    color: '#7F1D1D',
+    accent: '#FCA5A5',
+    badge: 'Know It',
+  },
 ]
 
 function calcStreaks(allResults) {
