@@ -9,9 +9,10 @@ const FREE_DAYS   = 7
 const GAME_META = {
   nums:     { emoji: '🔢', label: 'Nums' },
   link:     { emoji: '🔗', label: 'Link' },
-  words:    { emoji: '📝', label: 'Words' },
+  words:    { emoji: '🔤', label: 'Words' },
   gridiron: { emoji: '🏈', label: 'Gridiron' },
-  faceoff:  { emoji: '🥊', label: 'Faceoff' },
+  faceoff:  { emoji: '🏒', label: 'Faceoff' },
+  knockout: { emoji: '🥊', label: 'Knockout' },
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────

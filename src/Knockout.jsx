@@ -351,6 +351,7 @@ const css = `
 @keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-5px)}40%{transform:translateX(5px)}60%{transform:translateX(-4px)}80%{transform:translateX(4px)}}
 @keyframes confetti{0%{transform:translateY(0) rotate(0deg);opacity:1}100%{transform:translateY(130px) rotate(720deg);opacity:0}}
 @keyframes cellReveal{0%{transform:scale(0.85);opacity:0}100%{transform:scale(1);opacity:1}}
+@keyframes copied{0%{opacity:0;transform:translateY(4px)}20%{opacity:1;transform:translateY(0)}80%{opacity:1}100%{opacity:0}}
 .ko-grid{display:grid;grid-template-columns:90px repeat(3,110px);grid-template-rows:70px repeat(3,100px);gap:4px;padding:0 12px}
 @media(max-width:480px){.ko-grid{grid-template-columns:72px repeat(3,88px);grid-template-rows:60px repeat(3,86px)}}
 `;
@@ -376,6 +377,7 @@ export default function KnockoutGame() {
   const [showHow, setShowHow] = useState(false);
   const [confetti, setConfetti] = useState([]);
   const [totalScore, setTotalScore] = useState(0);
+  const [copied, setCopied] = useState(false);
   const inputRef = useRef(null);
 
   useEffect(() => {
@@ -482,6 +484,16 @@ export default function KnockoutGame() {
     setSuggestions([]);
     setPendingPlayer(null);
     setConfetti([]);
+    setCopied(false);
+  }
+
+  async function handleShare() {
+    const grid = Array.from({length:3},(_,r)=>Array.from({length:3},(_,c)=>cells[`${r}-${c}`]?'✅':'⬜').join('')).join('\n');
+    const text = `KNOCKOUT by Streakle 🥊 — ${formatDate(puzzleDate)}\nScore: ${totalScore} | ${Object.keys(cells).length}/9 cells\n${grid}\n\nPlay at: playstreakle.com/knockout`;
+    try {
+      if (navigator.share) await navigator.share({ text });
+      else { await navigator.clipboard.writeText(text); setCopied(true); setTimeout(() => setCopied(false), 2000); }
+    } catch { await navigator.clipboard.writeText(text); setCopied(true); setTimeout(() => setCopied(false), 2000); }
   }
 
   return (
@@ -654,11 +666,23 @@ export default function KnockoutGame() {
           <div style={{fontSize:22,fontWeight:800,color:won?'#C9A84C':'#FCA5A5',marginBottom:4}}>
             {won ? '🥊 Flawless Victory!' : 'Game Over'}
           </div>
-          <div style={{fontSize:14,color:'#7A6E5F'}}>
+          <div style={{fontSize:14,color:'#7A6E5F',marginBottom:16}}>
             Final score: <b style={{color:'#C9A84C'}}>{totalScore}</b>
+          </div>
+          <div style={{position:'relative',display:'inline-block'}}>
+            <button onClick={handleShare} style={{background:'#C9A84C',color:'#0F0E0C',border:'none',borderRadius:8,padding:'10px 28px',fontSize:15,fontWeight:700,cursor:'pointer'}}
+              onMouseOver={e=>e.currentTarget.style.background='#D4B45A'}
+              onMouseOut={e=>e.currentTarget.style.background='#C9A84C'}>
+              📋 Share result
+            </button>
+            {copied&&<div style={{position:'absolute',top:-32,left:'50%',transform:'translateX(-50%)',background:'#2d6a30',color:'#fff',fontSize:12,fontWeight:600,padding:'4px 12px',borderRadius:6,whiteSpace:'nowrap',animation:'copied 2s ease forwards',pointerEvents:'none'}}>Copied!</div>}
           </div>
         </div>
       )}
+
+      <div style={{marginTop:32,fontSize:12,color:'#5A5040',textAlign:'center'}}>
+        <a href="/privacy" style={{color:'#5A5040',textDecoration:'none'}}>Privacy Policy / Politique de confidentialité</a>
+      </div>
 
       {showArchive && (
         <Archive game="knockout" onClose={()=>setShowArchive(false)} onSelectDate={handleSelectDate} />
