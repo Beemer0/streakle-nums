@@ -1,4 +1,4 @@
-import { StrictMode, useState } from 'react'
+import { StrictMode, useState, useEffect, lazy, Suspense } from 'react'
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { Analytics } from '@vercel/analytics/react'
@@ -6,14 +6,16 @@ import { AuthProvider, useAuth } from './AuthContext.jsx'
 import { supabase } from './supabase.js'
 import './index.css'
 import Home from './Home.jsx'
-import Nums from './Nums.jsx'
-import Link from './Link.jsx'
-import Words from './Words.jsx'
-import Gridiron from './Gridiron.jsx'
-import Faceoff from './Faceoff.jsx'
-import Knockout from './Knockout.jsx'
-import Privacy from './Privacy.jsx'
 import ErrorBoundary from './ErrorBoundary.jsx'
+
+// Game routes are code-split — each loads its own chunk on demand.
+const Nums     = lazy(() => import('./Nums.jsx'))
+const Link     = lazy(() => import('./Link.jsx'))
+const Words    = lazy(() => import('./Words.jsx'))
+const Gridiron = lazy(() => import('./Gridiron.jsx'))
+const Faceoff  = lazy(() => import('./Faceoff.jsx'))
+const Knockout = lazy(() => import('./Knockout.jsx'))
+const Privacy  = lazy(() => import('./Privacy.jsx'))
 
 function SignInBanner() {
   const { user } = useAuth()
@@ -30,10 +32,11 @@ function LoginPage() {
   const { user } = useAuth()
   const [loading, setLoading] = useState(false)
 
-  if (user) {
-    window.location.href = '/'
-    return null
-  }
+  useEffect(() => {
+    if (user) window.location.href = '/'
+  }, [user])
+
+  if (user) return null
 
   const handleGoogleLogin = async () => {
     setLoading(true)
@@ -85,10 +88,8 @@ function LoginPage() {
   )
 }
 
-function AppRoutes() {
-  const { loading } = useAuth()
-
-  if (loading) return (
+function LoadingScreen() {
+  return (
     <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <div style={{
         fontFamily: "'Syne', sans-serif",
@@ -100,21 +101,29 @@ function AppRoutes() {
       </div>
     </div>
   )
+}
+
+function AppRoutes() {
+  const { loading } = useAuth()
+
+  if (loading) return <LoadingScreen />
 
   return (
     <BrowserRouter>
       <ErrorBoundary>
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/nums" element={<Nums />} />
-          <Route path="/link" element={<Link />} />
-          <Route path="/words" element={<Words />} />
-          <Route path="/gridiron" element={<Gridiron />} />
-          <Route path="/faceoff" element={<Faceoff />} />
-          <Route path="/knockout" element={<Knockout />} />
-          <Route path="/privacy" element={<Privacy />} />
-          <Route path="/login" element={<LoginPage />} />
-        </Routes>
+        <Suspense fallback={<LoadingScreen />}>
+          <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/nums" element={<Nums />} />
+            <Route path="/link" element={<Link />} />
+            <Route path="/words" element={<Words />} />
+            <Route path="/gridiron" element={<Gridiron />} />
+            <Route path="/faceoff" element={<Faceoff />} />
+            <Route path="/knockout" element={<Knockout />} />
+            <Route path="/privacy" element={<Privacy />} />
+            <Route path="/login" element={<LoginPage />} />
+          </Routes>
+        </Suspense>
       </ErrorBoundary>
       <SignInBanner />
     </BrowserRouter>

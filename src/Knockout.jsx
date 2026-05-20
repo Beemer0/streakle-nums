@@ -312,28 +312,35 @@ const HEADER_POOL = [
 
 function getDailyPuzzle(dateStr) {
   const seed = dateToSeed(dateStr);
-  for (let attempt = 0; attempt < 600; attempt++) {
-    const rng = mulberry32(seed + attempt * 997);
-    const shuffled = [...HEADER_POOL].sort(() => rng() - 0.5);
-    const rows = shuffled.slice(0, 3);
-    const cols = shuffled.slice(3, 6);
-    const all6 = [...rows, ...cols];
-    // Require at least 1 promotion + 1 weight class among all 6 headers
-    if (!all6.some(h => h in PROMOTIONS))    continue;
-    if (!all6.some(h => h in WEIGHT_CLASSES)) continue;
-    // No duplicates across rows/cols
-    if (rows.some(r => cols.includes(r))) continue;
-    // Every cell must have ≥2 valid fighters
-    let valid = true;
-    for (const row of rows) {
-      for (const col of cols) {
-        if (FIGHTERS.filter(f => matchesHeader(f,row) && matchesHeader(f,col)).length < 2) {
-          valid = false; break;
-        }
+  // Pass 0 enforces variety (a promotion + a weight class among the headers).
+  // Pass 1 drops that, so a pathological seed still yields a solvable grid
+  // rather than falling through to the hardcoded fallback.
+  for (let pass = 0; pass < 2; pass++) {
+    for (let attempt = 0; attempt < 600; attempt++) {
+      const rng = mulberry32(seed + attempt * 997 + pass * 31337);
+      const shuffled = [...HEADER_POOL].sort(() => rng() - 0.5);
+      const rows = shuffled.slice(0, 3);
+      const cols = shuffled.slice(3, 6);
+      const all6 = [...rows, ...cols];
+      if (pass === 0) {
+        // Require at least 1 promotion + 1 weight class among all 6 headers
+        if (!all6.some(h => h in PROMOTIONS))    continue;
+        if (!all6.some(h => h in WEIGHT_CLASSES)) continue;
       }
-      if (!valid) break;
+      // No duplicates across rows/cols
+      if (rows.some(r => cols.includes(r))) continue;
+      // Every cell must have ≥2 valid fighters
+      let valid = true;
+      for (const row of rows) {
+        for (const col of cols) {
+          if (FIGHTERS.filter(f => matchesHeader(f,row) && matchesHeader(f,col)).length < 2) {
+            valid = false; break;
+          }
+        }
+        if (!valid) break;
+      }
+      if (valid) return { rows, cols };
     }
-    if (valid) return { rows, cols };
   }
   return { rows:['UFC','PRIDE','MW'], cols:['CHAMPION','KO_WIN','SUB_WIN'] };
 }
