@@ -318,15 +318,17 @@ export default function App() {
   }
 
   return (
-    <div style={{minHeight:'100vh', display:'flex', flexDirection:'column', alignItems:'center', paddingTop:24, position:'relative', color:'#F5F0E8', overflow:'hidden'}}>
+    <div style={{minHeight:'100vh', display:'flex', flexDirection:'column', alignItems:'center', paddingTop:0, position:'relative', color:'#F5F0E8', overflow:'hidden'}}>
       <style>{css}</style>
 
       {confetti.map(c=>(
         <div key={c.id} style={{position:'fixed',left:`${c.x}%`,top:'28%',width:c.size,height:c.size,background:c.color,borderRadius:c.size>10?'50%':2,animation:`confetti 1.3s ${c.delay}ms ease forwards`,pointerEvents:'none',zIndex:100}}/>
       ))}
 
-      <a href="/" style={{position:'absolute',left:16,top:24,color:'#C9A84C',textDecoration:'none',fontSize:13,fontWeight:600}}>← Back</a>
       <UserMenu />
+      <div style={{width:'100%',display:'flex',alignItems:'center',padding:'12px 16px 0',minHeight:44}}>
+        <a href="/" style={{color:'#C9A84C',textDecoration:'none',fontSize:13,fontWeight:600}}>← Back</a>
+      </div>
 
       {/* Header */}
       <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:2}}>

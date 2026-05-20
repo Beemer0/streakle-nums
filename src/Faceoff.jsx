@@ -643,7 +643,7 @@ export default function FaceoffGame() {
   };
 
   return (
-    <div style={{minHeight:'100vh',display:'flex',flexDirection:'column',alignItems:'center',paddingTop:24,paddingBottom:40,color:'#F5F0E8',position:'relative',overflow:'hidden'}}>
+    <div style={{minHeight:'100vh',display:'flex',flexDirection:'column',alignItems:'center',paddingTop:0,paddingBottom:40,color:'#F5F0E8',position:'relative',overflow:'hidden'}}>
       <style>{css}</style>
 
       {confetti.map(c=>(
@@ -651,7 +651,9 @@ export default function FaceoffGame() {
       ))}
 
       <UserMenu />
-      <a href="/" style={{position:'absolute',left:16,top:24,color:'#C9A84C',textDecoration:'none',fontSize:13,fontWeight:600}}>← Back</a>
+      <div style={{width:'100%',display:'flex',alignItems:'center',padding:'12px 16px 0',minHeight:44}}>
+        <a href="/" style={{color:'#C9A84C',textDecoration:'none',fontSize:13,fontWeight:600}}>← Back</a>
+      </div>
 
       <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:2}}>
         <div style={{display:'flex',flexDirection:'column',alignItems:'center'}}>
