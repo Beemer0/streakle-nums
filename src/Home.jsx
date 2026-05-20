@@ -112,6 +112,11 @@ export default function Home() {
         .game-row { text-decoration: none; display: flex; align-items: center; transition: background 0.15s; }
         .game-row:hover { background: #211F1A !important; }
         .game-row:hover .game-row-cta { background: #D4B45A !important; }
+        @media (max-width: 520px) {
+          .game-row { padding: 14px 16px !important; gap: 12px !important; }
+          .game-desc { display: none; }
+          .game-row-cta { padding: 8px 12px !important; font-size: 11px !important; }
+        }
       `}</style>
 
       <UserMenu />
@@ -199,7 +204,7 @@ export default function Home() {
               </div>
 
               {/* Description */}
-              <div style={{
+              <div className="game-desc" style={{
                 flex: 1,
                 fontSize: 13, color: '#7A6E5F', lineHeight: 1.55,
               }}>{g.description}</div>

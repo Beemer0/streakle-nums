@@ -448,6 +448,8 @@ const css = `
 @keyframes confetti{0%{transform:translateY(0) rotate(0deg);opacity:1}100%{transform:translateY(130px) rotate(720deg);opacity:0}}
 @keyframes copied{0%{opacity:0}20%{opacity:1}80%{opacity:1}100%{opacity:0}}
 @keyframes cellReveal{0%{transform:scale(0.85);opacity:0}100%{transform:scale(1);opacity:1}}
+.gridiron-grid{display:grid;grid-template-columns:90px repeat(3,110px);grid-template-rows:70px repeat(3,100px);gap:4px;padding:0 12px}
+@media(max-width:480px){.gridiron-grid{grid-template-columns:72px repeat(3,88px);grid-template-rows:60px repeat(3,86px)}}
 `;
 
 export default function GridironGame() {
@@ -632,7 +634,7 @@ export default function GridironGame() {
 
       {/* Grid */}
       <div style={{overflowX:'auto',width:'100%',display:'flex',justifyContent:'center'}}>
-        <div style={{display:'grid',gridTemplateColumns:'90px repeat(3, 110px)',gridTemplateRows:'70px repeat(3, 100px)',gap:4,padding:'0 12px'}}>
+        <div className="gridiron-grid">
           
           <div style={{background:'transparent'}}/>
 
