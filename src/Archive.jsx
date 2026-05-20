@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useAuth } from './AuthContext'
 import { supabase } from './supabase'
 import { calcStreak } from './streak'
@@ -64,6 +64,7 @@ export default function Archive({ game, onSelectDate, onClose }) {
 
   const meta     = GAME_META[game] ?? { emoji: '🎮', label: game }
   const todayStr = getTodayStr()
+  const panelRef = useRef(null)
 
   // ── Fetch results ────────────────────────────────────────────────────────
   useEffect(() => {
@@ -91,6 +92,26 @@ export default function Archive({ game, onSelectDate, onClose }) {
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
   }, [onClose])
+
+  // ── Focus: move into the dialog on open, trap Tab, restore on close ───────
+  useEffect(() => {
+    const prevFocus = document.activeElement
+    const panel = panelRef.current
+    panel?.querySelector('button')?.focus()
+    const onKeyDown = (e) => {
+      if (e.key !== 'Tab' || !panel) return
+      const items = [...panel.querySelectorAll('button:not(:disabled), a[href], [tabindex]:not([tabindex="-1"])')]
+      if (!items.length) return
+      const first = items[0], last = items[items.length - 1]
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus() }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus() }
+    }
+    panel?.addEventListener('keydown', onKeyDown)
+    return () => {
+      panel?.removeEventListener('keydown', onKeyDown)
+      if (prevFocus instanceof HTMLElement) prevFocus.focus()
+    }
+  }, [])
 
   // ── Month navigation ─────────────────────────────────────────────────────
   const canGoBack    = !(viewYear === launch.getFullYear() && viewMonth === launch.getMonth())
@@ -161,7 +182,7 @@ export default function Archive({ game, onSelectDate, onClose }) {
         }}
       >
         {/* ── Panel ── */}
-        <div role="dialog" aria-modal="true" aria-label="Puzzle archive" style={{
+        <div ref={panelRef} role="dialog" aria-modal="true" aria-label="Puzzle archive" style={{
           background: 'rgba(15,14,12,0.97)',
           backdropFilter: 'blur(30px)',
           border: '1px solid rgba(255,255,255,0.09)',
