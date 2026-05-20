@@ -6,7 +6,7 @@ import { useStreak } from './useStreak';
 import AwardIcon from './AwardIcon';
 
 const TEAMS = {
-  ANA:"Ducks",ARI:"Coyotes",ARZ:"Coyotes",BOS:"Bruins",BUF:"Sabres",
+  ANA:"Ducks",ARI:"Coyotes",BOS:"Bruins",BUF:"Sabres",
   CAR:"Hurricanes",CBJ:"Blue Jackets",CGY:"Flames",CHI:"Blackhawks",
   COL:"Avalanche",DAL:"Stars",DET:"Red Wings",EDM:"Oilers",FLA:"Panthers",
   LAK:"Kings",MIN:"Wild",MTL:"Canadiens",NJD:"Devils",NSH:"Predators",

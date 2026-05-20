@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from './AuthContext'
 import { supabase } from './supabase'
+import { calcStreak } from './streak'
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 const LAUNCH_DATE = '2026-05-16'
@@ -37,17 +38,6 @@ function isLocked(dateStr, user) {
   cutoff.setDate(cutoff.getDate() - FREE_DAYS + 1)
   cutoff.setHours(0, 0, 0, 0)
   return new Date(dateStr + 'T00:00:00') < cutoff
-}
-
-function calcStreak(results) {
-  let streak = 0
-  const d = new Date()
-  while (true) {
-    const str = toLocalStr(d)
-    if (results[str] === true) { streak++; d.setDate(d.getDate() - 1) }
-    else break
-  }
-  return streak
 }
 
 function getCalendarDays(year, month) {
@@ -121,7 +111,7 @@ export default function Archive({ game, onSelectDate, onClose }) {
   const calDays   = getCalendarDays(viewYear, viewMonth)
   const available = calDays.filter(Boolean).filter(isAvailable)
   const completed = available.filter(d => results[d] === true)
-  const streak    = user ? calcStreak(results) : 0
+  const streak    = user ? calcStreak(Object.keys(results).filter(d => results[d] === true)) : 0
 
   // ── Select handler ───────────────────────────────────────────────────────
   function handleSelect(dateStr) {

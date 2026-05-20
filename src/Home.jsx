@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useAuth } from './AuthContext'
 import { supabase } from './supabase'
 import UserMenu from './UserMenu'
+import { calcStreak } from './streak'
 
 const games = [
   {
@@ -74,15 +75,7 @@ function calcStreaks(allResults) {
   })
   const streaks = {}
   Object.entries(byGame).forEach(([game, dates]) => {
-    dates.sort().reverse()
-    let count = 0
-    for (let i = 0; i < dates.length; i++) {
-      const d = new Date()
-      d.setDate(d.getDate() - i)
-      if (dates[i] === d.toLocaleDateString('en-CA')) count++
-      else break
-    }
-    streaks[game] = count
+    streaks[game] = calcStreak(dates)
   })
   return streaks
 }
