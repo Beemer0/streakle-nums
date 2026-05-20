@@ -318,9 +318,13 @@ function getDailyPuzzle(dateStr) {
   for (let pass = 0; pass < 2; pass++) {
     for (let attempt = 0; attempt < 600; attempt++) {
       const rng = mulberry32(seed + attempt * 997 + pass * 31337);
-      const shuffled = [...HEADER_POOL].sort(() => rng() - 0.5);
-      const rows = shuffled.slice(0, 3);
-      const cols = shuffled.slice(3, 6);
+      const pool = [...HEADER_POOL];
+      for (let i = pool.length - 1; i > 0; i--) {
+        const j = Math.floor(rng() * (i + 1));
+        [pool[i], pool[j]] = [pool[j], pool[i]];
+      }
+      const rows = pool.slice(0, 3);
+      const cols = pool.slice(3, 6);
       const all6 = [...rows, ...cols];
       if (pass === 0) {
         // Require at least 1 promotion + 1 weight class among all 6 headers
