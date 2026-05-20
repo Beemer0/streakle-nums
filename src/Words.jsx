@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import Archive from './Archive'
 import UserMenu from "./UserMenu";
 import { saveResult } from './saveResult';
@@ -94,6 +94,7 @@ export default function WordsGame() {
   const [copied, setCopied] = useState(false);
   const [showFact, setShowFact] = useState(false);
   const [revealingTiles, setRevealingTiles] = useState({});
+  const revealingRef = useRef(false);
 
   const showMsg = (msg, dur=1800) => { setMessage(msg); setTimeout(()=>setMessage(null), dur); };
 
@@ -124,6 +125,7 @@ export default function WordsGame() {
   }, [daily.word]);
 
   const submitGuess = useCallback(() => {
+    if (revealingRef.current) return;
     if (input.length!==COLS) {
       setShakeRow(current); setTimeout(()=>setShakeRow(null),600);
       showMsg('Not enough letters'); return;
@@ -133,6 +135,7 @@ export default function WordsGame() {
       showMsg('Not a valid word!'); return;
     }
     const result = evaluate(input);
+    revealingRef.current = true;
     const rowIdx = current;
     const submittedInput = input;
     setGuesses(prev=>{const n=[...prev];n[rowIdx]=submittedInput;return n;});
@@ -150,14 +153,17 @@ export default function WordsGame() {
     const totalDelay = (COLS-1)*150+800;
 
     setTimeout(()=>{
-      const newKeyStates={...keyStates};
-      submittedInput.split('').forEach((ch,i)=>{
-        const prev=newKeyStates[ch];
-        if (result[i]===ST.correct) newKeyStates[ch]=ST.correct;
-        else if (result[i]===ST.present&&prev!==ST.correct) newKeyStates[ch]=ST.present;
-        else if (!prev) newKeyStates[ch]=ST.absent;
+      setKeyStates(prev=>{
+        const next={...prev};
+        submittedInput.split('').forEach((ch,i)=>{
+          const p=next[ch];
+          if (result[i]===ST.correct) next[ch]=ST.correct;
+          else if (result[i]===ST.present&&p!==ST.correct) next[ch]=ST.present;
+          else if (!p) next[ch]=ST.absent;
+        });
+        return next;
       });
-      setKeyStates(newKeyStates);
+      revealingRef.current = false;
       const isWin=result.every(s=>s===ST.correct);
       if (isWin) {
         setBounceRow(rowIdx); setTimeout(()=>setBounceRow(null),1000);
@@ -170,10 +176,10 @@ export default function WordsGame() {
         setCurrent(c=>c+1);
       }
     }, totalDelay);
-  }, [input, current, keyStates, evaluate, daily.word]);
+  }, [input, current, evaluate, daily.word]);
 
   const handleKey = useCallback((key) => {
-    if (gameOver) return;
+    if (gameOver || revealingRef.current) return;
     if (key==='ENTER') { submitGuess(); return; }
     if (key==='⌫'||key==='BACKSPACE') { setInput(i=>i.slice(0,-1)); return; }
     if (/^[A-Z]$/.test(key)&&input.length<COLS) setInput(i=>i+key);
@@ -201,6 +207,7 @@ export default function WordsGame() {
     setCopied(false)
     setShowFact(false)
     setRevealingTiles({})
+    revealingRef.current = false
   }, [puzzleDate])
 
   const getLetter=(r,c)=>{
