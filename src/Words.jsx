@@ -366,7 +366,7 @@ export default function WordsGame() {
                     minWidth:wide?56:34,height:46,
                     background:st===ST.correct?CLR.correct:st===ST.present?CLR.present:st===ST.absent?CLR.absent:'#4A433A',
                     border:'none',borderRadius:6,
-                    color:st===ST.absent?'#3A342E':'#fff',
+                    color:st===ST.absent?'#5A5248':'#fff',
                     fontSize:wide?11:14,fontWeight:700,
                     cursor:'pointer',userSelect:'none',
                     transition:'background 0.3s, color 0.3s',padding:'0 4px',

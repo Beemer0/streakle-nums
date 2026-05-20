@@ -179,7 +179,7 @@ export default function Archive({ game, onSelectDate, onClose }) {
               <div style={{ fontSize: 21, fontWeight: 700, color: '#fff', letterSpacing: '-0.4px' }}>
                 {meta.emoji} {meta.label} Archive
               </div>
-              <div style={{ fontSize: 12, color: '#555', marginTop: 3 }}>
+              <div style={{ fontSize: 12, color: '#857F73', marginTop: 3 }}>
                 {user ? 'All puzzles since launch' : 'Last 7 days · sign in for full history'}
               </div>
             </div>
@@ -290,14 +290,14 @@ export default function Archive({ game, onSelectDate, onClose }) {
               {['Su','Mo','Tu','We','Th','Fr','Sa'].map(d => (
                 <div key={d} style={{
                   textAlign: 'center', fontSize: 11,
-                  color: '#444', fontWeight: 700, letterSpacing: '0.04em', paddingBottom: 2,
+                  color: '#6E6A60', fontWeight: 700, letterSpacing: '0.04em', paddingBottom: 2,
                 }}>{d}</div>
               ))}
             </div>
 
             {/* Day cells */}
             {loading ? (
-              <div style={{ textAlign: 'center', color: '#444', padding: '28px 0', fontSize: 13 }}>
+              <div style={{ textAlign: 'center', color: '#6E6A60', padding: '28px 0', fontSize: 13 }}>
                 Loading…
               </div>
             ) : (
@@ -384,7 +384,7 @@ export default function Archive({ game, onSelectDate, onClose }) {
           {/* ── Legend ── */}
           <div style={{
             display: 'flex', gap: 14, justifyContent: 'center',
-            fontSize: 11, color: '#444',
+            fontSize: 11, color: '#6E6A60',
           }}>
             {[
               { color: '#4ade80', label: 'Completed' },
