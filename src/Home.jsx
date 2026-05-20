@@ -116,14 +116,17 @@ export default function Home() {
           .game-row { padding: 14px 16px !important; gap: 12px !important; }
           .game-desc { display: none; }
           .game-row-cta { padding: 8px 12px !important; font-size: 11px !important; }
+          .home-logo { font-size: 48px !important; letter-spacing: 6px !important; }
+          .home-section { margin-bottom: 6px !important; }
+          .home-badge { margin-bottom: 24px !important; }
         }
       `}</style>
 
       <UserMenu />
 
       {/* ── Logo ── */}
-      <div style={{ textAlign: 'center', marginBottom: 12, animation: 'fadeIn 0.5s ease' }}>
-        <div style={{
+      <div className="home-section" style={{ textAlign: 'center', marginBottom: 12, animation: 'fadeIn 0.5s ease' }}>
+        <div className="home-logo" style={{
           fontFamily: "'Barlow Condensed', sans-serif",
           fontSize: 72, fontWeight: 800, letterSpacing: 10,
           color: '#F5F0E8', lineHeight: 1,
@@ -139,7 +142,7 @@ export default function Home() {
       </div>
 
       {/* ── Live badge ── */}
-      <div style={{
+      <div className="home-badge" style={{
         background: 'rgba(201,168,76,0.07)',
         border: '1px solid rgba(201,168,76,0.22)',
         borderRadius: 20, padding: '6px 16px',
