@@ -208,7 +208,7 @@ const KEYBOARD = [
 ];
 
 const ST = { empty:'empty', correct:'correct', present:'present', absent:'absent' };
-const CLR = { empty:'#1C1A16', active:'#2C2418', correct:'#538d4e', present:'#b59f3b', absent:'#3a3a4a' };
+const CLR = { empty:'#1C1A16', active:'#2C2418', correct:'#538d4e', present:'#b59f3b', absent:'#161412' };
 
 const css = `
 @keyframes shake{0%,100%{transform:translateX(0)}15%{transform:translateX(-6px)}30%{transform:translateX(6px)}45%{transform:translateX(-4px)}60%{transform:translateX(4px)}75%{transform:translateX(-2px)}90%{transform:translateX(2px)}}
@@ -503,11 +503,12 @@ export default function WordsGame() {
                 return (
                   <button key={key} onClick={()=>handleKey(key)} style={{
                     minWidth:wide?56:34,height:46,
-                    background:st===ST.correct?CLR.correct:st===ST.present?CLR.present:st===ST.absent?CLR.absent:'#2C2820',
-                    border:'none',borderRadius:6,color:'#fff',
+                    background:st===ST.correct?CLR.correct:st===ST.present?CLR.present:st===ST.absent?CLR.absent:'#4A433A',
+                    border:'none',borderRadius:6,
+                    color:st===ST.absent?'#3A342E':'#fff',
                     fontSize:wide?11:14,fontWeight:700,
                     cursor:'pointer',userSelect:'none',
-                    transition:'background 0.3s',padding:'0 4px',
+                    transition:'background 0.3s, color 0.3s',padding:'0 4px',
                   }}>{key}</button>
                 );
               })}
