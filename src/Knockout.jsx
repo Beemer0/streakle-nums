@@ -431,7 +431,7 @@ export default function KnockoutGame() {
       setGuessesLeft(newGuesses);
       if (newGuesses === 0) {
         setGameOver(true);
-        saveResult('knockout', puzzleDate, false, totalScore);
+        saveResult({ game: 'knockout', completed: false, score: totalScore });
       }
       setQuery('');
       setSuggestions([]);
@@ -454,7 +454,7 @@ export default function KnockoutGame() {
 
     if (Object.keys(newCells).length === 9) {
       setWon(true);
-      saveResult('knockout', puzzleDate, true, newTotal);
+      saveResult({ game: 'knockout', completed: true, score: newTotal });
       const colors = ['#C9A84C','#fff','#86EFAC','#FCA5A5','#93C5FD'];
       setConfetti(Array.from({length:30},(_,i)=>({
         id:i, x:Math.random()*100, size:Math.random()*10+6,
@@ -465,7 +465,7 @@ export default function KnockoutGame() {
 
     if (newGuesses === 0) {
       setGameOver(true);
-      saveResult('knockout', puzzleDate, false, newTotal);
+      saveResult({ game: 'knockout', completed: false, score: newTotal });
     }
   }
 

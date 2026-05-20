@@ -4,7 +4,7 @@ export async function saveResult({ game, completed, score = 0, swaps_used = 0 })
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return
 
-  const today = new Date().toISOString().split('T')[0] // YYYY-MM-DD
+  const today = new Date().toLocaleDateString('en-CA') // YYYY-MM-DD, local time
 
   const { error } = await supabase
     .from('game_results')
