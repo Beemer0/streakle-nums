@@ -25,6 +25,16 @@ const games = [
     badge: 'Know It',
   },
   {
+    key: 'knockout',
+    path: '/knockout',
+    title: 'KNOCKOUT',
+    emoji: '🥊',
+    description: 'Name MMA fighters by promotion, weight class, and achievement.',
+    color: '#7F1D1D',
+    accent: '#FCA5A5',
+    badge: 'Know It',
+  },
+  {
     key: 'words',
     path: '/words',
     title: 'WORDS',
@@ -53,16 +63,6 @@ const games = [
     color: '#1E40AF',
     accent: '#93C5FD',
     badge: 'Swap It',
-  },
-  {
-    key: 'knockout',
-    path: '/knockout',
-    title: 'KNOCKOUT',
-    emoji: '🥊',
-    description: 'Name MMA fighters by promotion, weight class, and achievement.',
-    color: '#7F1D1D',
-    accent: '#FCA5A5',
-    badge: 'Know It',
   },
 ]
 
