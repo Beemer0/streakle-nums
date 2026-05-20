@@ -3,6 +3,7 @@ import Archive from './Archive'
 import UserMenu from "./UserMenu";
 import { saveResult } from './saveResult';
 import { useStreak } from './useStreak';
+import AwardIcon from './AwardIcon';
 
 // ── Categories ───────────────────────────────────────────────────────────────
 
@@ -553,7 +554,9 @@ export default function KnockoutGame() {
             const {bg,color}=getHeaderStyle(col);
             return (
               <div key={ci} style={{background:'#1C1A16',border:'1px solid #2C2820',borderRadius:8,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:'4px 6px',textAlign:'center'}}>
-                <div style={{background:bg,border:`1px solid ${color}40`,borderRadius:4,padding:'2px 6px',fontSize:9,fontWeight:800,color,letterSpacing:0.5}}>{BADGE[col]}</div>
+                {col in ACHIEVEMENTS
+                  ? <AwardIcon name={col} size={32}/>
+                  : <div style={{background:bg,border:`1px solid ${color}40`,borderRadius:4,padding:'2px 6px',fontSize:9,fontWeight:800,color,letterSpacing:0.5}}>{BADGE[col]}</div>}
                 <div style={{fontSize:9,fontWeight:700,color,lineHeight:1.2,marginTop:3}}>{LABEL[col]}</div>
               </div>
             );
@@ -564,7 +567,7 @@ export default function KnockoutGame() {
             <React.Fragment key={`row-${ri}`}>
               {/* Row header */}
               <div style={{background:'#1C1A16',border:'1px solid #2C2820',borderRadius:8,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:'4px 6px',textAlign:'center'}}>
-                {(()=>{const{bg,color}=getHeaderStyle(row);return(<><div style={{background:bg,border:`1px solid ${color}40`,borderRadius:4,padding:'2px 6px',fontSize:9,fontWeight:800,color,letterSpacing:0.5}}>{BADGE[row]}</div><div style={{fontSize:9,fontWeight:700,color,lineHeight:1.2,marginTop:3}}>{LABEL[row]}</div></>);})()}
+                {(()=>{const{bg,color}=getHeaderStyle(row);return(<>{row in ACHIEVEMENTS?<AwardIcon name={row} size={32}/>:<div style={{background:bg,border:`1px solid ${color}40`,borderRadius:4,padding:'2px 6px',fontSize:9,fontWeight:800,color,letterSpacing:0.5}}>{BADGE[row]}</div>}<div style={{fontSize:9,fontWeight:700,color,lineHeight:1.2,marginTop:3}}>{LABEL[row]}</div></>);})()}
               </div>
               {/* Cells */}
               {colHeaders.map((col,ci)=>{
