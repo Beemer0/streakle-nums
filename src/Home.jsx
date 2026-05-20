@@ -123,9 +123,13 @@ export default function Home() {
         .game-row:hover { background: #211F1A !important; }
         .game-row:hover .game-row-cta { background: #D4B45A !important; }
         @media (max-width: 520px) {
-          .game-row { padding: 14px 16px !important; gap: 12px !important; }
+          .game-row { padding: 14px 16px !important; gap: 10px !important; }
           .game-desc { display: none; }
-          .game-row-cta { padding: 8px 12px !important; font-size: 11px !important; }
+          .game-name { width: 100px !important; }
+          .game-name-title { font-size: 22px !important; }
+          .game-status { min-width: 36px !important; }
+          .game-cta { padding: 7px 10px !important; font-size: 11px !important; }
+          .game-row-cta { padding: 7px 10px !important; font-size: 11px !important; }
           .home-logo { font-size: 48px !important; letter-spacing: 6px !important; }
           .home-section { margin-bottom: 6px !important; }
           .home-badge { margin-bottom: 24px !important; }
@@ -199,8 +203,8 @@ export default function Home() {
               <div style={{ fontSize: 28, flexShrink: 0, width: 36, textAlign: 'center' }}>{g.emoji}</div>
 
               {/* Name + badge */}
-              <div style={{ width: 148, flexShrink: 0 }}>
-                <div style={{
+              <div className="game-name" style={{ width: 148, flexShrink: 0 }}>
+                <div className="game-name-title" style={{
                   fontFamily: "'Barlow Condensed', sans-serif",
                   fontSize: 28, fontWeight: 800, letterSpacing: 1.5,
                   color: '#F5F0E8', lineHeight: 1,
@@ -224,7 +228,7 @@ export default function Home() {
 
               {/* Status + streak — only rendered when there's something to show */}
               {user && (completed || failed || streaks[g.key] > 0) && (
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4, flexShrink: 0, minWidth: 52 }}>
+                <div className="game-status" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4, flexShrink: 0, minWidth: 52 }}>
                   {completed && (
                     <div style={{ fontSize: 11, fontWeight: 700, color: '#86EFAC', letterSpacing: 0.3 }}>✓ Done</div>
                   )}
@@ -239,7 +243,7 @@ export default function Home() {
 
               {/* CTA */}
               <div
-                className={completed ? '' : 'game-row-cta'}
+                className={completed ? 'game-cta' : 'game-cta game-row-cta'}
                 style={{
                   flexShrink: 0,
                   background: completed ? 'rgba(134,239,172,0.08)' : failed ? 'transparent' : '#C9A84C',
