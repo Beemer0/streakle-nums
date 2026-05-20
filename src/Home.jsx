@@ -212,18 +212,20 @@ export default function Home() {
                 fontSize: 13, color: '#7A6E5F', lineHeight: 1.55,
               }}>{g.description}</div>
 
-              {/* Status + streak */}
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4, flexShrink: 0, minWidth: 60 }}>
-                {completed && (
-                  <div style={{ fontSize: 11, fontWeight: 700, color: '#86EFAC', letterSpacing: 0.3 }}>✓ Done</div>
-                )}
-                {failed && (
-                  <div style={{ fontSize: 11, fontWeight: 700, color: '#FCA5A5', letterSpacing: 0.3 }}>✗ Tried</div>
-                )}
-                {user && streaks[g.key] > 0 && (
-                  <div style={{ fontSize: 11, fontWeight: 700, color: '#C9A84C' }}>🔥 {streaks[g.key]}</div>
-                )}
-              </div>
+              {/* Status + streak — only rendered when there's something to show */}
+              {user && (completed || failed || streaks[g.key] > 0) && (
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4, flexShrink: 0, minWidth: 52 }}>
+                  {completed && (
+                    <div style={{ fontSize: 11, fontWeight: 700, color: '#86EFAC', letterSpacing: 0.3 }}>✓ Done</div>
+                  )}
+                  {failed && (
+                    <div style={{ fontSize: 11, fontWeight: 700, color: '#FCA5A5', letterSpacing: 0.3 }}>✗ Tried</div>
+                  )}
+                  {streaks[g.key] > 0 && (
+                    <div style={{ fontSize: 11, fontWeight: 700, color: '#C9A84C' }}>🔥 {streaks[g.key]}</div>
+                  )}
+                </div>
+              )}
 
               {/* CTA */}
               <div
@@ -232,7 +234,7 @@ export default function Home() {
                   flexShrink: 0,
                   background: completed ? 'rgba(134,239,172,0.08)' : failed ? 'transparent' : '#C9A84C',
                   border: completed ? '1px solid rgba(134,239,172,0.22)' : failed ? '1px solid rgba(252,165,165,0.3)' : 'none',
-                  borderRadius: 6, padding: '8px 16px',
+                  borderRadius: 20, padding: '7px 16px',
                   fontSize: 12, fontWeight: 700, letterSpacing: 0.4,
                   color: completed ? '#86EFAC' : failed ? '#FCA5A5' : '#0F0E0C',
                   whiteSpace: 'nowrap',
