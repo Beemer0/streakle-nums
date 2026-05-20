@@ -161,7 +161,7 @@ export default function Archive({ game, onSelectDate, onClose }) {
         }}
       >
         {/* ── Panel ── */}
-        <div style={{
+        <div role="dialog" aria-modal="true" aria-label="Puzzle archive" style={{
           background: 'rgba(15,14,12,0.97)',
           backdropFilter: 'blur(30px)',
           border: '1px solid rgba(255,255,255,0.09)',
@@ -185,6 +185,7 @@ export default function Archive({ game, onSelectDate, onClose }) {
             </div>
             <button
               className="arch-close"
+              aria-label="Close archive"
               onClick={onClose}
               style={{
                 background: 'rgba(255,255,255,0.07)',
@@ -258,6 +259,7 @@ export default function Archive({ game, onSelectDate, onClose }) {
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <button
                 className="arch-nav"
+                aria-label="Previous month"
                 onClick={prevMonth}
                 disabled={!canGoBack}
                 style={{
@@ -272,6 +274,7 @@ export default function Archive({ game, onSelectDate, onClose }) {
               <span style={{ color: '#fff', fontWeight: 600, fontSize: 15 }}>{monthName}</span>
               <button
                 className="arch-nav"
+                aria-label="Next month"
                 onClick={nextMonth}
                 disabled={!canGoForward}
                 style={{
