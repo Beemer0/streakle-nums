@@ -424,8 +424,10 @@ function getDailyPuzzle(dateStr) {
   return PUZZLES[seed % PUZZLES.length]
 }
 
-function formatDate() {
-  return new Date().toLocaleDateString('en-US', { month:'long', day:'numeric', year:'numeric' });
+function formatDate(dateStr) {
+  let d = new Date();
+  if (dateStr) { const [y,m,day] = dateStr.split('-').map(Number); d = new Date(y, m-1, day); }
+  return d.toLocaleDateString('en-US', { month:'long', day:'numeric', year:'numeric' });
 }
 
 function isValid(player, criteria) {
@@ -571,7 +573,7 @@ export default function GridironGame() {
   const handleShare = async () => {
     const grid = Array.from({length:3},(_,r)=>Array.from({length:3},(_,c)=>cells[`${r}-${c}`]?'✅':'⬜').join('')).join('\n');
     const filled = Object.keys(cells).length;
-    const text = `GRIDIRON by Streakle 🏈 — ${formatDate()}\nScore: ${totalScore} | ${filled}/9 cells\n${grid}\n\nPlay at: playstreakle.com/gridiron`;
+    const text = `GRIDIRON by Streakle 🏈 — ${formatDate(puzzleDate)}\nScore: ${totalScore} | ${filled}/9 cells\n${grid}\n\nPlay at: playstreakle.com/gridiron`;
     try {
       if (navigator.share) await navigator.share({text});
       else { await navigator.clipboard.writeText(text); setCopied(true); setTimeout(()=>setCopied(false),2000); }
@@ -604,7 +606,7 @@ export default function GridironGame() {
         </button>
       </div>
 
-      <div style={{fontSize:13,color:'#7A6E5F',marginBottom:8,marginTop:6}}>{formatDate()}</div>
+      <div style={{fontSize:13,color:'#7A6E5F',marginBottom:8,marginTop:6}}>{formatDate(puzzleDate)}</div>
 
       {showHow&&(
         <div style={{background:'#1C1A16',border:'1px solid #2C2820',borderRadius:10,padding:16,maxWidth:340,marginBottom:12,fontSize:13,lineHeight:1.65,color:'#ccc',animation:'slideUp 0.3s ease'}}>

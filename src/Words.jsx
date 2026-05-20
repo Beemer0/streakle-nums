@@ -48,8 +48,10 @@ function getDailyWord(dateStr) {
   return WORDS[seed % WORDS.length]
 }
 
-function formatDate() {
-  return new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+function formatDate(dateStr) {
+  let d = new Date();
+  if (dateStr) { const [y,m,day] = dateStr.split('-').map(Number); d = new Date(y, m-1, day); }
+  return d.toLocaleDateString('en-US', { month:'long', day:'numeric', year:'numeric' });
 }
 
 const ROWS = 6, COLS = 5;
@@ -217,7 +219,7 @@ export default function WordsGame() {
     const rows=guesses.slice(0,won?current+1:ROWS).filter(g=>g)
       .map((_,i)=>Array.from({length:COLS},(__,j)=>emoji[tileStates[`${i}-${j}`]]||'⬛').join(''));
     const result=won?`${current+1}/${ROWS}`:'X/6';
-    return `WORDS by Streakle 🔥 — ${formatDate()}\n${result}\n${rows.join('\n')}\n\nPlay at: playstreakle.com/words`;
+    return `WORDS by Streakle 🔥 — ${formatDate(puzzleDate)}\n${result}\n${rows.join('\n')}\n\nPlay at: playstreakle.com/words`;
   };
 
   const handleShare=async()=>{
@@ -253,7 +255,7 @@ export default function WordsGame() {
         </button>
       </div>
 
-      <div style={{fontSize:13,color:'#7A6E5F',marginBottom:10,marginTop:6}}>{formatDate()}</div>
+      <div style={{fontSize:13,color:'#7A6E5F',marginBottom:10,marginTop:6}}>{formatDate(puzzleDate)}</div>
 
       {streak > 0 && (
         <div style={{fontSize:13, color:'#C9A84C', fontWeight:600, marginBottom:8}}>
