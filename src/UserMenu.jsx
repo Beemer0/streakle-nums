@@ -27,7 +27,7 @@ export default function UserMenu() {
         display: 'flex', alignItems: 'center', justifyContent: 'center',
       }}>
         {avatar
-          ? <img src={avatar} width={36} height={36} style={{ borderRadius: '50%' }} />
+          ? <img src={avatar} alt="" width={36} height={36} style={{ borderRadius: '50%' }} />
           : <span style={{ fontSize: 14, fontWeight: 700, color: '#C9A84C' }}>
               {name?.[0]?.toUpperCase()}
             </span>
