@@ -3,6 +3,7 @@ import Archive from './Archive'
 import UserMenu from "./UserMenu";
 import { saveResult } from './saveResult';
 import { useStreak } from './useStreak';
+import { evaluate } from './evaluate';
 import validWordsRaw from './validWords.txt?raw';
 
 const WORDS = [
@@ -116,23 +117,6 @@ export default function WordsGame() {
     setTimeout(()=>setConfetti([]),1600);
   };
 
-  const evaluate = useCallback((guess) => {
-    const result = Array(COLS).fill(ST.absent);
-    const target = daily.word.split('');
-    const guessArr = guess.split('');
-    const used = Array(COLS).fill(false);
-    for (let i=0;i<COLS;i++) {
-      if (guessArr[i]===target[i]) { result[i]=ST.correct; used[i]=true; }
-    }
-    for (let i=0;i<COLS;i++) {
-      if (result[i]===ST.correct) continue;
-      for (let j=0;j<COLS;j++) {
-        if (!used[j]&&guessArr[i]===target[j]) { result[i]=ST.present; used[j]=true; break; }
-      }
-    }
-    return result;
-  }, [daily.word]);
-
   const submitGuess = useCallback(() => {
     if (revealingRef.current) return;
     if (input.length!==COLS) {
@@ -143,7 +127,7 @@ export default function WordsGame() {
       setShakeRow(current); setTimeout(()=>setShakeRow(null),600);
       showMsg('Not a valid word!'); return;
     }
-    const result = evaluate(input);
+    const result = evaluate(input, daily.word);
     revealingRef.current = true;
     const rowIdx = current;
     const submittedInput = input;
@@ -185,7 +169,7 @@ export default function WordsGame() {
         setCurrent(c=>c+1);
       }
     }, totalDelay);
-  }, [input, current, evaluate, daily.word]);
+  }, [input, current, daily.word]);
 
   const handleKey = useCallback((key) => {
     if (gameOver || revealingRef.current) return;
