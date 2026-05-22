@@ -35,21 +35,17 @@ security headers, a generated OG image, and a Vitest test foundation. All
 verified working on the live site.
 
 ## Current focus — SEO optimization
-Already done (do NOT redo): `<title>`, meta description, Open Graph + Twitter
-tags, the OG image (`public/og-image.png`), `theme-color`, and font-loading perf
-(fonts load via `<link>`+`preconnect`, not a CSS `@import`).
+Done: `<title>`, meta description, Open Graph + Twitter tags, the OG image
+(`public/og-image.png`), `theme-color`, font-loading perf, `public/robots.txt`,
+`public/sitemap.xml`, and — via the `useSeo` hook in `src/seo.js`, wired into
+every route — per-route `<title>`, meta description, `<link rel="canonical">`,
+social tags and JSON-LD. Semantic HTML is in place too: one `<h1>` per page and
+`<main>`/`<nav>`/`<footer>` landmarks. `index.html` carries a `WebSite` JSON-LD
+block.
 
-Remaining SEO work, rough priority order:
-1. `public/robots.txt` — allow crawlers, reference the sitemap.
-2. `public/sitemap.xml` — list all routes (`/`, the six games, `/privacy`).
-3. Per-route metadata — it's an SPA, so every route currently serves the same
-   homepage `<title>`/description. Give each game page its own title +
-   description (a small per-route `document.title` effect, or react-helmet).
-4. Semantic HTML — the "STREAKLE" logo is a `<div>`; make it an `<h1>`, add
-   `<main>`/`<nav>` landmarks, and give each game page a real `<h1>`.
-5. JSON-LD structured data (schema.org `WebSite`, optionally a game type per game).
-6. `<link rel="canonical">` per route.
-7. Optional/bigger: pre-render the routes so content is crawlable without JS.
-8. Finish with a Lighthouse SEO audit.
-
-(Once SEO is complete, trim this "Current focus" section so it doesn't go stale.)
+Remaining SEO work:
+1. Optional/bigger: pre-render the routes so content is crawlable without JS.
+   Per-route metadata currently updates client-side only — Googlebot runs JS so
+   it sees it, but non-JS social scrapers still read the homepage OG tags from
+   `index.html`. Pre-rendering (or SSG) would give each route static tags.
+2. Run a Lighthouse SEO audit on the deployed site.

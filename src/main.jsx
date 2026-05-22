@@ -7,6 +7,7 @@ import { supabase } from './supabase.js'
 import './index.css'
 import Home from './Home.jsx'
 import ErrorBoundary from './ErrorBoundary.jsx'
+import { useSeo, PAGE_SEO } from './seo.js'
 
 // Game routes are code-split — each loads its own chunk on demand.
 const Nums     = lazy(() => import('./Nums.jsx'))
@@ -31,6 +32,8 @@ function SignInBanner() {
 function LoginPage() {
   const { user } = useAuth()
   const [loading, setLoading] = useState(false)
+
+  useSeo(PAGE_SEO.login)
 
   useEffect(() => {
     if (user) window.location.href = '/'

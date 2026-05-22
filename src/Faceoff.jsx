@@ -5,6 +5,7 @@ import { saveResult } from './saveResult';
 import { useStreak } from './useStreak';
 import AwardIcon from './AwardIcon';
 import { clickableProps } from './a11y';
+import { useSeo, PAGE_SEO } from './seo';
 
 const TEAMS = {
   ANA:"Ducks",ARI:"Coyotes",BOS:"Bruins",BUF:"Sabres",
@@ -515,6 +516,7 @@ const css = `
 
 export default function FaceoffGame() {
   const { streak } = useStreak('faceoff');
+  useSeo(PAGE_SEO.faceoff)
   const [showArchive, setShowArchive] = useState(false)
   const [puzzleDate, setPuzzleDate] = useState(null)
   const puzzle = useMemo(() => getDailyPuzzle(puzzleDate), [puzzleDate])
@@ -633,7 +635,7 @@ export default function FaceoffGame() {
   };
 
   return (
-    <div style={{minHeight:'100vh',display:'flex',flexDirection:'column',alignItems:'center',paddingTop:0,paddingBottom:40,color:'#F5F0E8',position:'relative',overflow:'hidden'}}>
+    <main style={{minHeight:'100vh',display:'flex',flexDirection:'column',alignItems:'center',paddingTop:0,paddingBottom:40,color:'#F5F0E8',position:'relative',overflow:'hidden'}}>
       <style>{css}</style>
 
       {confetti.map(c=>(
@@ -647,7 +649,7 @@ export default function FaceoffGame() {
 
       <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:2}}>
         <div style={{display:'flex',flexDirection:'column',alignItems:'center'}}>
-          <div style={{fontSize:30,fontWeight:900,letterSpacing:2,color:'#fff'}}>FACEOFF</div>
+          <h1 style={{fontSize:30,fontWeight:900,letterSpacing:2,color:'#fff',margin:0}}>FACEOFF</h1>
           <div style={{fontSize:11,fontWeight:600,letterSpacing:3,color:'#C9A84C',textTransform:'uppercase',marginTop:-4}}>by Streakle</div>
         </div>
         <button onClick={()=>setShowHow(!showHow)} style={{background:'none',border:'1px solid #2C2820',borderRadius:6,color:'#C9A84C',cursor:'pointer',fontSize:13,padding:'3px 10px',marginLeft:8}}>
@@ -802,6 +804,6 @@ export default function FaceoffGame() {
           onClose={() => setShowArchive(false)}
         />
       )}
-    </div>
+    </main>
   );
 }

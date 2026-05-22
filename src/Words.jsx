@@ -5,6 +5,7 @@ import { saveResult } from './saveResult';
 import { useStreak } from './useStreak';
 import { evaluate } from './evaluate';
 import validWordsRaw from './validWords.txt?raw';
+import { useSeo, PAGE_SEO } from './seo';
 
 const WORDS = [
   { word: "BRINY", def: "Salty like the sea.", fact: "The ocean contains about 35 grams of salt per litre. Ancient sailors called the sea 'the briny deep', and the phrase stuck around for centuries." },
@@ -77,6 +78,7 @@ const css = `
 
 export default function WordsGame() {
   const { streak } = useStreak('words');
+  useSeo(PAGE_SEO.words)
   const [showArchive, setShowArchive] = useState(false)
   const [puzzleDate, setPuzzleDate] = useState(null)
   const daily = useMemo(() => getDailyWord(puzzleDate), [puzzleDate])
@@ -231,7 +233,7 @@ export default function WordsGame() {
   };
 
   return (
-    <div style={{minHeight:'100vh',display:'flex',flexDirection:'column',alignItems:'center',paddingTop:0,paddingBottom:32,color:'#F5F0E8',position:'relative',overflow:'hidden'}}>
+    <main style={{minHeight:'100vh',display:'flex',flexDirection:'column',alignItems:'center',paddingTop:0,paddingBottom:32,color:'#F5F0E8',position:'relative',overflow:'hidden'}}>
       <style>{css}</style>
       <UserMenu />
       <div style={{width:'100%',display:'flex',alignItems:'center',padding:'12px 16px 0',minHeight:44}}>
@@ -244,7 +246,7 @@ export default function WordsGame() {
 
       <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:2}}>
         <div style={{display:'flex',flexDirection:'column',alignItems:'center'}}>
-          <div style={{fontSize:32,fontWeight:900,letterSpacing:2,color:'#fff'}}>WORDS</div>
+          <h1 style={{fontSize:32,fontWeight:900,letterSpacing:2,color:'#fff',margin:0}}>WORDS</h1>
           <div style={{fontSize:11,fontWeight:600,letterSpacing:3,color:'#C9A84C',textTransform:'uppercase',marginTop:-4}}>by Streakle</div>
         </div>
         <button onClick={()=>setShowHow(!showHow)} style={{background:'none',border:'1px solid #2C2820',borderRadius:6,color:'#C9A84C',cursor:'pointer',fontSize:13,padding:'3px 10px',marginLeft:8}}>
@@ -394,6 +396,6 @@ export default function WordsGame() {
           onClose={() => setShowArchive(false)}
         />
       )}
-    </div>
+    </main>
   );
 }

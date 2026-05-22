@@ -1,0 +1,5 @@
+# Streakle — https://playstreakle.com
+User-agent: *
+Allow: /
+
+Sitemap: https://playstreakle.com/sitemap.xml

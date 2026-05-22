@@ -1,3 +1,5 @@
+import { useSeo, PAGE_SEO } from './seo'
+
 const h2Style = {
   fontFamily: "'Barlow Condensed', sans-serif",
   fontSize: 20, fontWeight: 800, letterSpacing: 1,
@@ -11,8 +13,9 @@ const h3Style = {
 }
 
 export default function Privacy() {
+  useSeo(PAGE_SEO.privacy)
   return (
-    <div style={{
+    <main style={{
       maxWidth: 680, margin: '0 auto', padding: '48px 24px 64px',
       fontFamily: "'DM Sans', sans-serif",
       color: '#A89880', minHeight: '100vh', lineHeight: 1.8,
@@ -127,6 +130,6 @@ export default function Privacy() {
       <div style={{marginTop:48, paddingTop:24, borderTop:'1px solid #2C2820', color:'#7A6E5F', fontSize:13}}>
         © 2026 Streakle. All rights reserved / Tous droits réservés.
       </div>
-    </div>
+    </main>
   );
 }

@@ -4,6 +4,7 @@ import UserMenu from "./UserMenu";
 import { saveResult } from './saveResult';
 import { useStreak } from './useStreak';
 import { clickableProps } from './a11y';
+import { useSeo, PAGE_SEO } from './seo';
 
 const PUZZLES = [
   {
@@ -197,6 +198,7 @@ function FlyingTile({ word, fr, fc, tr, tc, cs, total, color }) {
 
 export default function GridGame() {
   const { streak } = useStreak('link');
+  useSeo(PAGE_SEO.link)
   const [showArchive, setShowArchive] = useState(false)
   const [puzzleDate, setPuzzleDate] = useState(null)
 
@@ -353,7 +355,7 @@ export default function GridGame() {
   };
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: 0, color: '#F5F0E8', position: 'relative', overflow: 'hidden' }}>
+    <main style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: 0, color: '#F5F0E8', position: 'relative', overflow: 'hidden' }}>
       <style>{css}</style>
       <UserMenu />
       <div style={{width:'100%',display:'flex',alignItems:'center',padding:'12px 16px 0',minHeight:44}}>
@@ -366,7 +368,7 @@ export default function GridGame() {
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 2 }}>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-          <div style={{ fontSize: 32, fontWeight: 900, letterSpacing: 2, color: '#fff' }}>LINK</div>
+          <h1 style={{ fontSize: 32, fontWeight: 900, letterSpacing: 2, color: '#fff', margin: 0 }}>LINK</h1>
           <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: 3, color: '#C9A84C', textTransform: 'uppercase', marginTop: -4 }}>by Streakle</div>
         </div>
         <button onClick={() => setShowHow(!showHow)} style={{ background: 'none', border: '1px solid #2C2820', borderRadius: 6, color: '#C9A84C', cursor: 'pointer', fontSize: 13, padding: '3px 10px', marginLeft: 8 }}>
@@ -509,6 +511,6 @@ export default function GridGame() {
           onClose={() => setShowArchive(false)}
         />
       )}
-    </div>
+    </main>
   );
 }

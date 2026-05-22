@@ -3,6 +3,7 @@ import { useAuth } from './AuthContext'
 import { supabase } from './supabase'
 import UserMenu from './UserMenu'
 import { calcStreak } from './streak'
+import { useSeo, PAGE_SEO } from './seo'
 
 const games = [
   {
@@ -85,6 +86,8 @@ export default function Home() {
   const [todayResults, setTodayResults] = useState({})
   const [streaks, setStreaks] = useState({})
 
+  useSeo(PAGE_SEO.home)
+
   useEffect(() => {
     if (!user) return
     const today = new Date().toLocaleDateString('en-CA')
@@ -131,15 +134,17 @@ export default function Home() {
 
       <UserMenu />
 
+      <main style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+
       {/* ── Logo ── */}
       <div className="home-section" style={{ textAlign: 'center', marginBottom: 12, animation: 'fadeIn 0.5s ease' }}>
-        <div className="home-logo" style={{
+        <h1 className="home-logo" style={{
           fontFamily: "'Barlow Condensed', sans-serif",
           fontSize: 72, fontWeight: 800, letterSpacing: 10,
-          color: '#F5F0E8', lineHeight: 1,
+          color: '#F5F0E8', lineHeight: 1, margin: 0,
         }}>
           STREAKLE
-        </div>
+        </h1>
         <div style={{
           fontSize: 11, fontWeight: 600, letterSpacing: 4,
           color: '#C9A84C', textTransform: 'uppercase', marginTop: 12,
@@ -166,7 +171,7 @@ export default function Home() {
       </div>
 
       {/* ── Game list ── */}
-      <div style={{
+      <nav aria-label="Games" style={{
         width: '100%', maxWidth: 820,
         border: '1px solid #2C2820',
         borderRadius: 12, overflow: 'hidden',
@@ -253,10 +258,12 @@ export default function Home() {
             </a>
           )
         })}
-      </div>
+      </nav>
+
+      </main>
 
       {/* ── Footer ── */}
-      <div style={{ textAlign: 'center', fontSize: 12 }}>
+      <footer style={{ textAlign: 'center', fontSize: 12 }}>
         <a href="/privacy" style={{ color: '#9A8C73', textDecoration: 'none', transition: 'color 0.15s' }}
           onMouseOver={e => e.currentTarget.style.color = '#C9A84C'}
           onMouseOut={e => e.currentTarget.style.color = '#9A8C73'}
@@ -264,7 +271,7 @@ export default function Home() {
           Privacy Policy / Politique de confidentialité
         </a>
         <div style={{ marginTop: 6, color: '#7E7158' }}>© 2026 Streakle. All rights reserved.</div>
-      </div>
+      </footer>
     </div>
   )
 }

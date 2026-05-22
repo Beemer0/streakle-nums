@@ -4,6 +4,7 @@ import UserMenu from "./UserMenu";
 import { saveResult } from './saveResult';
 import { useStreak } from './useStreak';
 import { clickableProps } from './a11y';
+import { useSeo, PAGE_SEO } from './seo';
 
 const isActive = (r, c) => r % 2 === 0 || c % 2 === 0;
 
@@ -94,6 +95,7 @@ const css = `
 
 export default function App() {
   const { streak } = useStreak('nums');
+  useSeo(PAGE_SEO.nums)
   const [showArchive, setShowArchive] = useState(false)
   const [puzzleDate, setPuzzleDate] = useState(null)
 
@@ -321,7 +323,7 @@ export default function App() {
   }
 
   return (
-    <div style={{minHeight:'100vh', display:'flex', flexDirection:'column', alignItems:'center', paddingTop:0, position:'relative', color:'#F5F0E8', overflow:'hidden'}}>
+    <main style={{minHeight:'100vh', display:'flex', flexDirection:'column', alignItems:'center', paddingTop:0, position:'relative', color:'#F5F0E8', overflow:'hidden'}}>
       <style>{css}</style>
 
       {confetti.map(c=>(
@@ -336,7 +338,7 @@ export default function App() {
       {/* Header */}
       <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:2}}>
         <div style={{display:'flex',flexDirection:'column',alignItems:'center'}}>
-          <div style={{fontSize:32,fontWeight:900,letterSpacing:2,color:'#fff'}}>NUMS</div>
+          <h1 style={{fontSize:32,fontWeight:900,letterSpacing:2,color:'#fff',margin:0}}>NUMS</h1>
           <div style={{fontSize:11,fontWeight:600,letterSpacing:3,color:'#C9A84C',textTransform:'uppercase',marginTop:-4}}>by Streakle</div>
         </div>
         <button onClick={()=>setShowHow(!showHow)} style={{background:'none',border:'1px solid #2C2820',borderRadius:6,color:'#C9A84C',cursor:'pointer',fontSize:13,padding:'3px 10px',marginLeft:8}}>
@@ -429,7 +431,7 @@ export default function App() {
           onClose={() => setShowArchive(false)}
         />
       )}
-    </div>
+    </main>
   );
 }
 
