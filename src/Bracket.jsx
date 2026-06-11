@@ -60,6 +60,7 @@ export default function Bracket() {
   const [joinState, setJoinState] = useState('idle') // idle | busy | bad
   const [flash, setFlash] = useState(null)
   const [showRules, setShowRules] = useState(false)
+  const [confirmDay, setConfirmDay] = useState(null)
   const now = useNow()
 
   const me = user && Array.isArray(roster) ? roster.find(r => r.user_id === user.id) : null
@@ -71,7 +72,7 @@ export default function Bracket() {
     return Promise.all([
       supabase.rpc('get_pool_members'),
       supabase.from('matches').select('*').order('kickoff_at'),
-      supabase.from('predictions').select('user_id,match_id,pick'),
+      supabase.from('predictions').select('user_id,match_id,pick,locked_at'),
     ]).then(([r, m, p]) => {
       setRoster(r.data ?? [])
       setMatches(m.data ?? [])
@@ -87,6 +88,12 @@ export default function Bracket() {
     const map = {}
     if (user) for (const p of preds) if (p.user_id === user.id) map[p.match_id] = p.pick
     return map
+  }, [preds, user])
+
+  const myLocked = useMemo(() => {
+    const s = new Set()
+    if (user) for (const p of preds) if (p.user_id === user.id && p.locked_at) s.add(p.match_id)
+    return s
   }, [preds, user])
 
   const days = useMemo(() => {
@@ -120,6 +127,7 @@ export default function Bracket() {
 
   const savePick = async (m, pick) => {
     if (!user) return
+    if (myLocked.has(m.id)) { showFlash('That pick is locked in — no changes') ; return }
     const prev = preds
     setPreds(ps => [
       ...ps.filter(p => !(p.user_id === user.id && p.match_id === m.id)),
@@ -133,6 +141,30 @@ export default function Bracket() {
       setPreds(prev)
       showFlash('Could not save — this match may already be locked')
     }
+  }
+
+  // Locks every draft pick for the given matches — RLS makes the rows
+  // immutable from then on, so this is enforced server-side, not just here.
+  const lockPicks = async (ids) => {
+    const stamp = new Date().toISOString()
+    const { error } = await supabase.from('predictions')
+      .update({ locked_at: stamp })
+      .eq('user_id', user.id)
+      .is('locked_at', null)
+      .in('match_id', ids)
+    if (error) { showFlash(`Could not lock: ${error.message}`); return }
+    setPreds(ps => ps.map(p =>
+      p.user_id === user.id && ids.includes(p.match_id) && !p.locked_at
+        ? { ...p, locked_at: stamp }
+        : p
+    ))
+    setConfirmDay(null)
+  }
+
+  const handleLockDay = (day, ids) => {
+    if (confirmDay === day) { lockPicks(ids); return }
+    setConfirmDay(day)
+    setTimeout(() => setConfirmDay(c => (c === day ? null : c)), 3500)
   }
 
   const setResult = async (m, result) => {
@@ -267,14 +299,36 @@ export default function Bracket() {
               ? <>You've picked <b style={{ color: GOLD }}>{pickedCount}</b> of <b style={{ color: GOLD }}>{upcoming.length}</b> open matches</>
               : 'No open matches right now'}
           </div>
-          {days.map(([day, dayMatches]) => (
-            <div key={day} style={{ marginBottom: 22 }}>
-              <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 17, fontWeight: 800, letterSpacing: 1, color: INK, marginBottom: 8, borderBottom: `1px solid ${BORDER}`, paddingBottom: 4 }}>
-                {day}
+          {days.map(([day, dayMatches]) => {
+            const lockable = dayMatches
+              .filter(m => myPicks[m.id] && !myLocked.has(m.id) && !m.excluded && !m.result
+                && new Date(m.kickoff_at).getTime() > now)
+              .map(m => m.id)
+            return (
+              <div key={day} style={{ marginBottom: 22 }}>
+                <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 17, fontWeight: 800, letterSpacing: 1, color: INK, marginBottom: 8, borderBottom: `1px solid ${BORDER}`, paddingBottom: 4 }}>
+                  {day}
+                </div>
+                {dayMatches.map(m => (
+                  <MatchRow key={m.id} m={m} myPick={myPicks[m.id]} lockedIn={myLocked.has(m.id)} now={now} onPick={savePick} />
+                ))}
+                {lockable.length > 0 && (
+                  <button onClick={() => handleLockDay(day, lockable)} style={{
+                    width: '100%', marginTop: 2, padding: '9px 12px',
+                    background: confirmDay === day ? GOLD : 'none',
+                    border: `1px solid ${confirmDay === day ? GOLD : BORDER}`,
+                    borderRadius: 8, color: confirmDay === day ? '#0F0E0C' : GOLD,
+                    fontSize: 12, fontWeight: 700, letterSpacing: 0.5, cursor: 'pointer',
+                    transition: 'background 0.15s',
+                  }}>
+                    {confirmDay === day
+                      ? `Tap again to lock ${lockable.length} pick${lockable.length !== 1 ? 's' : ''} — can't be undone`
+                      : `🔒 Lock in ${lockable.length} pick${lockable.length !== 1 ? 's' : ''} for this day`}
+                  </button>
+                )}
               </div>
-              {dayMatches.map(m => <MatchRow key={m.id} m={m} myPick={myPicks[m.id]} now={now} onPick={savePick} />)}
-            </div>
-          ))}
+            )
+          })}
         </div>
       )}
 
@@ -330,10 +384,10 @@ export default function Bracket() {
   )
 }
 
-function MatchRow({ m, myPick, now, onPick }) {
+function MatchRow({ m, myPick, lockedIn, now, onPick }) {
   const kicked = new Date(m.kickoff_at).getTime() <= now
   const tbd = !m.team_a_locked || !m.team_b_locked
-  const locked = kicked || tbd || !!m.result || !!m.excluded
+  const locked = kicked || tbd || !!m.result || !!m.excluded || !!lockedIn
   const options = m.stage === 'group'
     ? [['a', m.team_a ?? 'TBD'], ['draw', 'Draw'], ['b', m.team_b ?? 'TBD']]
     : [['a', m.team_a ?? 'TBD'], ['b', m.team_b ?? 'TBD']]
@@ -350,6 +404,8 @@ function MatchRow({ m, myPick, now, onPick }) {
     status = <span style={{ color: MUTED }}>—</span>
   } else if (kicked) {
     status = <span style={{ color: MUTED }}>Locked</span>
+  } else if (lockedIn) {
+    status = <span style={{ color: GOLD, fontWeight: 700 }}>🔒 In</span>
   } else if (tbd) {
     status = <span style={{ color: MUTED }}>TBD</span>
   }
@@ -422,8 +478,10 @@ function RulesModal({ onClose }) {
 
         <div style={sectionTitle}>Locking</div>
         <p style={body}>
-          Picks <b>lock at kickoff</b>. Until then, change them as often as you like.
-          Everyone's picks stay hidden until the match starts — no copying.
+          Picks save as drafts you can change any time before kickoff. Hit
+          <b> 🔒 Lock in</b> under a matchday to commit those picks — locked picks
+          can't be changed, ever. Anything still in draft locks automatically at
+          kickoff. Everyone's picks stay hidden until the match starts — no copying.
           Knockout matches open for picking once both teams are known.
         </p>
 

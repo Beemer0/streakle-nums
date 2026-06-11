@@ -48,6 +48,8 @@ feature. Members join with an invite code, pick winners for every WC 2026 match
   SECURITY DEFINER RPC (no INSERT policy on `pool_members` — that's deliberate;
   don't add one). `get_pool_members()` RPC returns the roster with names.
   Picks lock at kickoff server-side (RLS checks `kickoff_at > now()`).
+  Players can also "lock in" a matchday's picks early (`predictions.locked_at`;
+  the RLS update policy makes locked rows immutable).
   `matches.excluded = true` takes a match out of the pool entirely (unpickable,
   never scored) — used for the June 11 2026 openers, which kicked off before
   the friends joined; the pool starts June 12. The sync never writes this column.

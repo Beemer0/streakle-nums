@@ -32,6 +32,7 @@ create table predictions (
   user_id    uuid not null references auth.users on delete cascade,
   match_id   int  not null references matches on delete cascade,
   pick       text not null check (pick in ('a','b','draw')),
+  locked_at  timestamptz,  -- set when the player "locks in"; row becomes immutable
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   primary key (user_id, match_id)
@@ -126,8 +127,10 @@ create policy p_insert_own on predictions for insert
                   and not m.excluded
                   and m.team_a_locked and m.team_b_locked)
   );
+-- locked_at is null in USING → once a pick is locked in, the row is immutable
+-- (the lock itself is the last permitted update).
 create policy p_update_own on predictions for update
-  using (user_id = auth.uid())
+  using (user_id = auth.uid() and locked_at is null)
   with check (
     user_id = auth.uid()
     and exists (select 1 from matches m
