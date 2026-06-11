@@ -34,6 +34,27 @@ A full code audit + fix pass: bug fixes, route code-splitting, accessibility
 security headers, a generated OG image, and a Vitest test foundation. All
 verified working on the live site.
 
+## World Cup 2026 bracket pool (`/bracket`)
+A private prediction pool for the owner's friends — the site's first multi-user
+feature. Members join with an invite code, pick winners for every WC 2026 match
+(a/b/draw in groups, a/b in knockouts), and are ranked on a leaderboard
+(points: group 1, R32 2, R16 3, QF 5, SF 8, 3rd-place 5, final 12 —
+`src/bracket/scoring.js`, tested).
+
+- UI: `src/Bracket.jsx` (signed-out / join-with-code / picks / standings /
+  admin-override views). Members-only banner on Home. `noindex` via `PAGE_SEO`.
+- DB: `supabase/schema.sql` — `pool_members`, `matches`, `predictions`,
+  `pool_config` + RLS. Joining goes ONLY through the `join_pool(code)`
+  SECURITY DEFINER RPC (no INSERT policy on `pool_members` — that's deliberate;
+  don't add one). `get_pool_members()` RPC returns the roster with names.
+  Picks lock at kickoff server-side (RLS checks `kickoff_at > now()`).
+- Results sync automatically: `supabase/functions/sync-matches/index.ts` (Edge
+  Function) pulls football-data.org every 5 min via pg_cron (setup commented at
+  the bottom of schema.sql; needs the `FOOTBALL_DATA_TOKEN` secret). Admin
+  grading in the UI sets `result_source='admin'`, which the sync never
+  overwrites. First admin is flipped manually:
+  `update pool_members set is_admin = true where user_id = '<uid>'`.
+
 ## Current focus — SEO optimization
 Done: `<title>`, meta description, Open Graph + Twitter tags, the OG image
 (`public/og-image.png`), `theme-color`, font-loading perf, `public/robots.txt`,

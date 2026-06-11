@@ -102,12 +102,19 @@ export const PAGE_SEO = {
       'Sign in to Streakle to save your progress, track your daily streaks and unlock the puzzle archive.',
     path: '/login',
   },
+  bracket: {
+    title: 'World Cup 2026 Pool | Streakle',
+    description:
+      'A private World Cup 2026 prediction pool — pick winners for every match and climb the leaderboard.',
+    path: '/bracket',
+    noindex: true, // private pool — keep it out of search results
+  },
 }
 
 // Streakle is a client-rendered SPA, so every route otherwise inherits the
 // homepage metadata baked into index.html. This applies the per-route
 // <title>, meta description, canonical link, social tags and JSON-LD.
-export function useSeo({ title, description, path, jsonLd }) {
+export function useSeo({ title, description, path, jsonLd, noindex }) {
   useEffect(() => {
     document.title = title
     const url = SITE_URL + path
@@ -120,7 +127,8 @@ export function useSeo({ title, description, path, jsonLd }) {
     setMeta('name', 'twitter:description', description)
     setCanonical(url)
     setJsonLd(jsonLd)
-  }, [title, description, path, jsonLd])
+    setRobots(noindex)
+  }, [title, description, path, jsonLd, noindex])
 }
 
 function setMeta(attr, key, content) {
@@ -141,6 +149,20 @@ function setCanonical(href) {
     document.head.appendChild(el)
   }
   el.setAttribute('href', href)
+}
+
+function setRobots(noindex) {
+  let el = document.head.querySelector('meta[name="robots"]')
+  if (!noindex) {
+    if (el) el.remove()
+    return
+  }
+  if (!el) {
+    el = document.createElement('meta')
+    el.setAttribute('name', 'robots')
+    document.head.appendChild(el)
+  }
+  el.setAttribute('content', 'noindex')
 }
 
 function setJsonLd(data) {

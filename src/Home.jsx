@@ -85,8 +85,21 @@ export default function Home() {
   const { user } = useAuth()
   const [todayResults, setTodayResults] = useState({})
   const [streaks, setStreaks] = useState({})
+  const [inPool, setInPool] = useState(false)
 
   useSeo(PAGE_SEO.home)
+
+  // RLS returns rows only for pool members, so a non-empty result means "in".
+  useEffect(() => {
+    if (!user) return
+    let active = true
+    supabase
+      .from('pool_members')
+      .select('user_id')
+      .limit(1)
+      .then(({ data }) => { if (active) setInPool(!!data?.length) })
+    return () => { active = false }
+  }, [user])
 
   useEffect(() => {
     if (!user) return
@@ -169,6 +182,21 @@ export default function Home() {
         }} />
         New puzzles every day
       </div>
+
+      {/* ── World Cup pool (members only) ── */}
+      {user && inPool && (
+        <a href="/bracket" style={{
+          width: '100%', maxWidth: 820, boxSizing: 'border-box',
+          background: 'rgba(201,168,76,0.07)',
+          border: '1px solid rgba(201,168,76,0.25)',
+          borderRadius: 12, padding: '14px 20px', marginBottom: 14,
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          textDecoration: 'none', animation: 'fadeIn 0.5s ease',
+        }}>
+          <span style={{ fontSize: 14, fontWeight: 700, color: '#F5F0E8' }}>⚽ World Cup 2026 Pool</span>
+          <span style={{ fontSize: 12, fontWeight: 700, color: '#C9A84C' }}>Make your picks →</span>
+        </a>
+      )}
 
       {/* ── Game list ── */}
       <nav aria-label="Games" style={{

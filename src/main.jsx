@@ -17,6 +17,7 @@ const Gridiron = lazy(() => import('./Gridiron.jsx'))
 const Faceoff  = lazy(() => import('./Faceoff.jsx'))
 const Knockout = lazy(() => import('./Knockout.jsx'))
 const Privacy  = lazy(() => import('./Privacy.jsx'))
+const Bracket  = lazy(() => import('./Bracket.jsx'))
 
 function SignInBanner() {
   const { user } = useAuth()
@@ -123,6 +124,7 @@ function AppRoutes() {
             <Route path="/gridiron" element={<Gridiron />} />
             <Route path="/faceoff" element={<Faceoff />} />
             <Route path="/knockout" element={<Knockout />} />
+            <Route path="/bracket" element={<Bracket />} />
             <Route path="/privacy" element={<Privacy />} />
             <Route path="/login" element={<LoginPage />} />
           </Routes>
