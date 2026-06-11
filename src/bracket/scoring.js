@@ -21,13 +21,14 @@ export const STAGE_LABELS = {
 }
 
 // score(predictions, matches) → { [user_id]: { total, correct, byStage } }
-// Ungraded matches (result null) and unknown stages contribute nothing.
+// Ungraded matches (result null), excluded matches and unknown stages
+// contribute nothing.
 export function score(predictions, matches) {
   const byMatch = new Map(matches.map(m => [m.id, m]))
   const out = {}
   for (const p of predictions) {
     const m = byMatch.get(p.match_id)
-    if (!m || !m.result) continue
+    if (!m || !m.result || m.excluded) continue
     let user = out[p.user_id]
     if (!user) user = out[p.user_id] = { total: 0, correct: 0, byStage: {} }
     if (p.pick === m.result) {

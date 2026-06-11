@@ -49,6 +49,11 @@ describe('score', () => {
     expect(result.u1).toBeUndefined()
   })
 
+  it('ignores excluded matches even when the pick was correct', () => {
+    const result = score([pred('u1', 1, 'a')], [{ ...match(1, 'group', 'a'), excluded: true }])
+    expect(result.u1).toBeUndefined()
+  })
+
   it('scores unknown stages as zero points but still counts them correct', () => {
     const result = score([pred('u1', 1, 'a')], [match(1, 'mystery', 'a')])
     expect(result.u1).toEqual({ total: 0, correct: 1, byStage: { mystery: 0 } })

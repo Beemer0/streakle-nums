@@ -211,7 +211,7 @@ export default function Bracket() {
   }
 
   // ── Member ──
-  const upcoming = matches.filter(m => new Date(m.kickoff_at).getTime() > now && m.team_a_locked && m.team_b_locked)
+  const upcoming = matches.filter(m => !m.excluded && new Date(m.kickoff_at).getTime() > now && m.team_a_locked && m.team_b_locked)
   const pickedCount = upcoming.filter(m => myPicks[m.id]).length
 
   const tabs = [
@@ -316,14 +316,16 @@ export default function Bracket() {
 function MatchRow({ m, myPick, now, onPick }) {
   const kicked = new Date(m.kickoff_at).getTime() <= now
   const tbd = !m.team_a_locked || !m.team_b_locked
-  const locked = kicked || tbd || !!m.result
+  const locked = kicked || tbd || !!m.result || !!m.excluded
   const options = m.stage === 'group'
     ? [['a', m.team_a ?? 'TBD'], ['draw', 'Draw'], ['b', m.team_b ?? 'TBD']]
     : [['a', m.team_a ?? 'TBD'], ['b', m.team_b ?? 'TBD']]
   const pts = STAGE_POINTS[m.stage] ?? 0
 
   let status = null
-  if (m.result && myPick) {
+  if (m.excluded) {
+    status = <span style={{ color: MUTED }}>Not scored</span>
+  } else if (m.result && myPick) {
     status = myPick === m.result
       ? <span style={{ color: '#86EFAC', fontWeight: 700 }}>✓ +{pts}</span>
       : <span style={{ color: '#FCA5A5', fontWeight: 700 }}>✗</span>

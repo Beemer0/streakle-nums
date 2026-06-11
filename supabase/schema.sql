@@ -24,6 +24,7 @@ create table matches (
   team_b_locked   boolean not null default true,
   result          text check (result in ('a','b','draw')),       -- null until finished
   result_source   text check (result_source in ('api','admin')), -- audit trail
+  excluded        boolean not null default false,  -- out of the pool: unpickable, never scored
   updated_at      timestamptz not null default now()
 );
 
@@ -122,13 +123,17 @@ create policy p_insert_own on predictions for insert
     and exists (select 1 from matches m
                 where m.id = match_id
                   and m.kickoff_at > now()
+                  and not m.excluded
                   and m.team_a_locked and m.team_b_locked)
   );
 create policy p_update_own on predictions for update
   using (user_id = auth.uid())
   with check (
     user_id = auth.uid()
-    and exists (select 1 from matches m where m.id = match_id and m.kickoff_at > now())
+    and exists (select 1 from matches m
+                where m.id = match_id
+                  and m.kickoff_at > now()
+                  and not m.excluded)
   );
 
 -- pool_config: invisible from the client. The join_pool RPC is the only reader.

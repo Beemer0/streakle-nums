@@ -48,6 +48,9 @@ feature. Members join with an invite code, pick winners for every WC 2026 match
   SECURITY DEFINER RPC (no INSERT policy on `pool_members` — that's deliberate;
   don't add one). `get_pool_members()` RPC returns the roster with names.
   Picks lock at kickoff server-side (RLS checks `kickoff_at > now()`).
+  `matches.excluded = true` takes a match out of the pool entirely (unpickable,
+  never scored) — used for the June 11 2026 openers, which kicked off before
+  the friends joined; the pool starts June 12. The sync never writes this column.
 - Results sync automatically: `supabase/functions/sync-matches/index.ts` (Edge
   Function) pulls football-data.org every 5 min via pg_cron (setup commented at
   the bottom of schema.sql; needs the `FOOTBALL_DATA_TOKEN` secret). Admin
