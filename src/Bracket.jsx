@@ -4,6 +4,7 @@ import { supabase } from './supabase'
 import UserMenu from './UserMenu'
 import { useSeo, PAGE_SEO } from './seo'
 import { score, STAGE_LABELS, STAGE_POINTS } from './bracket/scoring'
+import { flagUrl } from './bracket/flags'
 
 const GOLD = '#C9A84C', CARD = '#1C1A16', BORDER = '#2C2820', INK = '#F5F0E8', MUTED = '#7A6E5F'
 
@@ -22,6 +23,17 @@ function fmtTime(iso) {
 function stageBadge(m) {
   if (m.stage === 'group') return m.group_code ? `Group ${m.group_code}` : 'Groups'
   return STAGE_LABELS[m.stage] ?? m.stage
+}
+
+function Flag({ code, size = 16 }) {
+  const src = flagUrl(code)
+  if (!src) return null
+  return (
+    <img
+      src={src} alt="" width={size} height={Math.round(size * 0.75)} loading="lazy"
+      style={{ borderRadius: 2, objectFit: 'cover', display: 'block', flexShrink: 0 }}
+    />
+  )
 }
 
 // Clock that re-renders subscribers when the 30s bucket rolls over, so
@@ -47,6 +59,7 @@ export default function Bracket() {
   const [code, setCode] = useState('')
   const [joinState, setJoinState] = useState('idle') // idle | busy | bad
   const [flash, setFlash] = useState(null)
+  const [showRules, setShowRules] = useState(false)
   const now = useNow()
 
   const me = user && Array.isArray(roster) ? roster.find(r => r.user_id === user.id) : null
@@ -142,6 +155,9 @@ export default function Bracket() {
         <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: 3, color: GOLD, textTransform: 'uppercase', marginTop: 2 }}>
           World Cup 2026 · by Streakle
         </div>
+        <button onClick={() => setShowRules(true)} style={{ background: 'none', border: `1px solid ${BORDER}`, borderRadius: 6, color: GOLD, cursor: 'pointer', fontSize: 12, padding: '3px 12px', marginTop: 8 }}>
+          📖 Rules
+        </button>
       </div>
     </>
   )
@@ -162,6 +178,7 @@ export default function Bracket() {
       )}
       {children}
       {footer}
+      {showRules && <RulesModal onClose={() => setShowRules(false)} />}
     </main>
   )
 
@@ -364,12 +381,69 @@ function MatchRow({ m, myPick, now, onPick }) {
                 transition: 'background 0.15s, border-color 0.15s',
               }}
             >
-              {label}
+              <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
+                {key !== 'draw' && <Flag code={key === 'a' ? m.team_a : m.team_b} />}
+                {label}
+              </span>
             </button>
           )
         })}
       </div>
       <div style={{ width: 52, flexShrink: 0, textAlign: 'right', fontSize: 12 }}>{status}</div>
+    </div>
+  )
+}
+
+function RulesModal({ onClose }) {
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === 'Escape') onClose() }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [onClose])
+
+  const sectionTitle = { fontSize: 11, fontWeight: 700, letterSpacing: 1.5, color: GOLD, textTransform: 'uppercase', marginTop: 18, marginBottom: 6 }
+  const body = { fontSize: 13, color: '#ccc', lineHeight: 1.65, margin: 0 }
+  const stages = ['group', 'r32', 'r16', 'qf', 'sf', '3p', 'final']
+
+  return (
+    <div onClick={onClose} role="dialog" aria-modal="true" aria-label="Pool rules" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, animation: 'fadeIn 0.2s ease' }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 14, padding: '20px 22px 18px', maxWidth: 380, width: '100%', maxHeight: '85vh', overflowY: 'auto', boxSizing: 'border-box', animation: 'slideUp 0.25s ease' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 2 }}>
+          <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 22, fontWeight: 800, letterSpacing: 2, color: INK }}>POOL RULES</div>
+          <button onClick={onClose} aria-label="Close" style={{ background: 'none', border: 'none', color: MUTED, cursor: 'pointer', fontSize: 18, padding: 4, lineHeight: 1 }}>✕</button>
+        </div>
+
+        <div style={sectionTitle}>How it works</div>
+        <p style={body}>
+          Pick the winner of every World Cup match before it kicks off. Group-stage
+          matches can end in a <b>draw</b> — knockout matches can't (extra time and
+          penalties decide a winner).
+        </p>
+
+        <div style={sectionTitle}>Locking</div>
+        <p style={body}>
+          Picks <b>lock at kickoff</b>. Until then, change them as often as you like.
+          Everyone's picks stay hidden until the match starts — no copying.
+          Knockout matches open for picking once both teams are known.
+        </p>
+
+        <div style={sectionTitle}>Points per correct pick</div>
+        <div style={{ border: `1px solid ${BORDER}`, borderRadius: 8, overflow: 'hidden', marginTop: 2 }}>
+          {stages.map((s, i) => (
+            <div key={s} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 12px', fontSize: 13, background: i % 2 ? 'transparent' : '#0F0E0C' }}>
+              <span style={{ color: '#ccc' }}>{STAGE_LABELS[s]}</span>
+              <span style={{ color: GOLD, fontWeight: 800 }}>{STAGE_POINTS[s]} pt{STAGE_POINTS[s] !== 1 ? 's' : ''}</span>
+            </div>
+          ))}
+        </div>
+
+        <div style={sectionTitle}>Standings</div>
+        <p style={body}>
+          Most points wins. Ties are broken by total correct picks. Results come in
+          automatically a few minutes after full-time. Matches marked
+          <b> "Not scored"</b> don't count for anyone.
+        </p>
+      </div>
     </div>
   )
 }
@@ -383,8 +457,10 @@ function AdminRow({ m, onSet }) {
         <div style={{ fontSize: 12, fontWeight: 700, color: INK }}>{fmtTime(m.kickoff_at)}</div>
         <div style={{ fontSize: 10, fontWeight: 700, color: GOLD, textTransform: 'uppercase', letterSpacing: 0.5 }}>{stageBadge(m)}</div>
       </div>
-      <div style={{ flex: 1, fontSize: 13, fontWeight: 700, color: INK, textAlign: 'center' }}>
-        {m.team_a ?? 'TBD'} <span style={{ color: MUTED, fontWeight: 400 }}>vs</span> {m.team_b ?? 'TBD'}
+      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, fontSize: 13, fontWeight: 700, color: INK }}>
+        <Flag code={m.team_a} size={14} /> {m.team_a ?? 'TBD'}
+        <span style={{ color: MUTED, fontWeight: 400 }}>vs</span>
+        {m.team_b ?? 'TBD'} <Flag code={m.team_b} size={14} />
       </div>
       <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
         {options.map(key => (
