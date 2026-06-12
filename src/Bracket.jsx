@@ -12,6 +12,20 @@ const css = `
 @keyframes slideUp{from{transform:translateY(12px);opacity:0}to{transform:translateY(0);opacity:1}}
 @keyframes fadeIn{from{opacity:0}to{opacity:1}}
 @keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-6px)}40%{transform:translateX(6px)}60%{transform:translateX(-4px)}80%{transform:translateX(4px)}}
+.bk-row{display:flex;align-items:center;gap:10px}
+.bk-time{width:84px;flex-shrink:0}
+.bk-btns{display:flex;gap:6px;flex:1;justify-content:center;min-width:0}
+.bk-btn{flex:1 1 0;max-width:104px;min-width:0}
+.bk-status{width:52px;flex-shrink:0;text-align:right;font-size:12px}
+@media(max-width:520px){
+  .bk-row{gap:6px}
+  .bk-time{width:58px}
+  .bk-kick{font-size:11px !important}
+  .bk-badge{font-size:8.5px !important}
+  .bk-btn{font-size:12px !important;padding:8px 2px !important}
+  .bk-btns{gap:4px}
+  .bk-status{width:34px;font-size:11px}
+}
 `
 
 function fmtDay(iso) {
@@ -411,22 +425,23 @@ function MatchRow({ m, myPick, lockedIn, now, onPick }) {
   }
 
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: CARD, border: `1px solid ${BORDER}`, borderRadius: 10, padding: '8px 12px', marginBottom: 6, flexWrap: 'wrap' }}>
-      <div style={{ width: 84, flexShrink: 0 }}>
-        <div style={{ fontSize: 12, fontWeight: 700, color: INK }}>{fmtTime(m.kickoff_at)}</div>
-        <div style={{ fontSize: 10, fontWeight: 700, color: GOLD, textTransform: 'uppercase', letterSpacing: 0.5 }}>{stageBadge(m)}</div>
+    <div className="bk-row" style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 10, padding: '8px 12px', marginBottom: 6 }}>
+      <div className="bk-time">
+        <div className="bk-kick" style={{ fontSize: 12, fontWeight: 700, color: INK }}>{fmtTime(m.kickoff_at)}</div>
+        <div className="bk-badge" style={{ fontSize: 10, fontWeight: 700, color: GOLD, textTransform: 'uppercase', letterSpacing: 0.5 }}>{stageBadge(m)}</div>
       </div>
-      <div style={{ display: 'flex', gap: 6, flex: 1, justifyContent: 'center' }}>
+      <div className="bk-btns">
         {options.map(([key, label]) => {
           const active = myPick === key
           const won = m.result === key
           return (
             <button
               key={key}
+              className="bk-btn"
               onClick={() => onPick(m, key)}
               disabled={locked}
               style={{
-                minWidth: key === 'draw' ? 52 : 60, padding: '8px 6px',
+                padding: '8px 4px',
                 background: active ? (m.result ? (won ? 'rgba(134,239,172,0.12)' : 'rgba(252,165,165,0.10)') : GOLD) : '#0F0E0C',
                 border: `2px solid ${won ? '#4caf50' : active ? GOLD : BORDER}`,
                 borderRadius: 8,
@@ -445,7 +460,7 @@ function MatchRow({ m, myPick, lockedIn, now, onPick }) {
           )
         })}
       </div>
-      <div style={{ width: 52, flexShrink: 0, textAlign: 'right', fontSize: 12 }}>{status}</div>
+      <div className="bk-status">{status}</div>
     </div>
   )
 }
@@ -510,10 +525,10 @@ function AdminRow({ m, onSet }) {
   const options = m.stage === 'group' ? ['a', 'draw', 'b'] : ['a', 'b']
   const label = { a: m.team_a ?? 'A', draw: 'Draw', b: m.team_b ?? 'B' }
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: CARD, border: `1px solid ${BORDER}`, borderRadius: 10, padding: '8px 12px', marginBottom: 6, flexWrap: 'wrap' }}>
-      <div style={{ width: 84, flexShrink: 0 }}>
-        <div style={{ fontSize: 12, fontWeight: 700, color: INK }}>{fmtTime(m.kickoff_at)}</div>
-        <div style={{ fontSize: 10, fontWeight: 700, color: GOLD, textTransform: 'uppercase', letterSpacing: 0.5 }}>{stageBadge(m)}</div>
+    <div className="bk-row" style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 10, padding: '8px 12px', marginBottom: 6 }}>
+      <div className="bk-time">
+        <div className="bk-kick" style={{ fontSize: 12, fontWeight: 700, color: INK }}>{fmtTime(m.kickoff_at)}</div>
+        <div className="bk-badge" style={{ fontSize: 10, fontWeight: 700, color: GOLD, textTransform: 'uppercase', letterSpacing: 0.5 }}>{stageBadge(m)}</div>
       </div>
       <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, fontSize: 13, fontWeight: 700, color: INK }}>
         <Flag code={m.team_a} size={14} /> {m.team_a ?? 'TBD'}
