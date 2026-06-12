@@ -1,10 +1,11 @@
-// Audits the Faceoff answer key: verifies every one of the 30 daily puzzles
-// is solvable (each of the 9 cells has at least one valid player AND a full
-// board of 9 DISTINCT players exists), and prints thin spots.
-// Run: node scripts/check-faceoff.mjs
+// Audits a grid-game answer key (Faceoff or Gridiron): verifies every one of
+// the 30 daily puzzles is solvable (each of the 9 cells has at least one valid
+// player AND a full board of 9 DISTINCT players exists), and prints thin spots.
+// Run: node scripts/check-faceoff.mjs [Gridiron]
 import { readFileSync } from 'node:fs'
 
-const src = readFileSync(new URL('../src/Faceoff.jsx', import.meta.url), 'utf8')
+const game = process.argv[2] ?? 'Faceoff'
+const src = readFileSync(new URL(`../src/${game}.jsx`, import.meta.url), 'utf8')
 
 function extractArray(name) {
   const start = src.indexOf(`const ${name} = [`)
