@@ -127,6 +127,454 @@ const PUZZLES = [
       { label: "___ map", color: "#9b59b6", words: ["ROAD", "MIND", "HEAT", "GOOGLE"] },
     ]
   },
+  {
+    categories: [
+      { label: "Card suits", color: "#b59f3b", words: ["HEART", "SPADE", "CLUB", "DIAMOND"] },
+      { label: "Shades of green", color: "#538d4e", words: ["OLIVE", "EMERALD", "JADE", "FOREST"] },
+      { label: "Trees", color: "#3a7bd5", words: ["OAK", "MAPLE", "BIRCH", "WILLOW"] },
+      { label: "___ house", color: "#9b59b6", words: ["GREEN", "LIGHT", "FULL", "WARE"] },
+    ]
+  },
+  {
+    categories: [
+      { label: "Pizza toppings", color: "#b59f3b", words: ["PEPPERONI", "MUSHROOM", "ANCHOVY", "OLIVE"] },
+      { label: "Chess pieces", color: "#538d4e", words: ["KING", "QUEEN", "BISHOP", "ROOK"] },
+      { label: "Worker bee roles", color: "#3a7bd5", words: ["FORAGER", "DRONE", "SCOUT", "NURSE"] },
+      { label: "Stephen King novels", color: "#9b59b6", words: ["IT", "CARRIE", "MISERY", "CUJO"] },
+    ]
+  },
+  {
+    categories: [
+      { label: "Citrus fruits", color: "#b59f3b", words: ["LEMON", "LIME", "ORANGE", "YUZU"] },
+      { label: "Bond actors", color: "#538d4e", words: ["CONNERY", "MOORE", "CRAIG", "DALTON"] },
+      { label: "Shades of orange", color: "#3a7bd5", words: ["AMBER", "CORAL", "TANGERINE", "RUST"] },
+      { label: "Rocky ___", color: "#9b59b6", words: ["ROAD", "BALBOA", "MOUNTAIN", "HORROR"] },
+    ]
+  },
+  {
+    categories: [
+      { label: "Units of time", color: "#b59f3b", words: ["WEEK", "HOUR", "DECADE", "MONTH"] },
+      { label: "Coffee drinks", color: "#538d4e", words: ["LATTE", "MOCHA", "AMERICANO", "CORTADO"] },
+      { label: "Tiny amounts", color: "#3a7bd5", words: ["MINUTE", "TRACE", "SPECK", "DASH"] },
+      { label: "Track events", color: "#9b59b6", words: ["SPRINT", "HURDLES", "RELAY", "MARATHON"] },
+    ]
+  },
+  {
+    categories: [
+      { label: "Continents", color: "#b59f3b", words: ["ASIA", "EUROPE", "AFRICA", "OCEANIA"] },
+      { label: "Boxing punches", color: "#538d4e", words: ["JAB", "CROSS", "UPPERCUT", "COMBO"] },
+      { label: "Pirate things", color: "#3a7bd5", words: ["HOOK", "PARROT", "PLANK", "CUTLASS"] },
+      { label: "Peter ___", color: "#9b59b6", words: ["PAN", "PARKER", "PIPER", "PRINCIPLE"] },
+    ]
+  },
+  {
+    categories: [
+      { label: "Sushi ingredients", color: "#b59f3b", words: ["RICE", "TUNA", "NORI", "WASABI"] },
+      { label: "Famous Toms", color: "#538d4e", words: ["HANKS", "CRUISE", "HOLLAND", "HARDY"] },
+      { label: "Bridges", color: "#3a7bd5", words: ["LONDON", "BROOKLYN", "GOLDEN", "RIALTO"] },
+      { label: "Jeff ___", color: "#9b59b6", words: ["BRIDGES", "GOLDBLUM", "BEZOS", "BUCKLEY"] },
+    ]
+  },
+  {
+    categories: [
+      { label: "Keyboard keys", color: "#b59f3b", words: ["SHIFT", "ENTER", "SPACE", "TAB"] },
+      { label: "Restaurant areas", color: "#538d4e", words: ["KITCHEN", "PATIO", "BOOTH", "COUNTER"] },
+      { label: "Gymnastics apparatus", color: "#3a7bd5", words: ["BEAM", "RINGS", "VAULT", "BARS"] },
+      { label: "___ bell", color: "#9b59b6", words: ["DUMB", "BLUE", "TACO", "DOOR"] },
+    ]
+  },
+  {
+    categories: [
+      { label: "Knights of the Round Table", color: "#b59f3b", words: ["LANCELOT", "GALAHAD", "GAWAIN", "PERCIVAL"] },
+      { label: "Dances", color: "#538d4e", words: ["TWIST", "FLOSS", "DAB", "MOONWALK"] },
+      { label: "Dental items", color: "#3a7bd5", words: ["BRACE", "CROWN", "PLAQUE", "FILLING"] },
+      { label: "___ saw", color: "#9b59b6", words: ["JIG", "SEE", "CHAIN", "HACK"] },
+    ]
+  },
+  {
+    categories: [
+      { label: "Hairstyles", color: "#b59f3b", words: ["BOB", "BRAID", "PERM", "MULLET"] },
+      { label: "Apple products", color: "#538d4e", words: ["MAC", "WATCH", "IPHONE", "IPOD"] },
+      { label: "SpongeBob characters", color: "#3a7bd5", words: ["PATRICK", "SQUIDWARD", "SANDY", "PLANKTON"] },
+      { label: "___ apple", color: "#9b59b6", words: ["ADAMS", "BIG", "CRAB", "PINE"] },
+    ]
+  },
+  {
+    categories: [
+      { label: "Egyptian gods", color: "#b59f3b", words: ["RA", "ANUBIS", "HORUS", "ISIS"] },
+      { label: "Things with wings", color: "#538d4e", words: ["ANGEL", "PLANE", "BUTTERFLY", "STADIUM"] },
+      { label: "Beatles songs", color: "#3a7bd5", words: ["YESTERDAY", "MICHELLE", "SOMETHING", "BLACKBIRD"] },
+      { label: "Help synonyms", color: "#9b59b6", words: ["AID", "ASSIST", "ABET", "SERVE"] },
+    ]
+  },
+  {
+    categories: [
+      { label: "Norse gods", color: "#b59f3b", words: ["ODIN", "THOR", "LOKI", "FREYA"] },
+      { label: "Avengers", color: "#538d4e", words: ["HULK", "VISION", "FALCON", "GROOT"] },
+      { label: "___ hammer", color: "#3a7bd5", words: ["SLEDGE", "JACK", "CLAW", "MC"] },
+      { label: "Famous Chrises", color: "#9b59b6", words: ["EVANS", "PRATT", "PINE", "ROCK"] },
+    ]
+  },
+  {
+    categories: [
+      { label: "Salad ingredients", color: "#b59f3b", words: ["LETTUCE", "CROUTON", "TOMATO", "CUCUMBER"] },
+      { label: "Roman emperors", color: "#538d4e", words: ["NERO", "AUGUSTUS", "TRAJAN", "HADRIAN"] },
+      { label: "Types of cipher", color: "#3a7bd5", words: ["SHIFT", "VIGENERE", "ENIGMA", "MORSE"] },
+      { label: "Caesar ___", color: "#9b59b6", words: ["SALAD", "PALACE", "SECTION", "DRESSING"] },
+    ]
+  },
+  {
+    categories: [
+      { label: "Monopoly tokens", color: "#b59f3b", words: ["THIMBLE", "BOOT", "TOPHAT", "WHEELBARROW"] },
+      { label: "Bodies of water", color: "#538d4e", words: ["LAKE", "POND", "LAGOON", "INLET"] },
+      { label: "Reservoir Dogs colours", color: "#3a7bd5", words: ["WHITE", "ORANGE", "PINK", "BLONDE"] },
+      { label: "Car ___", color: "#9b59b6", words: ["WASH", "POOL", "PORT", "JACK"] },
+    ]
+  },
+  {
+    categories: [
+      { label: "Weather phenomena", color: "#b59f3b", words: ["RAIN", "FOG", "SLEET", "DRIZZLE"] },
+      { label: "Royal greetings", color: "#538d4e", words: ["HAIL", "BOW", "CURTSY", "SALUTE"] },
+      { label: "Cloud types", color: "#3a7bd5", words: ["CIRRUS", "STRATUS", "CUMULUS", "NIMBUS"] },
+      { label: "Storm ___", color: "#9b59b6", words: ["TROOPER", "CHASER", "SURGE", "FRONT"] },
+    ]
+  },
+  {
+    categories: [
+      { label: "Sandwich types", color: "#b59f3b", words: ["CLUB", "REUBEN", "BLT", "PANINI"] },
+      { label: "Golf equipment", color: "#538d4e", words: ["TEE", "IRON", "WEDGE", "PUTTER"] },
+      { label: "Laundry steps", color: "#3a7bd5", words: ["WASH", "DRY", "FOLD", "RINSE"] },
+      { label: "T-___", color: "#9b59b6", words: ["SHIRT", "REX", "BONE", "JUNCTION"] },
+    ]
+  },
+  {
+    categories: [
+      { label: "Yoga poses", color: "#b59f3b", words: ["COBRA", "CHILD", "PIGEON", "CAMEL"] },
+      { label: "Construction beams", color: "#538d4e", words: ["PLANK", "JOIST", "RAFTER", "GIRDER"] },
+      { label: "Fictional bridges", color: "#3a7bd5", words: ["KHAZAD", "KWAI", "TERABITHIA", "MADISON"] },
+      { label: "Card games", color: "#9b59b6", words: ["RUMMY", "HEARTS", "WAR", "EUCHRE"] },
+    ]
+  },
+  {
+    categories: [
+      { label: "Mexican dishes", color: "#b59f3b", words: ["TACO", "BURRITO", "ENCHILADA", "TAMALE"] },
+      { label: "Pepper types", color: "#538d4e", words: ["BELL", "GHOST", "CAYENNE", "JALAPENO"] },
+      { label: "Cluedo suspects", color: "#3a7bd5", words: ["PLUM", "SCARLETT", "MUSTARD", "GREEN"] },
+      { label: "Bell ___", color: "#9b59b6", words: ["HOP", "TOWER", "BOY", "JAR"] },
+    ]
+  },
+  {
+    categories: [
+      { label: "Leg joints & parts", color: "#b59f3b", words: ["SHIN", "ANKLE", "KNEE", "CALF"] },
+      { label: "Macbeth characters", color: "#538d4e", words: ["DUNCAN", "BANQUO", "MACDUFF", "MALCOLM"] },
+      { label: "Donut shapes", color: "#3a7bd5", words: ["RING", "TWIST", "HOLE", "BALL"] },
+      { label: "Grease ___", color: "#9b59b6", words: ["MONKEY", "PAINT", "PROOF", "SPOON"] },
+    ]
+  },
+  {
+    categories: [
+      { label: "Wind instruments", color: "#b59f3b", words: ["FLUTE", "OBOE", "CLARINET", "BASSOON"] },
+      { label: "Breakfast foods", color: "#538d4e", words: ["TOAST", "CEREAL", "BACON", "WAFFLE"] },
+      { label: "Toasts (cheers!)", color: "#3a7bd5", words: ["SALUD", "PROST", "SKOL", "KANPAI"] },
+      { label: "Champagne ___", color: "#9b59b6", words: ["BRUNCH", "SOCKET", "BOTTLE", "CORK"] },
+    ]
+  },
+  {
+    categories: [
+      { label: "Poker terms", color: "#b59f3b", words: ["BLUFF", "FOLD", "RAISE", "ANTE"] },
+      { label: "Phone actions", color: "#538d4e", words: ["CALL", "TEXT", "RING", "MUTE"] },
+      { label: "Boxing ring features", color: "#3a7bd5", words: ["ROPE", "CORNER", "CANVAS", "STOOL"] },
+      { label: "Laundry ___", color: "#9b59b6", words: ["BASKET", "ROOM", "DAY", "LINE"] },
+    ]
+  },
+  {
+    categories: [
+      { label: "Greek letters", color: "#b59f3b", words: ["ALPHA", "GAMMA", "DELTA", "SIGMA"] },
+      { label: "Wolf pack roles", color: "#538d4e", words: ["OMEGA", "BETA", "LONE", "PUP"] },
+      { label: "Watch brands", color: "#3a7bd5", words: ["ROLEX", "SEIKO", "CASIO", "TAG"] },
+      { label: "Software releases", color: "#9b59b6", words: ["STABLE", "NIGHTLY", "CANARY", "PATCH"] },
+    ]
+  },
+  {
+    categories: [
+      { label: "High card values", color: "#b59f3b", words: ["ACE", "JACK", "QUEEN", "TEN"] },
+      { label: "Tennis terms", color: "#538d4e", words: ["LOVE", "DEUCE", "SERVE", "RALLY"] },
+      { label: "Cracker ___", color: "#3a7bd5", words: ["BARREL", "BOX", "NUT", "WHEAT"] },
+      { label: "Flapjack ingredients", color: "#9b59b6", words: ["OATS", "BUTTER", "SYRUP", "SUGAR"] },
+    ]
+  },
+  {
+    categories: [
+      { label: "Italian cities", color: "#b59f3b", words: ["ROME", "MILAN", "VENICE", "NAPLES"] },
+      { label: "Window blinds", color: "#538d4e", words: ["VENETIAN", "ROLLER", "VERTICAL", "PLEATED"] },
+      { label: "Salad dressings", color: "#3a7bd5", words: ["RANCH", "ITALIAN", "CAESAR", "FRENCH"] },
+      { label: "When in ___", color: "#9b59b6", words: ["DOUBT", "DROUGHT", "VEGAS", "CHARGE"] },
+    ]
+  },
+  {
+    categories: [
+      { label: "Snooker colours", color: "#b59f3b", words: ["RED", "PINK", "YELLOW", "BROWN"] },
+      { label: "Karate belts", color: "#538d4e", words: ["WHITE", "PURPLE", "ORANGE", "BLACK"] },
+      { label: "Charlie ___", color: "#3a7bd5", words: ["CHAPLIN", "SHEEN", "HORSE", "BUCKET"] },
+      { label: "Feeling down", color: "#9b59b6", words: ["BLUE", "GLOOMY", "LOW", "GLUM"] },
+    ]
+  },
+  {
+    categories: [
+      { label: "Olympic medals", color: "#b59f3b", words: ["GOLD", "SILVER", "BRONZE", "WOODEN"] },
+      { label: "Lone ___", color: "#538d4e", words: ["RANGER", "STAR", "WOLF", "GUNMAN"] },
+      { label: "Silver ___", color: "#3a7bd5", words: ["SPOON", "SCREEN", "LINING", "FOX"] },
+      { label: "Surfer slang", color: "#9b59b6", words: ["DUDE", "GNARLY", "STOKED", "RAD"] },
+    ]
+  },
+  {
+    categories: [
+      { label: "Famous lakes", color: "#b59f3b", words: ["ERIE", "TAHOE", "BAIKAL", "GENEVA"] },
+      { label: "Swiss things", color: "#538d4e", words: ["ALPS", "CHEESE", "FONDUE", "WATCH"] },
+      { label: "Army ___", color: "#3a7bd5", words: ["BASE", "KNIFE", "ANT", "BRAT"] },
+      { label: "Hard cheeses", color: "#9b59b6", words: ["GOUDA", "EDAM", "COLBY", "GRANA"] },
+    ]
+  },
+  {
+    categories: [
+      { label: "Big cats", color: "#b59f3b", words: ["LION", "TIGER", "JAGUAR", "LEOPARD"] },
+      { label: "Ford models", color: "#538d4e", words: ["COBRA", "BRONCO", "FOCUS", "MUSTANG"] },
+      { label: "Detroit teams", color: "#3a7bd5", words: ["LIONS", "TIGERS", "PISTONS", "REDWINGS"] },
+      { label: "Snakes", color: "#9b59b6", words: ["VIPER", "MAMBA", "PYTHON", "ADDER"] },
+    ]
+  },
+  {
+    categories: [
+      { label: "Apple varieties", color: "#b59f3b", words: ["GALA", "FUJI", "BRAEBURN", "JAZZ"] },
+      { label: "Japanese exports", color: "#538d4e", words: ["NIKON", "LEICA", "TOYOTA", "SONY"] },
+      { label: "Gala ___", color: "#3a7bd5", words: ["DINNER", "NIGHT", "EVENT", "DAY"] },
+      { label: "Deadly sins", color: "#9b59b6", words: ["ENVY", "PRIDE", "WRATH", "SLOTH"] },
+    ]
+  },
+  {
+    categories: [
+      { label: "Trigonometry", color: "#b59f3b", words: ["SINE", "COSINE", "TANGENT", "SECANT"] },
+      { label: "Go off on a ___", color: "#538d4e", words: ["WHIM", "RANT", "LIMB", "JAUNT"] },
+      { label: "Tree parts", color: "#3a7bd5", words: ["BRANCH", "BOUGH", "TWIG", "TRUNK"] },
+      { label: "Bank ___", color: "#9b59b6", words: ["ROLL", "NOTE", "RUPT", "ROBBER"] },
+    ]
+  },
+  {
+    categories: [
+      { label: "Playing card games", color: "#b59f3b", words: ["BRIDGE", "POKER", "EUCHRE", "WHIST"] },
+      { label: "Dental work", color: "#538d4e", words: ["FILLING", "CROWN", "CAP", "VENEER"] },
+      { label: "Nautical terms", color: "#3a7bd5", words: ["BOW", "STERN", "GALLEY", "HELM"] },
+      { label: "Pie ___", color: "#9b59b6", words: ["CRUST", "CHART", "EYED", "HOLE"] },
+    ]
+  },
+  {
+    categories: [
+      { label: "Famous Michaels", color: "#b59f3b", words: ["JORDAN", "JACKSON", "PHELPS", "CAINE"] },
+      { label: "Jordan ___", color: "#538d4e", words: ["RIVER", "VALLEY", "PETERSON", "ALMOND"] },
+      { label: "Almond products", color: "#3a7bd5", words: ["MILK", "PASTE", "FLOUR", "BUTTER"] },
+      { label: "River features", color: "#9b59b6", words: ["DELTA", "BANK", "MOUTH", "BEND"] },
+    ]
+  },
+  {
+    categories: [
+      { label: "Famous Davids", color: "#b59f3b", words: ["BOWIE", "BECKHAM", "ATTENBOROUGH", "COPPERFIELD"] },
+      { label: "Knife types", color: "#538d4e", words: ["STANLEY", "BUTTER", "PARING", "CLEAVER"] },
+      { label: "Dickens novels", color: "#3a7bd5", words: ["OLIVER", "DOMBEY", "DORRIT", "DROOD"] },
+      { label: "Stage magicians", color: "#9b59b6", words: ["HOUDINI", "BLAINE", "ANGEL", "PENN"] },
+    ]
+  },
+  {
+    categories: [
+      { label: "Coffee sizes", color: "#b59f3b", words: ["TALL", "GRANDE", "VENTI", "SHORT"] },
+      { label: "Espresso styles", color: "#538d4e", words: ["DOUBLE", "SINGLE", "RISTRETTO", "LUNGO"] },
+      { label: "Tennis scores", color: "#3a7bd5", words: ["LOVE", "DEUCE", "GAME", "FIFTEEN"] },
+      { label: "Dice games", color: "#9b59b6", words: ["YAHTZEE", "CRAPS", "BUNCO", "FARKLE"] },
+    ]
+  },
+  {
+    categories: [
+      { label: "Planets", color: "#b59f3b", words: ["URANUS", "VENUS", "MARS", "NEPTUNE"] },
+      { label: "Roman gods", color: "#538d4e", words: ["JUNO", "VESTA", "JANUS", "CERES"] },
+      { label: "Disney dogs", color: "#3a7bd5", words: ["PLUTO", "GOOFY", "BOLT", "NANA"] },
+      { label: "Liquid metals & elements", color: "#9b59b6", words: ["MERCURY", "GALLIUM", "CESIUM", "BROMINE"] },
+    ]
+  },
+  {
+    categories: [
+      { label: "Golf clubs", color: "#b59f3b", words: ["IRON", "WOOD", "WEDGE", "DRIVER"] },
+      { label: "Lead a group", color: "#538d4e", words: ["GUIDE", "STEER", "HEAD", "PILOT"] },
+      { label: "Pencil ___", color: "#3a7bd5", words: ["CASE", "SHARPENER", "SKIRT", "PUSHER"] },
+      { label: "Periodic metals", color: "#9b59b6", words: ["GOLD", "TIN", "ZINC", "NICKEL"] },
+    ]
+  },
+  {
+    categories: [
+      { label: "Berries", color: "#b59f3b", words: ["STRAWBERRY", "BLACKBERRY", "RASPBERRY", "MULBERRY"] },
+      { label: "Halle ___", color: "#538d4e", words: ["BERRY", "LUJAH", "BANANA", "STORM"] },
+      { label: "Old phone brands", color: "#3a7bd5", words: ["NOKIA", "MOTOROLA", "ERICSSON", "PALM"] },
+      { label: "Chuck ___", color: "#9b59b6", words: ["NORRIS", "ROAST", "WAGON", "STEAK"] },
+    ]
+  },
+  {
+    categories: [
+      { label: "Pool / billiards", color: "#b59f3b", words: ["CUE", "CHALK", "POCKET", "RACK"] },
+      { label: "Theatre prompts", color: "#538d4e", words: ["LINE", "MARK", "EXIT", "ASIDE"] },
+      { label: "Pocket ___", color: "#3a7bd5", words: ["MONEY", "WATCH", "KNIFE", "ROCKET"] },
+      { label: "Spice ___", color: "#9b59b6", words: ["GIRL", "JAR", "TRADE", "ISLANDS"] },
+    ]
+  },
+  {
+    categories: [
+      { label: "Hot drinks", color: "#b59f3b", words: ["COCOA", "CIDER", "TODDY", "CHAI"] },
+      { label: "Spill the ___", color: "#538d4e", words: ["TEA", "BEANS", "MILK", "GUTS"] },
+      { label: "British slang for food", color: "#3a7bd5", words: ["GRUB", "NOSH", "SCRAN", "TUCK"] },
+      { label: "Golf ___", color: "#9b59b6", words: ["CART", "COURSE", "CADDIE", "SWING"] },
+    ]
+  },
+  {
+    categories: [
+      { label: "Ocean depth zones", color: "#b59f3b", words: ["SUNLIGHT", "HADAL", "MIDNIGHT", "ABYSS"] },
+      { label: "Movie sagas", color: "#538d4e", words: ["TWILIGHT", "MATRIX", "HOBBIT", "ROCKY"] },
+      { label: "Danger ___", color: "#3a7bd5", words: ["MOUSE", "CLOSE", "SIGN", "MONEY"] },
+      { label: "___ zone", color: "#9b59b6", words: ["END", "OZONE", "TIME", "COMFORT"] },
+    ]
+  },
+  {
+    categories: [
+      { label: "Currencies", color: "#b59f3b", words: ["DOLLAR", "RUPEE", "DINAR", "RAND"] },
+      { label: "Weight units", color: "#538d4e", words: ["POUND", "OUNCE", "STONE", "GRAM"] },
+      { label: "Stone ___", color: "#3a7bd5", words: ["WALL", "HENGE", "MASON", "FRUIT"] },
+      { label: "Rolling ___", color: "#9b59b6", words: ["PIN", "STONES", "HILLS", "THUNDER"] },
+    ]
+  },
+  {
+    categories: [
+      { label: "Punctuation", color: "#b59f3b", words: ["COMMA", "APOSTROPHE", "DASH", "SEMICOLON"] },
+      { label: "Sprint races", color: "#538d4e", words: ["HUNDRED", "RELAY", "HURDLE", "FURLONG"] },
+      { label: "Large intestine etc", color: "#3a7bd5", words: ["COLON", "LIVER", "SPLEEN", "KIDNEY"] },
+      { label: "History ___", color: "#9b59b6", words: ["BOOK", "BUFF", "CLASS", "MAKER"] },
+    ]
+  },
+  {
+    categories: [
+      { label: "Fencing actions", color: "#b59f3b", words: ["LUNGE", "PARRY", "RIPOSTE", "FOIL"] },
+      { label: "Kitchen wraps", color: "#538d4e", words: ["CLING", "WAX", "GREASE", "PARCHMENT"] },
+      { label: "Wrap ___", color: "#3a7bd5", words: ["AROUND", "PAPER", "PARTY", "SHEET"] },
+      { label: "Rap ___", color: "#9b59b6", words: ["BATTLE", "STAR", "SCALLION", "MUSIC"] },
+    ]
+  },
+  {
+    categories: [
+      { label: "Shades of blue", color: "#b59f3b", words: ["NAVY", "TEAL", "AZURE", "COBALT"] },
+      { label: "Armed forces", color: "#538d4e", words: ["ARMY", "MARINES", "AIRFORCE", "COASTGUARD"] },
+      { label: "Hard metals", color: "#3a7bd5", words: ["NICKEL", "ZINC", "CHROME", "TITANIUM"] },
+      { label: "Clothing stores", color: "#9b59b6", words: ["GAP", "ZARA", "UNIQLO", "MANGO"] },
+    ]
+  },
+  {
+    categories: [
+      { label: "Bread types", color: "#b59f3b", words: ["RYE", "SOURDOUGH", "PITA", "BAGEL"] },
+      { label: "Brown spirits", color: "#538d4e", words: ["BOURBON", "SCOTCH", "RUM", "BRANDY"] },
+      { label: "Scotch ___", color: "#3a7bd5", words: ["TAPE", "EGG", "BROTH", "MIST"] },
+      { label: "Field of ___", color: "#9b59b6", words: ["DREAMS", "VISION", "PLAY", "STUDY"] },
+    ]
+  },
+  {
+    categories: [
+      { label: "Eye parts", color: "#b59f3b", words: ["IRIS", "PUPIL", "RETINA", "CORNEA"] },
+      { label: "Flowers", color: "#538d4e", words: ["ROSE", "LILY", "DAISY", "TULIP"] },
+      { label: "School ___", color: "#3a7bd5", words: ["BUS", "YARD", "BOY", "TRIP"] },
+      { label: "Greek goddesses", color: "#9b59b6", words: ["HERA", "ATHENA", "NIKE", "DEMETER"] },
+    ]
+  },
+  {
+    categories: [
+      { label: "Compass points", color: "#b59f3b", words: ["NORTH", "SOUTH", "EAST", "WEST"] },
+      { label: "Wild ___", color: "#538d4e", words: ["CARD", "FIRE", "FLOWER", "CAT"] },
+      { label: "GoT houses", color: "#3a7bd5", words: ["STARK", "LANNISTER", "TARGARYEN", "TULLY"] },
+      { label: "Kanye albums", color: "#9b59b6", words: ["YEEZUS", "GRADUATION", "DONDA", "808S"] },
+    ]
+  },
+  {
+    categories: [
+      { label: "Martial arts", color: "#b59f3b", words: ["KARATE", "JUDO", "AIKIDO", "KENDO"] },
+      { label: "Rock subgenres", color: "#538d4e", words: ["PUNK", "GRUNGE", "INDIE", "GLAM"] },
+      { label: "Heavy ___", color: "#3a7bd5", words: ["METAL", "WEIGHT", "DUTY", "HANDED"] },
+      { label: "Kid ___", color: "#9b59b6", words: ["CUDI", "GLOVES", "SISTER", "BROTHER"] },
+    ]
+  },
+  {
+    categories: [
+      { label: "Cold desserts", color: "#b59f3b", words: ["SORBET", "PARFAIT", "GELATO", "SUNDAE"] },
+      { label: "Deer family", color: "#538d4e", words: ["MOOSE", "ELK", "CARIBOU", "FAWN"] },
+      { label: "Chocolate ___", color: "#3a7bd5", words: ["CHIP", "BAR", "BOX", "FOUNTAIN"] },
+      { label: "Hair products", color: "#9b59b6", words: ["MOUSSE", "GEL", "WAX", "SERUM"] },
+    ]
+  },
+  {
+    categories: [
+      { label: "Casino games", color: "#b59f3b", words: ["BLACKJACK", "BACCARAT", "ROULETTE", "KENO"] },
+      { label: "Jack ___", color: "#538d4e", words: ["POT", "RABBIT", "KNIFE", "FRUIT"] },
+      { label: "Tools", color: "#3a7bd5", words: ["DRILL", "WRENCH", "PLIERS", "CHISEL"] },
+      { label: "MC ___", color: "#9b59b6", words: ["HAMMER", "ESCHER", "FLY", "LAREN"] },
+    ]
+  },
+  {
+    categories: [
+      { label: "Constellations", color: "#b59f3b", words: ["ORION", "LYRA", "CYGNUS", "AQUILA"] },
+      { label: "Harry Potter names", color: "#538d4e", words: ["DRACO", "SIRIUS", "REMUS", "NARCISSA"] },
+      { label: "Zodiac signs", color: "#3a7bd5", words: ["LEO", "ARIES", "VIRGO", "LIBRA"] },
+      { label: "Bright stars", color: "#9b59b6", words: ["VEGA", "RIGEL", "POLARIS", "ALTAIR"] },
+    ]
+  },
+  {
+    categories: [
+      { label: "Fast food chains", color: "#b59f3b", words: ["WENDYS", "ARBYS", "POPEYES", "CHIPOTLE"] },
+      { label: "Tinker ___", color: "#538d4e", words: ["BELL", "TOY", "TON", "ER"] },
+      { label: "Le Carré roles", color: "#3a7bd5", words: ["TAILOR", "SOLDIER", "SAILOR", "SPY"] },
+      { label: "Peter Pan", color: "#9b59b6", words: ["WENDY", "HOOK", "NANA", "SMEE"] },
+    ]
+  },
+  {
+    categories: [
+      { label: "Skateboard tricks", color: "#b59f3b", words: ["OLLIE", "KICKFLIP", "GRIND", "NOSESLIDE"] },
+      { label: "Daily ___", color: "#538d4e", words: ["MAIL", "BREAD", "PLANET", "ROUTINE"] },
+      { label: "Roast meats", color: "#3a7bd5", words: ["BEEF", "CHICKEN", "LAMB", "PORK"] },
+      { label: "Coffee steps", color: "#9b59b6", words: ["BREW", "POUR", "STEEP", "FROTH"] },
+    ]
+  },
+  {
+    categories: [
+      { label: "Volcano parts", color: "#b59f3b", words: ["CRATER", "MAGMA", "VENT", "CONE"] },
+      { label: "Pokemon trainers", color: "#538d4e", words: ["MISTY", "BROCK", "GARY", "OAK"] },
+      { label: "Air ___", color: "#3a7bd5", words: ["PORT", "PLANE", "BORNE", "FARE"] },
+      { label: "Ash ___", color: "#9b59b6", words: ["TRAY", "WEDNESDAY", "CLOUD", "POT"] },
+    ]
+  },
+  {
+    categories: [
+      { label: "Fictional wizards", color: "#b59f3b", words: ["GANDALF", "MERLIN", "DUMBLEDORE", "SARUMAN"] },
+      { label: "Falcon types", color: "#538d4e", words: ["KESTREL", "HOBBY", "PEREGRINE", "GYR"] },
+      { label: "Hobby ___", color: "#3a7bd5", words: ["HORSE", "CRAFT", "IST", "SHOP"] },
+      { label: "Engine types", color: "#9b59b6", words: ["DIESEL", "JET", "STEAM", "ROCKET"] },
+    ]
+  },
+  {
+    categories: [
+      { label: "Pasta shapes", color: "#b59f3b", words: ["PENNE", "FUSILLI", "RIGATONI", "FARFALLE"] },
+      { label: "Tie a ___", color: "#538d4e", words: ["KNOT", "BOW", "RIBBON", "SHOELACE"] },
+      { label: "Tie ___", color: "#3a7bd5", words: ["BREAKER", "DYE", "PIN", "CLIP"] },
+      { label: "Hair accessories", color: "#9b59b6", words: ["BAND", "SCRUNCHIE", "GRIP", "SLIDE"] },
+    ]
+  },
+  {
+    categories: [
+      { label: "Cocktails", color: "#b59f3b", words: ["MOJITO", "MARTINI", "NEGRONI", "DAIQUIRI"] },
+      { label: "Bond's order", color: "#538d4e", words: ["SHAKEN", "STIRRED", "VODKA", "OLIVE"] },
+      { label: "Mix together", color: "#3a7bd5", words: ["WHISK", "BLEND", "FOLD", "STIR"] },
+      { label: "Sports cars", color: "#9b59b6", words: ["ASTON", "LOTUS", "BENTLEY", "MCLAREN"] },
+    ]
+  },
 ];
 
 function getDailyPuzzle(dateStr) {
