@@ -133,21 +133,24 @@ export default function Bracket() {
 
   const matchById = useMemo(() => new Map(matches.map(m => [m.id, m])), [matches])
 
-  // A participant's settled picks (graded, non-excluded matches only — which are
-  // necessarily post-kickoff, so RLS has already exposed everyone's), oldest
-  // first. The form strip reads left→right; the list reverses to newest-first.
+  // A participant's settled picks, oldest first (form strip reads left→right;
+  // the list reverses to newest-first). Only matches that have kicked off and
+  // are graded + non-excluded — NEVER upcoming. RLS already withholds other
+  // members' pre-kickoff picks; the explicit kickoff check makes the same rule
+  // legible here and guards the viewer's own row against an early-set result.
   const historyFor = useCallback((userId) => {
     const out = []
     for (const p of preds) {
       if (p.user_id !== userId) continue
       const m = matchById.get(p.match_id)
-      if (!m || !m.result || m.excluded) continue
+      if (!m || m.excluded || !m.result) continue
+      if (new Date(m.kickoff_at).getTime() > now) continue
       const correct = p.pick === m.result
       out.push({ m, pick: p.pick, correct, pts: correct ? (STAGE_POINTS[m.stage] ?? 0) : 0 })
     }
     out.sort((a, b) => new Date(a.m.kickoff_at) - new Date(b.m.kickoff_at))
     return out
-  }, [preds, matchById])
+  }, [preds, matchById, now])
 
   const handleJoin = async (e) => {
     e.preventDefault()
