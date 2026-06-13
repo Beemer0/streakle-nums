@@ -20,6 +20,9 @@ puzzles every day; signed-in players build streaks.
   `streak.js`, `evaluate.js` (Wordle logic, tested), `a11y.js` (`clickableProps`),
   `AwardIcon.jsx`, `ErrorBoundary.jsx`, `validWords.txt` (~14.8k words).
 - Tests live next to the code as `*.test.js` (`evaluate.test.js`, `streak.test.js`).
+- Content banks never repeat for months: `Words` has 144 words, `Link` 71 puzzles;
+  the grids + `Nums` generate fresh daily. Validate edits with
+  `node scripts/check-words.mjs` and `node scripts/check-link.mjs`.
 
 ## Conventions
 - Warm "Ink & Gold" palette: `#0F0E0C` bg, `#1C1A16` cards, `#2C2820` borders,
