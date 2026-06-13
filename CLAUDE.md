@@ -27,12 +27,15 @@ puzzles every day; signed-in players build streaks.
 - Push directly to `master` — no PRs unless asked.
 - Verify every change with `npm run build` (and `npm test` for logic).
 - Daily puzzles are date-seeded and must be identical for every user/browser.
-- After editing any grid game's answer key or puzzles, run
-  `node scripts/check-faceoff.mjs [Faceoff|Gridiron|Knockout]` — it verifies
-  every puzzle has a full 9-distinct-player solution and flags thin cells
-  (Knockout is procedural, so it simulates the generator over 2025–2027).
-  Beware criteria pairs no player in history satisfies (e.g. NORRIS×VEZINA,
-  SELKE×CALDER, DPOY×OROY, rushing×passing title, Calder winners for TBL/EDM).
+- All three grid games (Faceoff, Gridiron, Knockout) generate their daily grid
+  procedurally from the date seed — no fixed puzzle lists, so they never repeat.
+  Each `getDailyPuzzle` shuffles a criteria pool, enforces variety, and validates
+  every cell has answers AND the board has a full 9-distinct-player solution
+  (impossible criteria pairs self-reject via empty cells). After editing any
+  grid's player/fighter data, run
+  `node scripts/check-faceoff.mjs [Faceoff|Gridiron|Knockout]` — it replays each
+  generator over 2025–2027 and fails if any day falls back to the hardcoded grid
+  (= pool too thin). Keep the in-app generator and the checker's copy in sync.
 
 ## Recent work (last session)
 A full code audit + fix pass: bug fixes, route code-splitting, accessibility

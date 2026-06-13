@@ -126,20 +126,43 @@ if (game === 'Knockout') {
   process.exit(unmatchable + fallbacks > 0 ? 1 : 0)
 }
 
+// ── Faceoff / Gridiron: simulate the procedural grid generator ──────────────
+// Both games generate their daily grid from the date seed and self-validate, so
+// the worst case in-app is the hardcoded fallback. This replays the generator
+// over 3 years and flags any day that fell back (= the criteria pool is too thin
+// to make a fresh solvable grid) — keep this in sync with getDailyPuzzle.
 const PLAYERS = extractArray('PLAYERS')
-const PUZZLES = extractArray('PUZZLES')
+const AWARDS = extractObject('AWARDS')
+const LOGO = extractObject(game === 'Gridiron' ? 'NFL_LOGO' : 'NHL_LOGO')
 
-const isValid = (p, crit) => p.t.includes(crit) || p.a.includes(crit)
+const seen = new Map()
+for (const p of PLAYERS) seen.set(p.n, (seen.get(p.n) ?? 0) + 1)
+const dupes = [...seen].filter(([, c]) => c > 1)
+if (dupes.length) console.log('DUPLICATE PLAYERS:', dupes.map(([n]) => n).join(', '))
 
-// Exact perfect-matching check: can all 9 cells be filled with distinct players?
-function matchable(cellPlayers) {
-  const order = cellPlayers
-    .map((players, idx) => ({ players, idx }))
-    .sort((a, b) => a.players.length - b.players.length)
+const HEADER_POOL = [
+  ...Object.keys(LOGO).filter(t => !(game === 'Gridiron' && ['OAK', 'SD', 'STL'].includes(t))),
+  ...Object.keys(AWARDS),
+]
+const AWARD_KEYS = new Set(Object.keys(AWARDS))
+const PLAYERS_BY_CRIT = Object.fromEntries(
+  HEADER_POOL.map(c => [c, PLAYERS.filter(p => p.t.includes(c) || p.a.includes(c))])
+)
+const cellPlayers = (row, col) => PLAYERS_BY_CRIT[row].filter(p => p.t.includes(col) || p.a.includes(col))
+
+const mulberry32 = (a) => () => {
+  a |= 0; a = a + 0x6D2B79F5 | 0
+  let t = Math.imul(a ^ a >>> 15, 1 | a)
+  t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t
+  return ((t ^ t >>> 14) >>> 0) / 4294967296
+}
+
+function matchable(cells) {
+  const order = [...cells].sort((a, b) => a.length - b.length)
   const used = new Set()
-  function go(k) {
+  const go = (k) => {
     if (k === order.length) return true
-    for (const p of order[k].players) {
+    for (const p of order[k]) {
       if (used.has(p.n)) continue
       used.add(p.n)
       if (go(k + 1)) return true
@@ -150,38 +173,54 @@ function matchable(cellPlayers) {
   return go(0)
 }
 
-// Duplicate-name check
-const seen = new Map()
-for (const p of PLAYERS) {
-  seen.set(p.n, (seen.get(p.n) ?? 0) + 1)
-}
-const dupes = [...seen].filter(([, c]) => c > 1)
-if (dupes.length) console.log('DUPLICATE PLAYERS:', dupes.map(([n]) => n).join(', '))
-
-let broken = 0
-let unsolvable = 0
-const thin = []
-PUZZLES.forEach((pz, i) => {
+function boardSolvable(rows, cols) {
   const cells = []
-  for (const r of pz.rows) {
-    for (const c of pz.cols) {
-      const eligible = PLAYERS.filter(p => isValid(p, r) && isValid(p, c))
-      cells.push({ r, c, eligible })
-      if (eligible.length === 0) {
-        broken++
-        console.log(`PUZZLE ${i}: EMPTY CELL ${r} x ${c}`)
-      } else if (eligible.length < 3) {
-        thin.push(`puzzle ${i}: ${r} x ${c} = ${eligible.length} (${eligible.map(p => p.n).join(', ')})`)
+  for (const r of rows) for (const c of cols) {
+    const pl = cellPlayers(r, c)
+    if (pl.length === 0) return false
+    cells.push(pl)
+  }
+  return matchable(cells)
+}
+
+function generate(dateStr) {
+  const seed = parseInt(dateStr.replace(/-/g, ''))
+  for (let pass = 0; pass < 2; pass++) {
+    for (let attempt = 0; attempt < 800; attempt++) {
+      const rng = mulberry32(seed + attempt * 997 + pass * 31337)
+      const pool = [...HEADER_POOL]
+      for (let i = pool.length - 1; i > 0; i--) {
+        const j = Math.floor(rng() * (i + 1))
+        ;[pool[i], pool[j]] = [pool[j], pool[i]]
       }
+      const rows = pool.slice(0, 3)
+      const cols = pool.slice(3, 6)
+      if (rows.some(r => cols.includes(r))) continue
+      if (pass === 0) {
+        const awards = [...rows, ...cols].filter(h => AWARD_KEYS.has(h)).length
+        if (awards < 1 || awards > 3) continue
+        let thin = false
+        for (const r of rows) { for (const c of cols) { if (cellPlayers(r, c).length < 2) { thin = true; break } } if (thin) break }
+        if (thin) continue
+      }
+      if (boardSolvable(rows, cols)) return { rows, cols, pass }
     }
   }
-  if (!matchable(cells.map(c => c.eligible))) {
-    unsolvable++
-    console.log(`PUZZLE ${i}: NO FULL 9-PLAYER SOLUTION (rows ${pz.rows} x cols ${pz.cols})`)
-  }
-})
+  return null
+}
 
-console.log(`\n${PLAYERS.length} players, ${PUZZLES.length} puzzles`)
-console.log(`empty cells: ${broken}, unsolvable puzzles: ${unsolvable}`)
-console.log(`\nTHIN CELLS (<3 answers): ${thin.length}`)
-thin.forEach(t => console.log('  ' + t))
+let fallbacks = 0, pass1 = 0
+const distinct = new Set()
+const start = new Date(2025, 0, 1)
+for (let i = 0; i < 1095; i++) {
+  const d = new Date(start.getFullYear(), start.getMonth(), start.getDate() + i)
+  const ds = d.toLocaleDateString('en-CA')
+  const g = generate(ds)
+  if (!g) { fallbacks++; console.log(`${ds}: FELL THROUGH TO FALLBACK GRID`); continue }
+  if (g.pass === 1) pass1++
+  distinct.add([...g.rows, '|', ...g.cols].join(','))
+}
+
+console.log(`${PLAYERS.length} players; simulated 1095 days (2025-2027)`)
+console.log(`fallback grids: ${fallbacks}, variety-relaxed (pass 1): ${pass1}, distinct grids: ${distinct.size}`)
+process.exit(fallbacks > 0 ? 1 : 0)

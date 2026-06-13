@@ -435,43 +435,84 @@ const PLAYERS = [
   {n:"Shaquil Barrett",t:["DEN","TB"],a:["SB_CHAMP","PRO_BOWL"],f:65},
 ];
 
-const PUZZLES = [
-  { rows: ["NE","DAL","NFL_MVP"],       cols: ["SB_CHAMP","GB","PRO_BOWL"] },
-  { rows: ["SF","SB_MVP","DEN"],        cols: ["PIT","RUSH_TITLE","DPOY"] },
-  { rows: ["BAL","SEA","DPOY"],         cols: ["SB_CHAMP","IND","PRO_BOWL"] },
-  { rows: ["NO","SB_CHAMP","STL"],      cols: ["NYG","PRO_BOWL","OPOY"] },
-  { rows: ["KC","NFL_MVP","TB"],        cols: ["SF","SB_MVP","PASS_TITLE"] },
-  { rows: ["MIA","RUSH_TITLE","MIN"],   cols: ["PHI","PRO_BOWL","SB_CHAMP"] },
-  { rows: ["ATL","CAR","OPOY"],         cols: ["NFL_MVP","SB_CHAMP","PRO_BOWL"] },
-  { rows: ["ARI","TEN","SB_CHAMP"],     cols: ["JAX","PRO_BOWL","OROY"] },
-  { rows: ["CLE","OROY","BUF"],         cols: ["RUSH_TITLE","DET","PRO_BOWL"] },
-  { rows: ["OAK","WAS","SB_MVP"],       cols: ["NYJ","DPOY","PRO_BOWL"] },
-  { rows: ["CIN","SB_MVP","SF"],         cols: ["NFL_MVP","DAL","PRO_BOWL"] },
-  { rows: ["DEN","SB_MVP","NE"],        cols: ["BAL","PRO_BOWL","PASS_TITLE"] },
-  { rows: ["SEA","OPOY","IND"],         cols: ["SB_CHAMP","ATL","OROY"] },
-  { rows: ["DAL","SB_MVP","LAR"],       cols: ["OPOY","SB_CHAMP","PRO_BOWL"] },
-  { rows: ["MIN","TB","RUSH_TITLE"],    cols: ["PRO_BOWL","KC","SB_CHAMP"] },
-  { rows: ["NYG","DROY","MIA"],         cols: ["PHI","SB_CHAMP","PRO_BOWL"] },
-  { rows: ["SF","NFL_MVP","GB"],        cols: ["SB_MVP","MIN","PASS_TITLE"] },
-  { rows: ["BAL","DPOY","NE"],          cols: ["SB_CHAMP","SEA","PRO_BOWL"] },
-  { rows: ["STL","IND","NFL_MVP"],      cols: ["SB_CHAMP","DEN","OPOY"] },
-  { rows: ["ATL","OROY","HOU"],         cols: ["PRO_BOWL","TEN","RUSH_TITLE"] },
-  { rows: ["OAK","WAS","PRO_BOWL"],     cols: ["SB_CHAMP","CIN","DROY"] },
-  { rows: ["BUF","SB_CHAMP","DET"],         cols: ["RUSH_TITLE","CLE","PRO_BOWL"] },
-  { rows: ["TEN","ARI","SB_MVP"],       cols: ["NFL_MVP","NO","OPOY"] },
-  { rows: ["NYJ","SB_CHAMP","TB"],      cols: ["CHI","PRO_BOWL","DPOY"] },
-  { rows: ["GB","NO","SF"],     cols: ["KC","SB_MVP","PASS_TITLE"] },
-  { rows: ["LAR","NFL_MVP","BAL"],      cols: ["PIT","SB_CHAMP","PRO_BOWL"] },
-  { rows: ["MIA","SB_CHAMP","PHI"],      cols: ["DPOY","MIN","PRO_BOWL"] },
-  { rows: ["IND","OPOY","DEN"],         cols: ["SB_CHAMP","SEA","RUSH_TITLE"] },
-  { rows: ["DAL","SB_MVP","NO"],        cols: ["NE","NFL_MVP","PRO_BOWL"] },
-  { rows: ["NYG","ATL","SB_CHAMP"],     cols: ["CAR","PRO_BOWL","OPOY"] },
+function mulberry32(a) {
+  return function() {
+    a |= 0; a = a + 0x6D2B79F5 | 0;
+    let t = Math.imul(a ^ a >>> 15, 1 | a);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+
+// Procedural daily grid — replaces a fixed 30-puzzle list, so it never repeats.
+// Criteria pool = the 32 current teams (relocated codes OAK/SD/STL excluded so
+// e.g. OAK and LV don't both appear) + the awards. Each day's grid is seeded
+// from the date — identical for every user — and validated so every cell has
+// answers AND the whole board has a 9-distinct-player solution. Impossible award
+// pairs (DPOY×OROY, rushing×passing title) self-reject via empty cells.
+// (Generator mirrored in scripts/check-faceoff.mjs — keep in sync.)
+const HEADER_POOL = [
+  ...Object.keys(NFL_LOGO).filter(t => !['OAK', 'SD', 'STL'].includes(t)),
+  ...Object.keys(AWARDS),
 ];
+const AWARD_KEYS = new Set(Object.keys(AWARDS));
+const PLAYERS_BY_CRIT = Object.fromEntries(
+  HEADER_POOL.map(c => [c, PLAYERS.filter(p => p.t.includes(c) || p.a.includes(c))])
+);
+const FALLBACK_PUZZLE = { rows: ["NE","DAL","NFL_MVP"], cols: ["SB_CHAMP","GB","PRO_BOWL"] };
+
+function cellPlayers(row, col) {
+  return PLAYERS_BY_CRIT[row].filter(p => p.t.includes(col) || p.a.includes(col));
+}
+
+// Backtracking perfect-match: can all 9 cells be filled with distinct players?
+function boardSolvable(rows, cols) {
+  const cells = [];
+  for (const r of rows) for (const c of cols) {
+    const players = cellPlayers(r, c);
+    if (players.length === 0) return false;
+    cells.push(players);
+  }
+  const order = cells.map((players) => players).sort((a, b) => a.length - b.length);
+  const used = new Set();
+  const go = (k) => {
+    if (k === order.length) return true;
+    for (const p of order[k]) {
+      if (used.has(p.n)) continue;
+      used.add(p.n);
+      if (go(k + 1)) return true;
+      used.delete(p.n);
+    }
+    return false;
+  };
+  return go(0);
+}
 
 function getDailyPuzzle(dateStr) {
-  const seedDate = dateStr ?? new Date().toLocaleDateString('en-CA')
-  const seed = parseInt(seedDate.replace(/-/g, ''))
-  return PUZZLES[seed % PUZZLES.length]
+  const seedDate = dateStr ?? new Date().toLocaleDateString('en-CA');
+  const seed = parseInt(seedDate.replace(/-/g, ''));
+  for (let pass = 0; pass < 2; pass++) {
+    for (let attempt = 0; attempt < 800; attempt++) {
+      const rng = mulberry32(seed + attempt * 997 + pass * 31337);
+      const pool = [...HEADER_POOL];
+      for (let i = pool.length - 1; i > 0; i--) {
+        const j = Math.floor(rng() * (i + 1));
+        [pool[i], pool[j]] = [pool[j], pool[i]];
+      }
+      const rows = pool.slice(0, 3);
+      const cols = pool.slice(3, 6);
+      if (rows.some(r => cols.includes(r))) continue;
+      if (pass === 0) {
+        const awards = [...rows, ...cols].filter(h => AWARD_KEYS.has(h)).length;
+        if (awards < 1 || awards > 3) continue;
+        let thin = false;
+        for (const r of rows) { for (const c of cols) { if (cellPlayers(r, c).length < 2) { thin = true; break; } } if (thin) break; }
+        if (thin) continue;
+      }
+      if (boardSolvable(rows, cols)) return { rows, cols };
+    }
+  }
+  return FALLBACK_PUZZLE;
 }
 
 function formatDate(dateStr) {

@@ -504,43 +504,82 @@ const PLAYERS = [
   {n:"Scott Hannan",t:["SJS","COL","WSH","CGY","NSH"],a:[],f:48},
 ];
 
-const PUZZLES = [
-  { rows: ["PIT","BOS","SC_CHAMP"],      cols: ["WSH","HART","ALL_STAR"] },
-  { rows: ["DET","COL","NORRIS"],        cols: ["NJD","SC_CHAMP","ALL_STAR"] },
-  { rows: ["TBL","CHI","HART"],          cols: ["EDM","ART_ROSS","SC_CHAMP"] },
-  { rows: ["NYR","LAK","ALL_STAR"],      cols: ["BOS","SC_CHAMP","VEZINA"] },
-  { rows: ["MTL","SJS","VEZINA"],        cols: ["PIT","SC_CHAMP","CONN_SMYTHE"] },
-  { rows: ["VAN","NSH","SC_CHAMP"],      cols: ["TOR","HART","ALL_STAR"] },
-  { rows: ["STL","FLA","ART_ROSS"],      cols: ["CHI","CALDER","SC_CHAMP"] },
-  { rows: ["OTT","WPG","SELKE"],         cols: ["CHI","SC_CHAMP","ALL_STAR"] },
-  { rows: ["ANA","CGY","NORRIS"],        cols: ["DET","ALL_STAR","HART"] },
-  { rows: ["MIN","DAL","CALDER"],        cols: ["CHI","SC_CHAMP","VEZINA"] },
-  { rows: ["BUF","PHI","ALL_STAR"],      cols: ["NYR","VEZINA","SC_CHAMP"] },
-  { rows: ["NYI","CAR","CONN_SMYTHE"],   cols: ["BOS","NORRIS","SC_CHAMP"] },
-  { rows: ["WSH","COL","SC_CHAMP"],      cols: ["TBL","ALL_STAR","SELKE"] },
-  { rows: ["LAK","STL","HART"],          cols: ["PIT","ART_ROSS","CALDER"] },
-  { rows: ["EDM","NJD","VEZINA"],        cols: ["CHI","SC_CHAMP","ALL_STAR"] },
-  { rows: ["TOR","FLA","ALL_STAR"],      cols: ["BOS","CONN_SMYTHE","SELKE"] },
-  { rows: ["SJS","MTL","NORRIS"],        cols: ["WSH","HART","CALDER"] },
-  { rows: ["CGY","VAN","SC_CHAMP"],      cols: ["DET","ALL_STAR","ART_ROSS"] },
-  { rows: ["NSH","WPG","SC_CHAMP"],      cols: ["STL","VEZINA","ALL_STAR"] },
-  { rows: ["CAR","MIN","CALDER"],        cols: ["COL","SC_CHAMP","ALL_STAR"] },
-  { rows: ["PHI","ANA","ART_ROSS"],      cols: ["NYR","ALL_STAR","NORRIS"] },
-  { rows: ["OTT","BUF","CONN_SMYTHE"],   cols: ["LAK","VEZINA","ALL_STAR"] },
-  { rows: ["NYI","DAL","HART"],          cols: ["TOR","SC_CHAMP","ALL_STAR"] },
-  { rows: ["PIT","TBL","NORRIS"],        cols: ["BOS","ART_ROSS","SC_CHAMP"] },
-  { rows: ["DET","CHI","SC_CHAMP"],      cols: ["WSH","HART","VEZINA"] },
-  { rows: ["COL","NJD","ALL_STAR"],      cols: ["EDM","NORRIS","SELKE"] },
-  { rows: ["VGK","FLA","CALDER"],        cols: ["STL","SC_CHAMP","ALL_STAR"] },
-  { rows: ["MTL","CGY","VEZINA"],        cols: ["PIT","ALL_STAR","CONN_SMYTHE"] },
-  { rows: ["BOS","LAK","SELKE"],         cols: ["DET","SC_CHAMP","HART"] },
-  { rows: ["EDM","WSH","SC_CHAMP"],      cols: ["CHI","ART_ROSS","ALL_STAR"] },
-];
+function mulberry32(a) {
+  return function() {
+    a |= 0; a = a + 0x6D2B79F5 | 0;
+    let t = Math.imul(a ^ a >>> 15, 1 | a);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+
+// Procedural daily grid — replaces a fixed 30-puzzle list, so it never repeats.
+// Criteria pool = the modern teams (which have logos) + the awards. Each day's
+// grid is seeded from the date, so it's identical for every user, and validated
+// so every cell has answers AND the whole board has a 9-distinct-player
+// solution. Impossible award pairs (e.g. NORRIS×VEZINA) self-reject by leaving
+// an empty cell. (Generator mirrored in scripts/check-faceoff.mjs — keep in sync.)
+const HEADER_POOL = [...Object.keys(NHL_LOGO), ...Object.keys(AWARDS)];
+const AWARD_KEYS = new Set(Object.keys(AWARDS));
+const PLAYERS_BY_CRIT = Object.fromEntries(
+  HEADER_POOL.map(c => [c, PLAYERS.filter(p => p.t.includes(c) || p.a.includes(c))])
+);
+const FALLBACK_PUZZLE = { rows: ["PIT","BOS","SC_CHAMP"], cols: ["WSH","HART","ALL_STAR"] };
+
+function cellPlayers(row, col) {
+  return PLAYERS_BY_CRIT[row].filter(p => p.t.includes(col) || p.a.includes(col));
+}
+
+// Backtracking perfect-match: can all 9 cells be filled with distinct players?
+function boardSolvable(rows, cols) {
+  const cells = [];
+  for (const r of rows) for (const c of cols) {
+    const players = cellPlayers(r, c);
+    if (players.length === 0) return false;
+    cells.push(players);
+  }
+  const order = cells.map((players) => players).sort((a, b) => a.length - b.length);
+  const used = new Set();
+  const go = (k) => {
+    if (k === order.length) return true;
+    for (const p of order[k]) {
+      if (used.has(p.n)) continue;
+      used.add(p.n);
+      if (go(k + 1)) return true;
+      used.delete(p.n);
+    }
+    return false;
+  };
+  return go(0);
+}
 
 function getDailyPuzzle(dateStr) {
-  const seedDate = dateStr ?? new Date().toLocaleDateString('en-CA')
-  const seed = parseInt(seedDate.replace(/-/g, ''))
-  return PUZZLES[seed % PUZZLES.length]
+  const seedDate = dateStr ?? new Date().toLocaleDateString('en-CA');
+  const seed = parseInt(seedDate.replace(/-/g, ''));
+  // Pass 0 wants a balanced, non-thin board; pass 1 relaxes so a pathological
+  // seed still resolves to a solvable grid rather than the fallback.
+  for (let pass = 0; pass < 2; pass++) {
+    for (let attempt = 0; attempt < 800; attempt++) {
+      const rng = mulberry32(seed + attempt * 997 + pass * 31337);
+      const pool = [...HEADER_POOL];
+      for (let i = pool.length - 1; i > 0; i--) {
+        const j = Math.floor(rng() * (i + 1));
+        [pool[i], pool[j]] = [pool[j], pool[i]];
+      }
+      const rows = pool.slice(0, 3);
+      const cols = pool.slice(3, 6);
+      if (rows.some(r => cols.includes(r))) continue;
+      if (pass === 0) {
+        const awards = [...rows, ...cols].filter(h => AWARD_KEYS.has(h)).length;
+        if (awards < 1 || awards > 3) continue;
+        let thin = false;
+        for (const r of rows) { for (const c of cols) { if (cellPlayers(r, c).length < 2) { thin = true; break; } } if (thin) break; }
+        if (thin) continue;
+      }
+      if (boardSolvable(rows, cols)) return { rows, cols };
+    }
+  }
+  return FALLBACK_PUZZLE;
 }
 
 function formatDate(dateStr) {
