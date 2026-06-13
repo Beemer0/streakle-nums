@@ -5,6 +5,7 @@ import UserMenu from './UserMenu'
 import { useSeo, PAGE_SEO } from './seo'
 import { score, STAGE_LABELS, STAGE_POINTS } from './bracket/scoring'
 import { flagUrl } from './bracket/flags'
+import { clickableProps } from './a11y'
 
 const GOLD = '#C9A84C', CARD = '#1C1A16', BORDER = '#2C2820', INK = '#F5F0E8', MUTED = '#7A6E5F'
 
@@ -75,6 +76,7 @@ export default function Bracket() {
   const [flash, setFlash] = useState(null)
   const [showRules, setShowRules] = useState(false)
   const [confirmDay, setConfirmDay] = useState(null)
+  const [openMatch, setOpenMatch] = useState(null)
   const now = useNow()
 
   const me = user && Array.isArray(roster) ? roster.find(r => r.user_id === user.id) : null
@@ -187,6 +189,25 @@ export default function Bracket() {
       .eq('id', m.id)
     if (error) showFlash(`Update failed: ${error.message}`)
     else setMatches(ms => ms.map(x => x.id === m.id ? { ...x, result, result_source: 'admin' } : x))
+  }
+
+  // Others' picks only become visible post-kickoff via RLS, so a page left open
+  // since before kickoff needs a refetch when a match is expanded. Render cached
+  // picks immediately; the fresh rows land async. Guard against an empty/failed
+  // refetch clobbering cached data.
+  const refreshMatchPreds = useCallback(async (id) => {
+    const { data, error } = await supabase
+      .from('predictions').select('user_id,match_id,pick,locked_at').eq('match_id', id)
+    if (error || !data) return
+    setPreds(ps => [...ps.filter(p => p.match_id !== id), ...data])
+  }, [])
+
+  const toggleMatch = (m) => {
+    setOpenMatch(cur => {
+      const next = cur === m.id ? null : m.id
+      if (next) refreshMatchPreds(m.id)
+      return next
+    })
   }
 
   const header = (
@@ -324,7 +345,14 @@ export default function Bracket() {
                   {day}
                 </div>
                 {dayMatches.map(m => (
-                  <MatchRow key={m.id} m={m} myPick={myPicks[m.id]} lockedIn={myLocked.has(m.id)} now={now} onPick={savePick} />
+                  <MatchRow
+                    key={m.id} m={m} myPick={myPicks[m.id]} lockedIn={myLocked.has(m.id)} now={now} onPick={savePick}
+                    expanded={openMatch === m.id}
+                    onToggle={() => toggleMatch(m)}
+                    roster={roster}
+                    meId={user.id}
+                    matchPreds={openMatch === m.id ? preds.filter(p => p.match_id === m.id) : null}
+                  />
                 ))}
                 {lockable.length > 0 && (
                   <button onClick={() => handleLockDay(day, lockable)} style={{
@@ -398,10 +426,11 @@ export default function Bracket() {
   )
 }
 
-function MatchRow({ m, myPick, lockedIn, now, onPick }) {
+function MatchRow({ m, myPick, lockedIn, now, onPick, expanded, onToggle, roster, meId, matchPreds }) {
   const kicked = new Date(m.kickoff_at).getTime() <= now
   const tbd = !m.team_a_locked || !m.team_b_locked
   const locked = kicked || tbd || !!m.result || !!m.excluded || !!lockedIn
+  const expandable = kicked && !m.excluded
   const options = m.stage === 'group'
     ? [['a', m.team_a ?? 'TBD'], ['draw', 'Draw'], ['b', m.team_b ?? 'TBD']]
     : [['a', m.team_a ?? 'TBD'], ['b', m.team_b ?? 'TBD']]
@@ -425,42 +454,94 @@ function MatchRow({ m, myPick, lockedIn, now, onPick }) {
   }
 
   return (
-    <div className="bk-row" style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 10, padding: '8px 12px', marginBottom: 6 }}>
-      <div className="bk-time">
-        <div className="bk-kick" style={{ fontSize: 12, fontWeight: 700, color: INK }}>{fmtTime(m.kickoff_at)}</div>
-        <div className="bk-badge" style={{ fontSize: 10, fontWeight: 700, color: GOLD, textTransform: 'uppercase', letterSpacing: 0.5 }}>{stageBadge(m)}</div>
+    <div
+      style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 10, padding: '8px 12px', marginBottom: 6, cursor: expandable ? 'pointer' : 'default' }}
+      {...(expandable ? { ...clickableProps(onToggle), 'aria-expanded': expanded } : {})}
+    >
+      <div className="bk-row">
+        <div className="bk-time">
+          <div className="bk-kick" style={{ fontSize: 12, fontWeight: 700, color: INK }}>{fmtTime(m.kickoff_at)}</div>
+          <div className="bk-badge" style={{ fontSize: 10, fontWeight: 700, color: GOLD, textTransform: 'uppercase', letterSpacing: 0.5 }}>{stageBadge(m)}</div>
+        </div>
+        <div className="bk-btns">
+          {options.map(([key, label]) => {
+            const active = myPick === key
+            const won = m.result === key
+            return (
+              <button
+                key={key}
+                className="bk-btn"
+                onClick={() => onPick(m, key)}
+                disabled={locked}
+                style={{
+                  padding: '8px 4px',
+                  background: active ? (m.result ? (won ? 'rgba(134,239,172,0.12)' : 'rgba(252,165,165,0.10)') : GOLD) : '#0F0E0C',
+                  border: `2px solid ${won ? '#4caf50' : active ? GOLD : BORDER}`,
+                  borderRadius: 8,
+                  color: active && !m.result ? '#0F0E0C' : won ? '#86EFAC' : active ? INK : locked ? '#5A5040' : INK,
+                  fontSize: 13, fontWeight: 800, letterSpacing: 0.5,
+                  cursor: locked ? 'default' : 'pointer',
+                  opacity: locked && !active && !won ? 0.55 : 1,
+                  pointerEvents: locked ? 'none' : 'auto',
+                  transition: 'background 0.15s, border-color 0.15s',
+                }}
+              >
+                <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
+                  {key !== 'draw' && <Flag code={key === 'a' ? m.team_a : m.team_b} />}
+                  {label}
+                </span>
+              </button>
+            )
+          })}
+        </div>
+        <div className="bk-status">
+          {status}
+          {expandable && (
+            <div style={{ fontSize: 10, fontWeight: 600, color: MUTED, marginTop: 2 }}>
+              {expanded ? 'picks ▴' : 'picks ▾'}
+            </div>
+          )}
+        </div>
       </div>
-      <div className="bk-btns">
-        {options.map(([key, label]) => {
-          const active = myPick === key
-          const won = m.result === key
-          return (
-            <button
-              key={key}
-              className="bk-btn"
-              onClick={() => onPick(m, key)}
-              disabled={locked}
-              style={{
-                padding: '8px 4px',
-                background: active ? (m.result ? (won ? 'rgba(134,239,172,0.12)' : 'rgba(252,165,165,0.10)') : GOLD) : '#0F0E0C',
-                border: `2px solid ${won ? '#4caf50' : active ? GOLD : BORDER}`,
-                borderRadius: 8,
-                color: active && !m.result ? '#0F0E0C' : won ? '#86EFAC' : active ? INK : locked ? '#5A5040' : INK,
-                fontSize: 13, fontWeight: 800, letterSpacing: 0.5,
-                cursor: locked ? 'default' : 'pointer',
-                opacity: locked && !active && !won ? 0.55 : 1,
-                transition: 'background 0.15s, border-color 0.15s',
-              }}
-            >
-              <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
-                {key !== 'draw' && <Flag code={key === 'a' ? m.team_a : m.team_b} />}
-                {label}
-              </span>
-            </button>
-          )
-        })}
-      </div>
-      <div className="bk-status">{status}</div>
+      {expanded && <PicksPanel m={m} roster={roster} matchPreds={matchPreds} meId={meId} />}
+    </div>
+  )
+}
+
+function PicksPanel({ m, roster, matchPreds, meId }) {
+  const byUser = new Map((matchPreds ?? []).map(p => [p.user_id, p.pick]))
+  // Viewer pinned first, then roster (joined) order. No correct-first sorting —
+  // rows reshuffling when a result lands is worse than colours doing the work.
+  const members = (roster ?? []).slice().sort((a, b) =>
+    a.user_id === meId ? -1 : b.user_id === meId ? 1 : 0)
+
+  const pickCell = (pick) => {
+    if (!pick) return <span style={{ color: MUTED, fontSize: 12 }}>No pick</span>
+    const color = m.result ? (pick === m.result ? '#86EFAC' : '#FCA5A5') : INK
+    const label = pick === 'draw' ? 'Draw' : pick === 'a' ? m.team_a : m.team_b
+    return (
+      <span style={{ display: 'flex', alignItems: 'center', gap: 5, color, fontWeight: 700, fontSize: 13, flexShrink: 0 }}>
+        {pick !== 'draw' && <Flag code={pick === 'a' ? m.team_a : m.team_b} size={14} />}
+        {label ?? '—'}
+      </span>
+    )
+  }
+
+  return (
+    <div style={{ borderTop: `1px solid ${BORDER}`, marginTop: 8, paddingTop: 8 }} onClick={e => e.stopPropagation()}>
+      {members.map(mem => (
+        <div key={mem.user_id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0' }}>
+          {mem.avatar_url
+            ? <img src={mem.avatar_url} alt="" width={22} height={22} style={{ borderRadius: '50%', flexShrink: 0 }} referrerPolicy="no-referrer" />
+            : <div style={{ width: 22, height: 22, borderRadius: '50%', background: '#0F0E0C', border: `1px solid ${BORDER}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: GOLD, flexShrink: 0 }}>
+                {(mem.display_name ?? '?')[0]?.toUpperCase()}
+              </div>}
+          <div style={{ flex: 1, minWidth: 0, fontSize: 13, color: INK, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            {mem.display_name ?? 'Player'}{mem.user_id === meId && <span style={{ color: MUTED, fontWeight: 600 }}> (you)</span>}
+          </div>
+          {pickCell(byUser.get(mem.user_id))}
+        </div>
+      ))}
     </div>
   )
 }
@@ -497,6 +578,7 @@ function RulesModal({ onClose }) {
           <b> 🔒 Lock in</b> under a matchday to commit those picks — locked picks
           can't be changed, ever. Anything still in draft locks automatically at
           kickoff. Everyone's picks stay hidden until the match starts — no copying.
+          Once a match kicks off, tap it to see what everyone picked.
           Knockout matches open for picking once both teams are known.
         </p>
 
