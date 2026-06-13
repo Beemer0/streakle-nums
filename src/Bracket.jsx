@@ -77,6 +77,7 @@ export default function Bracket() {
   const [showRules, setShowRules] = useState(false)
   const [confirmDay, setConfirmDay] = useState(null)
   const [openMatch, setOpenMatch] = useState(null)
+  const [openStanding, setOpenStanding] = useState(null)
   const now = useNow()
 
   const me = user && Array.isArray(roster) ? roster.find(r => r.user_id === user.id) : null
@@ -129,6 +130,24 @@ export default function Bracket() {
       .map(r => ({ ...r, ...(totals[r.user_id] ?? { total: 0, correct: 0, byStage: {} }) }))
       .sort((a, b) => b.total - a.total || b.correct - a.correct)
   }, [roster, preds, matches])
+
+  const matchById = useMemo(() => new Map(matches.map(m => [m.id, m])), [matches])
+
+  // A participant's settled picks (graded, non-excluded matches only — which are
+  // necessarily post-kickoff, so RLS has already exposed everyone's), oldest
+  // first. The form strip reads left→right; the list reverses to newest-first.
+  const historyFor = useCallback((userId) => {
+    const out = []
+    for (const p of preds) {
+      if (p.user_id !== userId) continue
+      const m = matchById.get(p.match_id)
+      if (!m || !m.result || m.excluded) continue
+      const correct = p.pick === m.result
+      out.push({ m, pick: p.pick, correct, pts: correct ? (STAGE_POINTS[m.stage] ?? 0) : 0 })
+    }
+    out.sort((a, b) => new Date(a.m.kickoff_at) - new Date(b.m.kickoff_at))
+    return out
+  }, [preds, matchById])
 
   const handleJoin = async (e) => {
     e.preventDefault()
@@ -376,30 +395,43 @@ export default function Bracket() {
 
       {view === 'board' && (
         <div style={{ width: '100%', maxWidth: 480, padding: '0 12px', boxSizing: 'border-box' }}>
-          {standings.map((s, i) => (
-            <div key={s.user_id} style={{
-              display: 'flex', alignItems: 'center', gap: 12,
-              background: CARD, border: `1px solid ${s.user_id === user.id ? GOLD : BORDER}`,
-              borderRadius: 10, padding: '10px 16px', marginBottom: 6,
-              animation: `fadeIn 0.4s ${i * 60}ms both ease`,
-            }}>
-              <div style={{ width: 24, fontSize: 15, fontWeight: 800, color: i === 0 ? GOLD : MUTED, textAlign: 'center' }}>
-                {i === 0 ? '👑' : i + 1}
-              </div>
-              {s.avatar_url
-                ? <img src={s.avatar_url} alt="" width={28} height={28} style={{ borderRadius: '50%' }} referrerPolicy="no-referrer" />
-                : <div style={{ width: 28, height: 28, borderRadius: '50%', background: '#0F0E0C', border: `1px solid ${BORDER}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, color: GOLD }}>
-                    {(s.display_name ?? '?')[0]?.toUpperCase()}
-                  </div>}
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 14, fontWeight: 700, color: INK, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                  {s.display_name ?? 'Player'}{s.user_id === user.id && <span style={{ color: MUTED, fontWeight: 600 }}> (you)</span>}
+          {standings.map((s, i) => {
+            const hist = historyFor(s.user_id)
+            const expandable = hist.length > 0
+            const open = openStanding === s.user_id
+            return (
+              <div key={s.user_id} style={{
+                background: CARD, border: `1px solid ${s.user_id === user.id ? GOLD : BORDER}`,
+                borderRadius: 10, padding: '10px 16px', marginBottom: 6,
+                animation: `fadeIn 0.4s ${i * 60}ms both ease`,
+                cursor: expandable ? 'pointer' : 'default',
+              }}
+                {...(expandable ? { ...clickableProps(() => setOpenStanding(c => c === s.user_id ? null : s.user_id)), 'aria-expanded': open } : {})}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <div style={{ width: 24, fontSize: 15, fontWeight: 800, color: i === 0 ? GOLD : MUTED, textAlign: 'center' }}>
+                    {i === 0 ? '👑' : i + 1}
+                  </div>
+                  {s.avatar_url
+                    ? <img src={s.avatar_url} alt="" width={28} height={28} style={{ borderRadius: '50%', flexShrink: 0 }} referrerPolicy="no-referrer" />
+                    : <div style={{ width: 28, height: 28, borderRadius: '50%', background: '#0F0E0C', border: `1px solid ${BORDER}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, color: GOLD, flexShrink: 0 }}>
+                        {(s.display_name ?? '?')[0]?.toUpperCase()}
+                      </div>}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: INK, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {s.display_name ?? 'Player'}{s.user_id === user.id && <span style={{ color: MUTED, fontWeight: 600 }}> (you)</span>}
+                    </div>
+                    <div style={{ fontSize: 11, color: MUTED }}>{s.correct} correct</div>
+                  </div>
+                  <div style={{ fontSize: 20, fontWeight: 800, color: i === 0 ? GOLD : INK }}>{s.total}</div>
+                  {expandable && (
+                    <div style={{ color: MUTED, fontSize: 13, marginLeft: 2, flexShrink: 0 }}>{open ? '▴' : '▾'}</div>
+                  )}
                 </div>
-                <div style={{ fontSize: 11, color: MUTED }}>{s.correct} correct</div>
+                {open && <HistoryPanel history={hist} />}
               </div>
-              <div style={{ fontSize: 20, fontWeight: 800, color: i === 0 ? GOLD : INK }}>{s.total}</div>
-            </div>
-          ))}
+            )
+          })}
           <div style={{ textAlign: 'center', fontSize: 11, color: '#5A5040', marginTop: 14, lineHeight: 1.7 }}>
             Group 1 · R32 2 · R16 3 · QF 5 · SF 8 · 3rd place 5 · Final 12 points per correct pick.
             <br />Other players' picks are visible only after kickoff.
@@ -542,6 +574,41 @@ function PicksPanel({ m, roster, matchPreds, meId }) {
           {pickCell(byUser.get(mem.user_id))}
         </div>
       ))}
+    </div>
+  )
+}
+
+function HistoryPanel({ history }) {
+  const newest = [...history].reverse()
+  return (
+    <div style={{ borderTop: `1px solid ${BORDER}`, marginTop: 10, paddingTop: 10 }} onClick={e => e.stopPropagation()}>
+      <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1, color: GOLD, textTransform: 'uppercase', marginBottom: 6 }}>Form</div>
+      <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginBottom: 14 }}>
+        {history.map((h, i) => (
+          <span key={i} title={`${h.m.team_a} v ${h.m.team_b}`} style={{
+            width: 16, height: 16, borderRadius: 3,
+            background: h.correct ? 'rgba(134,239,172,0.85)' : 'rgba(252,165,165,0.85)',
+          }} />
+        ))}
+      </div>
+      <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1, color: GOLD, textTransform: 'uppercase', marginBottom: 4 }}>Pick history</div>
+      {newest.map((h, i) => {
+        const pickLabel = h.pick === 'draw' ? 'Draw' : h.pick === 'a' ? h.m.team_a : h.m.team_b
+        return (
+          <div key={h.m.id} style={{ display: 'flex', alignItems: 'center', padding: '6px 0', borderBottom: i < newest.length - 1 ? '1px solid rgba(44,40,32,0.6)' : 'none' }}>
+            <span style={{ flex: 1, minWidth: 0, fontSize: 13, color: INK, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {h.m.team_a ?? 'TBD'} <span style={{ color: MUTED }}>v</span> {h.m.team_b ?? 'TBD'}
+            </span>
+            <span style={{ fontSize: 12, color: MUTED, margin: '0 10px', flexShrink: 0, display: 'flex', alignItems: 'center', gap: 4 }}>
+              {h.pick !== 'draw' && <Flag code={h.pick === 'a' ? h.m.team_a : h.m.team_b} size={13} />}
+              {pickLabel}
+            </span>
+            <span style={{ fontSize: 12, fontWeight: 700, color: h.correct ? '#86EFAC' : '#FCA5A5', flexShrink: 0, minWidth: 30, textAlign: 'right' }}>
+              {h.correct ? `+${h.pts}` : '✗'}
+            </span>
+          </div>
+        )
+      })}
     </div>
   )
 }
