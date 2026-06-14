@@ -4,8 +4,8 @@
 const FLAG_ISO = {
   // Hosts
   USA: 'us', MEX: 'mx', CAN: 'ca',
-  // CONMEBOL
-  ARG: 'ar', BRA: 'br', URU: 'uy', COL: 'co', ECU: 'ec',
+  // CONMEBOL (URY is the ISO-3 code football-data.org returns for Uruguay)
+  ARG: 'ar', BRA: 'br', URU: 'uy', URY: 'uy', COL: 'co', ECU: 'ec',
   PAR: 'py', PER: 'pe', CHI: 'cl', BOL: 'bo', VEN: 've',
   // UEFA
   ENG: 'gb-eng', SCO: 'gb-sct', WAL: 'gb-wls', NIR: 'gb-nir',
