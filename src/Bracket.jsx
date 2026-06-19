@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback, useSyncExternalStore } from 'react'
+import { useState, useEffect, useMemo, useCallback, useRef, useSyncExternalStore } from 'react'
 import { useAuth } from './AuthContext'
 import { supabase } from './supabase'
 import UserMenu from './UserMenu'
@@ -78,6 +78,9 @@ export default function Bracket() {
   const [confirmDay, setConfirmDay] = useState(null)
   const [openMatch, setOpenMatch] = useState(null)
   const [openStanding, setOpenStanding] = useState(null)
+  const [openPastDays, setOpenPastDays] = useState(() => new Set()) // finished days the user re-opened
+  const currentDayRef = useRef(null)
+  const didScrollRef = useRef(false)
   const now = useNow()
 
   const me = user && Array.isArray(roster) ? roster.find(r => r.user_id === user.id) : null
@@ -122,6 +125,28 @@ export default function Bracket() {
     }
     return [...map.entries()]
   }, [matches])
+
+  // Per-day metadata for the Picks view. A day is "past" once its LAST match has
+  // kicked off — so a day straddling now stays expanded and keeps its pickable
+  // rows + Lock-in button. Past days collapse to a one-line summary by default.
+  const pickDays = useMemo(() => days.map(([day, dayMatches]) => {
+    const lastKick = Math.max(...dayMatches.map(m => new Date(m.kickoff_at).getTime()))
+    const settled = dayMatches.filter(m => !m.excluded && m.result)
+    const correct = settled.filter(m => myPicks[m.id] === m.result).length
+    return { day, dayMatches, isPast: lastKick <= now, scored: settled.length, correct }
+  }), [days, now, myPicks])
+  const currentDayLabel = pickDays.find(d => !d.isPast)?.day ?? null
+
+  // Land the user on the current day once, instead of scrolling past finished days.
+  useEffect(() => {
+    if (view !== 'picks' || didScrollRef.current || !currentDayRef.current) return
+    didScrollRef.current = true
+    currentDayRef.current.scrollIntoView({ block: 'start', behavior: 'auto' })
+  }, [view, currentDayLabel, matches.length])
+
+  const togglePastDay = (day) => setOpenPastDays(s => {
+    const n = new Set(s); n.has(day) ? n.delete(day) : n.add(day); return n
+  })
 
   const standings = useMemo(() => {
     if (!Array.isArray(roster)) return []
@@ -356,16 +381,42 @@ export default function Bracket() {
               ? <>You've picked <b style={{ color: GOLD }}>{pickedCount}</b> of <b style={{ color: GOLD }}>{upcoming.length}</b> open matches</>
               : 'No open matches right now'}
           </div>
-          {days.map(([day, dayMatches]) => {
+          {pickDays.map(({ day, dayMatches, isPast, scored, correct }) => {
             const lockable = dayMatches
               .filter(m => myPicks[m.id] && !myLocked.has(m.id) && !m.excluded && !m.result
                 && new Date(m.kickoff_at).getTime() > now)
               .map(m => m.id)
-            return (
-              <div key={day} style={{ marginBottom: 22 }}>
-                <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 17, fontWeight: 800, letterSpacing: 1, color: INK, marginBottom: 8, borderBottom: `1px solid ${BORDER}`, paddingBottom: 4 }}>
-                  {day}
+            const collapsed = isPast && !openPastDays.has(day)
+            const isCurrent = day === currentDayLabel
+            const nMatch = `${dayMatches.length} match${dayMatches.length !== 1 ? 'es' : ''}`
+            const stats = scored > 0 ? `${nMatch} · ${correct}/${scored} correct` : nMatch
+
+            if (collapsed) {
+              return (
+                <div key={day} {...clickableProps(() => togglePastDay(day))} aria-expanded={false} style={{
+                  display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer',
+                  marginBottom: 8, paddingBottom: 4, borderBottom: `1px solid ${BORDER}`,
+                }}>
+                  <span style={{ flex: 1, minWidth: 0, fontFamily: "'Barlow Condensed', sans-serif", fontSize: 15, fontWeight: 800, letterSpacing: 1, color: MUTED, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{day}</span>
+                  <span style={{ fontSize: 11, color: MUTED, flexShrink: 0 }}>{stats}</span>
+                  <span style={{ fontSize: 13, color: MUTED, flexShrink: 0 }}>▾</span>
                 </div>
+              )
+            }
+
+            return (
+              <div key={day} ref={isCurrent ? currentDayRef : null} style={{ marginBottom: 22, ...(isCurrent ? { borderLeft: `2px solid ${GOLD}`, paddingLeft: 8 } : null) }}>
+                {isPast ? (
+                  <div {...clickableProps(() => togglePastDay(day))} aria-expanded={true} style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontFamily: "'Barlow Condensed', sans-serif", fontSize: 17, fontWeight: 800, letterSpacing: 1, color: INK, marginBottom: 8, borderBottom: `1px solid ${BORDER}`, paddingBottom: 4 }}>
+                    <span style={{ flex: 1, minWidth: 0 }}>{day}</span>
+                    <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, fontWeight: 400, color: MUTED, flexShrink: 0 }}>{stats}</span>
+                    <span style={{ fontSize: 13, color: MUTED, flexShrink: 0 }}>▴</span>
+                  </div>
+                ) : (
+                  <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 17, fontWeight: 800, letterSpacing: 1, color: INK, marginBottom: 8, borderBottom: `1px solid ${BORDER}`, paddingBottom: 4 }}>
+                    {day}
+                  </div>
+                )}
                 {dayMatches.map(m => (
                   <MatchRow
                     key={m.id} m={m} myPick={myPicks[m.id]} lockedIn={myLocked.has(m.id)} now={now} onPick={savePick}
