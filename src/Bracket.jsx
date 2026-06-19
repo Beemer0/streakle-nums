@@ -166,7 +166,9 @@ export default function Bracket() {
   const groupTables = useMemo(() => {
     const groups = {}
     for (const m of matches) {
-      if (m.stage !== 'group' || !m.group_code || m.excluded) continue
+      // Excluded matches are out of the POOL (unpickable/unscored), but they're
+      // still real tournament games, so they DO count toward group standings.
+      if (m.stage !== 'group' || !m.group_code) continue
       const g = (groups[m.group_code] ??= {})
       for (const t of [m.team_a, m.team_b]) {
         if (t && !g[t]) g[t] = { team: t, w: 0, d: 0, l: 0, gf: 0, ga: 0, pts: 0 }
