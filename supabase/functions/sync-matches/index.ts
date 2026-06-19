@@ -58,6 +58,8 @@ Deno.serve(async () => {
     team_b_locked: !!m.awayTeam?.tla,
     result: finished(m) ? WINNER_MAP[m.score?.winner] ?? null : null,
     result_source: finished(m) && WINNER_MAP[m.score?.winner] ? 'api' : null,
+    score_a: finished(m) ? m.score?.fullTime?.home ?? null : null,
+    score_b: finished(m) ? m.score?.fullTime?.away ?? null : null,
     updated_at: new Date().toISOString(),
   }))
 
@@ -72,7 +74,7 @@ Deno.serve(async () => {
   const fresh = rows.filter((r) => !adminIds.has(r.id))
   const frozen = rows
     .filter((r) => adminIds.has(r.id))
-    .map(({ result: _r, result_source: _s, ...rest }) => rest)
+    .map(({ result: _r, result_source: _s, score_a: _sa, score_b: _sb, ...rest }) => rest)
 
   for (const batch of [fresh, frozen]) {
     if (!batch.length) continue

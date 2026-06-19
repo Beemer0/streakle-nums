@@ -24,6 +24,8 @@ create table matches (
   team_b_locked   boolean not null default true,
   result          text check (result in ('a','b','draw')),       -- null until finished
   result_source   text check (result_source in ('api','admin')), -- audit trail
+  score_a         int,                             -- full-time score, null until finished
+  score_b         int,
   excluded        boolean not null default false,  -- out of the pool: unpickable, never scored
   updated_at      timestamptz not null default now()
 );
