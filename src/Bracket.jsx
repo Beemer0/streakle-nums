@@ -79,6 +79,7 @@ export default function Bracket() {
   const [openMatch, setOpenMatch] = useState(null)
   const [openStanding, setOpenStanding] = useState(null)
   const [openPastDays, setOpenPastDays] = useState(() => new Set()) // finished days the user re-opened
+  const [tourTab, setTourTab] = useState('groups') // groups | bracket
   const currentDayRef = useRef(null)
   const didScrollRef = useRef(false)
   const now = useNow()
@@ -157,6 +158,39 @@ export default function Bracket() {
   }, [roster, preds, matches])
 
   const matchById = useMemo(() => new Map(matches.map(m => [m.id, m])), [matches])
+
+  // Live group tables from match results. Ranks by points, then goal difference,
+  // then goals scored, then alphabetical (FIFA order, minus head-to-head). GD/GF
+  // need the score_a/score_b the sync now stores.
+  const cmpTeam = (x, y) => y.pts - x.pts || (y.gf - y.ga) - (x.gf - x.ga) || y.gf - x.gf || x.team.localeCompare(y.team)
+  const groupTables = useMemo(() => {
+    const groups = {}
+    for (const m of matches) {
+      if (m.stage !== 'group' || !m.group_code || m.excluded) continue
+      const g = (groups[m.group_code] ??= {})
+      for (const t of [m.team_a, m.team_b]) {
+        if (t && !g[t]) g[t] = { team: t, w: 0, d: 0, l: 0, gf: 0, ga: 0, pts: 0 }
+      }
+      if (!m.result) continue
+      const a = g[m.team_a], b = g[m.team_b]
+      if (!a || !b) continue
+      if (m.score_a != null && m.score_b != null) {
+        a.gf += m.score_a; a.ga += m.score_b; b.gf += m.score_b; b.ga += m.score_a
+      }
+      if (m.result === 'a') { a.w++; a.pts += 3; b.l++ }
+      else if (m.result === 'b') { b.w++; b.pts += 3; a.l++ }
+      else { a.d++; b.d++; a.pts++; b.pts++ }
+    }
+    return Object.entries(groups)
+      .map(([code, teams]) => [code, Object.values(teams).sort(cmpTeam)])
+      .sort((a, b) => a[0].localeCompare(b[0]))
+  }, [matches])
+
+  // The 8 best 3rd-placed teams also advance in the 48-team format.
+  const qualifyingThirds = useMemo(() => {
+    const thirds = groupTables.map(([, teams]) => teams[2]).filter(Boolean)
+    return new Set([...thirds].sort(cmpTeam).slice(0, 8).map(t => t.team))
+  }, [groupTables])
 
   // A participant's settled picks, oldest first (form strip reads left→right;
   // the list reverses to newest-first). Only matches that have kicked off and
@@ -348,6 +382,7 @@ export default function Bracket() {
   const tabs = [
     ['picks', 'Picks'],
     ['board', 'Standings'],
+    ['tournament', 'Tournament'],
     ...(isAdmin ? [['admin', 'Admin']] : []),
   ]
 
@@ -508,7 +543,113 @@ export default function Bracket() {
           ))}
         </div>
       )}
+
+      {view === 'tournament' && (
+        <div style={{ width: '100%', maxWidth: 560, padding: '0 12px', boxSizing: 'border-box' }}>
+          <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginBottom: 16 }}>
+            {[['groups', 'Groups'], ['bracket', 'Bracket']].map(([k, l]) => (
+              <button key={k} onClick={() => setTourTab(k)} style={{
+                background: tourTab === k ? 'rgba(201,168,76,0.14)' : 'none',
+                border: `1px solid ${tourTab === k ? 'rgba(201,168,76,0.35)' : BORDER}`,
+                borderRadius: 20, color: tourTab === k ? GOLD : MUTED,
+                cursor: 'pointer', fontSize: 12, fontWeight: 700, padding: '5px 16px',
+              }}>{l}</button>
+            ))}
+          </div>
+
+          {tourTab === 'groups' && (
+            groupTables.length === 0
+              ? <div style={{ textAlign: 'center', fontSize: 13, color: MUTED }}>No group results yet.</div>
+              : <>
+                  {groupTables.map(([code, teams]) => (
+                    <GroupTable key={code} code={code} teams={teams} qualifyingThirds={qualifyingThirds} />
+                  ))}
+                  <div style={{ textAlign: 'center', fontSize: 11, color: '#5A5040', marginTop: 6, lineHeight: 1.8 }}>
+                    <span style={{ color: GOLD }}>■</span> top 2 advance · <span style={{ color: '#8a7a3a' }}>■</span> in the 8 best 3rd-place spots
+                  </div>
+                </>
+          )}
+
+          {tourTab === 'bracket' && <BracketView matches={matches} />}
+        </div>
+      )}
     </>
+  )
+}
+
+function GroupTable({ code, teams, qualifyingThirds }) {
+  const cols = '1fr 16px 16px 16px 26px 26px'
+  return (
+    <div style={{ marginBottom: 18 }}>
+      <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 15, fontWeight: 800, letterSpacing: 1, color: INK, marginBottom: 6 }}>GROUP {code}</div>
+      <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 10, overflow: 'hidden' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: cols, gap: 6, padding: '6px 12px', fontSize: 10, color: MUTED, textTransform: 'uppercase', letterSpacing: 0.5, borderBottom: `1px solid ${BORDER}` }}>
+          <span>Team</span><span style={{ textAlign: 'center' }}>W</span><span style={{ textAlign: 'center' }}>D</span><span style={{ textAlign: 'center' }}>L</span><span style={{ textAlign: 'center' }}>GD</span><span style={{ textAlign: 'right' }}>Pts</span>
+        </div>
+        {teams.map((t, i) => {
+          const advance = i < 2
+          const thirdQ = i === 2 && qualifyingThirds.has(t.team)
+          const accent = advance ? GOLD : thirdQ ? '#8a7a3a' : 'transparent'
+          const gd = t.gf - t.ga
+          return (
+            <div key={t.team} style={{ display: 'grid', gridTemplateColumns: cols, gap: 6, padding: '7px 12px', fontSize: 13, alignItems: 'center', borderLeft: `2px solid ${accent}`, background: advance || thirdQ ? 'rgba(201,168,76,0.05)' : 'transparent' }}>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
+                <Flag code={t.team} size={14} />
+                <span style={{ color: advance || thirdQ ? INK : '#A89880', fontWeight: advance || thirdQ ? 500 : 400, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.team}</span>
+              </span>
+              <span style={{ textAlign: 'center', color: MUTED }}>{t.w}</span>
+              <span style={{ textAlign: 'center', color: MUTED }}>{t.d}</span>
+              <span style={{ textAlign: 'center', color: MUTED }}>{t.l}</span>
+              <span style={{ textAlign: 'center', color: '#A89880' }}>{gd > 0 ? '+' : ''}{gd}</span>
+              <span style={{ textAlign: 'right', color: advance ? GOLD : INK, fontWeight: 700 }}>{t.pts}</span>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+const KO_STAGES = [['r32', 'Round of 32'], ['r16', 'Round of 16'], ['qf', 'Quarter-finals'], ['sf', 'Semi-finals'], ['3p', 'Third place'], ['final', 'Final']]
+
+function BracketView({ matches }) {
+  const byStage = {}
+  for (const m of matches) {
+    if (m.stage === 'group' || m.excluded) continue
+    ;(byStage[m.stage] ??= []).push(m)
+  }
+  Object.values(byStage).forEach(arr => arr.sort((a, b) => new Date(a.kickoff_at) - new Date(b.kickoff_at)))
+  const anyTeams = matches.some(m => m.stage !== 'group' && m.team_a)
+  const stages = KO_STAGES.filter(([k]) => byStage[k]?.length)
+  if (!stages.length) return <div style={{ textAlign: 'center', fontSize: 13, color: MUTED }}>The knockout schedule isn't set yet.</div>
+  return (
+    <>
+      {!anyTeams && <div style={{ textAlign: 'center', fontSize: 11, color: MUTED, marginBottom: 14 }}>Teams fill in as the group stage finishes.</div>}
+      {stages.map(([key, label]) => (
+        <div key={key} style={{ marginBottom: 18 }}>
+          <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 13, fontWeight: 700, letterSpacing: 1.5, color: GOLD, textTransform: 'uppercase', marginBottom: 8 }}>{label}</div>
+          {byStage[key].map(m => <KoRow key={m.id} m={m} />)}
+        </div>
+      ))}
+    </>
+  )
+}
+
+function KoRow({ m }) {
+  const aWin = m.result === 'a', bWin = m.result === 'b'
+  const scoreStr = (m.score_a != null && m.score_b != null) ? `${m.score_a}–${m.score_b}` : null
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', background: CARD, border: `1px solid ${BORDER}`, borderRadius: 10, padding: '9px 14px', marginBottom: 6 }}>
+      <span style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 6, minWidth: 0, fontSize: 13, color: aWin ? '#86EFAC' : '#A89880', fontWeight: aWin ? 700 : 400 }}>
+        {m.team_a && <Flag code={m.team_a} size={14} />}
+        <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.team_a ?? 'TBD'}</span>
+      </span>
+      <span style={{ flexShrink: 0, padding: '0 10px', fontSize: scoreStr ? 13 : 11, fontWeight: scoreStr ? 700 : 400, color: scoreStr ? INK : MUTED }}>{scoreStr ?? 'vs'}</span>
+      <span style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 6, minWidth: 0, justifyContent: 'flex-end', fontSize: 13, color: bWin ? '#86EFAC' : '#A89880', fontWeight: bWin ? 700 : 400 }}>
+        <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.team_b ?? 'TBD'}</span>
+        {m.team_b && <Flag code={m.team_b} size={14} />}
+      </span>
+    </div>
   )
 }
 

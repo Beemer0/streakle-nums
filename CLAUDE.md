@@ -54,7 +54,12 @@ feature. Members join with an invite code, pick winners for every WC 2026 match
 `src/bracket/scoring.js`, tested).
 
 - UI: `src/Bracket.jsx` (signed-out / join-with-code / picks / standings /
-  admin-override views). Members-only banner on Home. `noindex` via `PAGE_SEO`.
+  tournament / admin-override views). Members-only banner on Home. `noindex` via
+  `PAGE_SEO`. Picks auto-collapses finished days; Standings expands per-player
+  pick history; Tournament has live Groups tables (ranked pts/GD/GF, top-2 +
+  best-8 thirds) and a stacked-rounds Bracket — all computed client-side from
+  the loaded matches. `matches.score_a/score_b` (full-time score from the sync)
+  feed goal difference and scorelines.
 - DB: `supabase/schema.sql` — `pool_members`, `matches`, `predictions`,
   `pool_config` + RLS. Joining goes ONLY through the `join_pool(code)`
   SECURITY DEFINER RPC (no INSERT policy on `pool_members` — that's deliberate;
