@@ -24,8 +24,9 @@ create table matches (
   team_b_locked   boolean not null default true,
   result          text check (result in ('a','b','draw')),       -- null until finished
   result_source   text check (result_source in ('api','admin')), -- audit trail
-  score_a         int,                             -- full-time score, null until finished
+  score_a         int,                             -- running score (live) / final; null pre-match
   score_b         int,
+  status          text,                            -- football-data status: TIMED/IN_PLAY/PAUSED/FINISHED…
   excluded        boolean not null default false,  -- out of the pool: unpickable, never scored
   updated_at      timestamptz not null default now()
 );
@@ -160,7 +161,7 @@ create policy pc_none on pool_config for select using (false);
 --    then schedule it. Enable the pg_cron and pg_net extensions
 --    (Dashboard → Database → Extensions) and run — fill in project ref + anon key:
 --
---      select cron.schedule('sync-matches', '*/5 * * * *', $$
+--      select cron.schedule('sync-matches', '*/2 * * * *', $$  -- every 2 min for live scores
 --        select net.http_post(
 --          url     := 'https://<project-ref>.supabase.co/functions/v1/sync-matches',
 --          headers := jsonb_build_object('Authorization', 'Bearer <anon-key>')

@@ -58,8 +58,10 @@ feature. Members join with an invite code, pick winners for every WC 2026 match
   `PAGE_SEO`. Picks auto-collapses finished days; Standings expands per-player
   pick history; Tournament has live Groups tables (ranked pts/GD/GF, top-2 +
   best-8 thirds) and a stacked-rounds Bracket — all computed client-side from
-  the loaded matches. `matches.score_a/score_b` (full-time score from the sync)
-  feed goal difference and scorelines.
+  the loaded matches. `matches.score_a/score_b` (running/final score) +
+  `matches.status` (TIMED/IN_PLAY/PAUSED/FINISHED) from the sync feed goal
+  difference, scorelines, and a LIVE badge on in-progress matches. The client
+  polls matches every 60s; the sync cron runs every 2 min for fresh live scores.
 - DB: `supabase/schema.sql` — `pool_members`, `matches`, `predictions`,
   `pool_config` + RLS. Joining goes ONLY through the `join_pool(code)`
   SECURITY DEFINER RPC (no INSERT policy on `pool_members` — that's deliberate;

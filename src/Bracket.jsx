@@ -13,6 +13,7 @@ const css = `
 @keyframes slideUp{from{transform:translateY(12px);opacity:0}to{transform:translateY(0);opacity:1}}
 @keyframes fadeIn{from{opacity:0}to{opacity:1}}
 @keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-6px)}40%{transform:translateX(6px)}60%{transform:translateX(-4px)}80%{transform:translateX(4px)}}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0.25}}
 .bk-row{display:flex;align-items:center;gap:10px}
 .bk-time{width:84px;flex-shrink:0}
 .bk-btns{display:flex;gap:6px;flex:1;justify-content:center;min-width:0}
@@ -102,6 +103,17 @@ export default function Bracket() {
   }, [])
 
   useEffect(() => { if (user) loadAll() }, [user, loadAll])
+
+  // Poll just the matches every 60s so live scores, results and tables refresh
+  // without a reload. (The sync writes to the DB on its own cron; this reads.)
+  useEffect(() => {
+    if (!user) return
+    const t = setInterval(() => {
+      supabase.from('matches').select('*').order('kickoff_at')
+        .then(({ data }) => { if (data) setMatches(data) })
+    }, 60000)
+    return () => clearInterval(t)
+  }, [user])
 
   const showFlash = (msg) => { setFlash(msg); setTimeout(() => setFlash(null), 2500) }
 
@@ -660,6 +672,7 @@ function MatchRow({ m, myPick, lockedIn, now, onPick, expanded, onToggle, roster
   const tbd = !m.team_a_locked || !m.team_b_locked
   const locked = kicked || tbd || !!m.result || !!m.excluded || !!lockedIn
   const expandable = kicked && !m.excluded
+  const isLive = m.status === 'IN_PLAY' || m.status === 'PAUSED'
   const options = m.stage === 'group'
     ? [['a', m.team_a ?? 'TBD'], ['draw', 'Draw'], ['b', m.team_b ?? 'TBD']]
     : [['a', m.team_a ?? 'TBD'], ['b', m.team_b ?? 'TBD']]
@@ -734,6 +747,7 @@ function MatchRow({ m, myPick, lockedIn, now, onPick, expanded, onToggle, roster
       </div>
       {m.score_a != null && m.score_b != null && (
         <div style={{ textAlign: 'center', fontSize: 11, color: MUTED, marginTop: 5, letterSpacing: 0.3 }}>
+          {isLive && <span style={{ color: '#e94560', fontWeight: 700, marginRight: 6 }}><span style={{ animation: 'blink 1.2s infinite' }}>●</span> LIVE</span>}
           <span style={{ color: m.result === 'a' ? '#86EFAC' : '#A89880', fontWeight: m.result === 'a' ? 700 : 400 }}>{m.team_a}</span>
           {' '}<span style={{ color: INK, fontWeight: 700 }}>{m.score_a}–{m.score_b}</span>{' '}
           <span style={{ color: m.result === 'b' ? '#86EFAC' : '#A89880', fontWeight: m.result === 'b' ? 700 : 400 }}>{m.team_b}</span>

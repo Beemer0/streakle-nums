@@ -58,8 +58,11 @@ Deno.serve(async () => {
     team_b_locked: !!m.awayTeam?.tla,
     result: finished(m) ? WINNER_MAP[m.score?.winner] ?? null : null,
     result_source: finished(m) && WINNER_MAP[m.score?.winner] ? 'api' : null,
-    score_a: finished(m) ? m.score?.fullTime?.home ?? null : null,
-    score_b: finished(m) ? m.score?.fullTime?.away ?? null : null,
+    // fullTime holds the running score while IN_PLAY and the final once FINISHED;
+    // it's null before kickoff. So this captures live scores too.
+    score_a: m.score?.fullTime?.home ?? null,
+    score_b: m.score?.fullTime?.away ?? null,
+    status: m.status ?? null,
     updated_at: new Date().toISOString(),
   }))
 
