@@ -81,6 +81,7 @@ export default function Bracket() {
   const [openStanding, setOpenStanding] = useState(null)
   const [openPastDays, setOpenPastDays] = useState(() => new Set()) // finished days the user re-opened
   const [tourTab, setTourTab] = useState('groups') // groups | bracket
+  const [historyTeam, setHistoryTeam] = useState(null) // team code whose WC history modal is open
   const currentDayRef = useRef(null)
   const didScrollRef = useRef(false)
   const now = useNow()
@@ -160,6 +161,8 @@ export default function Bracket() {
   const togglePastDay = (day) => setOpenPastDays(s => {
     const n = new Set(s); n.has(day) ? n.delete(day) : n.add(day); return n
   })
+
+  const onTeam = useCallback((code) => { if (code) setHistoryTeam(code) }, [])
 
   const standings = useMemo(() => {
     if (!Array.isArray(roster)) return []
@@ -341,6 +344,7 @@ export default function Bracket() {
       {children}
       {footer}
       {showRules && <RulesModal onClose={() => setShowRules(false)} />}
+      {historyTeam && <TeamHistoryModal team={historyTeam} matches={matches} onClose={() => setHistoryTeam(null)} />}
     </main>
   )
 
@@ -474,6 +478,7 @@ export default function Bracket() {
                     roster={roster}
                     meId={user.id}
                     matchPreds={openMatch === m.id ? preds.filter(p => p.match_id === m.id) : null}
+                    onTeam={onTeam}
                   />
                 ))}
                 {lockable.length > 0 && (
@@ -576,7 +581,7 @@ export default function Bracket() {
               ? <div style={{ textAlign: 'center', fontSize: 13, color: MUTED }}>No group results yet.</div>
               : <>
                   {groupTables.map(([code, teams]) => (
-                    <GroupTable key={code} code={code} teams={teams} qualifyingThirds={qualifyingThirds} />
+                    <GroupTable key={code} code={code} teams={teams} qualifyingThirds={qualifyingThirds} onTeam={onTeam} />
                   ))}
                   <div style={{ textAlign: 'center', fontSize: 11, color: '#5A5040', marginTop: 6, lineHeight: 1.8 }}>
                     <span style={{ color: GOLD }}>■</span> top 2 advance · <span style={{ color: '#8a7a3a' }}>■</span> in the 8 best 3rd-place spots
@@ -584,14 +589,14 @@ export default function Bracket() {
                 </>
           )}
 
-          {tourTab === 'bracket' && <BracketView matches={matches} />}
+          {tourTab === 'bracket' && <BracketView matches={matches} onTeam={onTeam} />}
         </div>
       )}
     </>
   )
 }
 
-function GroupTable({ code, teams, qualifyingThirds }) {
+function GroupTable({ code, teams, qualifyingThirds, onTeam }) {
   const cols = '1fr 16px 16px 16px 26px 26px'
   return (
     <div style={{ marginBottom: 18 }}>
@@ -607,7 +612,7 @@ function GroupTable({ code, teams, qualifyingThirds }) {
           const gd = t.gf - t.ga
           return (
             <div key={t.team} style={{ display: 'grid', gridTemplateColumns: cols, gap: 6, padding: '7px 12px', fontSize: 13, alignItems: 'center', borderLeft: `2px solid ${accent}`, background: advance || thirdQ ? 'rgba(201,168,76,0.05)' : 'transparent' }}>
-              <span style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
+              <span {...clickableProps(() => onTeam(t.team))} style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0, cursor: 'pointer' }}>
                 <Flag code={t.team} size={14} />
                 <span style={{ color: advance || thirdQ ? INK : '#A89880', fontWeight: advance || thirdQ ? 500 : 400, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.team}</span>
               </span>
@@ -626,7 +631,7 @@ function GroupTable({ code, teams, qualifyingThirds }) {
 
 const KO_STAGES = [['r32', 'Round of 32'], ['r16', 'Round of 16'], ['qf', 'Quarter-finals'], ['sf', 'Semi-finals'], ['3p', 'Third place'], ['final', 'Final']]
 
-function BracketView({ matches }) {
+function BracketView({ matches, onTeam }) {
   const byStage = {}
   for (const m of matches) {
     if (m.stage === 'group' || m.excluded) continue
@@ -642,24 +647,24 @@ function BracketView({ matches }) {
       {stages.map(([key, label]) => (
         <div key={key} style={{ marginBottom: 18 }}>
           <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 13, fontWeight: 700, letterSpacing: 1.5, color: GOLD, textTransform: 'uppercase', marginBottom: 8 }}>{label}</div>
-          {byStage[key].map(m => <KoRow key={m.id} m={m} />)}
+          {byStage[key].map(m => <KoRow key={m.id} m={m} onTeam={onTeam} />)}
         </div>
       ))}
     </>
   )
 }
 
-function KoRow({ m }) {
+function KoRow({ m, onTeam }) {
   const aWin = m.result === 'a', bWin = m.result === 'b'
   const scoreStr = (m.score_a != null && m.score_b != null) ? `${m.score_a}–${m.score_b}` : null
   return (
     <div style={{ display: 'flex', alignItems: 'center', background: CARD, border: `1px solid ${BORDER}`, borderRadius: 10, padding: '9px 14px', marginBottom: 6 }}>
-      <span style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 6, minWidth: 0, fontSize: 13, color: aWin ? '#86EFAC' : '#A89880', fontWeight: aWin ? 700 : 400 }}>
+      <span {...(m.team_a ? clickableProps(() => onTeam(m.team_a)) : {})} style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 6, minWidth: 0, fontSize: 13, color: aWin ? '#86EFAC' : '#A89880', fontWeight: aWin ? 700 : 400, cursor: m.team_a ? 'pointer' : 'default' }}>
         {m.team_a && <Flag code={m.team_a} size={14} />}
         <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.team_a ?? 'TBD'}</span>
       </span>
       <span style={{ flexShrink: 0, padding: '0 10px', fontSize: scoreStr ? 13 : 11, fontWeight: scoreStr ? 700 : 400, color: scoreStr ? INK : MUTED }}>{scoreStr ?? 'vs'}</span>
-      <span style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 6, minWidth: 0, justifyContent: 'flex-end', fontSize: 13, color: bWin ? '#86EFAC' : '#A89880', fontWeight: bWin ? 700 : 400 }}>
+      <span {...(m.team_b ? clickableProps(() => onTeam(m.team_b)) : {})} style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 6, minWidth: 0, justifyContent: 'flex-end', fontSize: 13, color: bWin ? '#86EFAC' : '#A89880', fontWeight: bWin ? 700 : 400, cursor: m.team_b ? 'pointer' : 'default' }}>
         <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.team_b ?? 'TBD'}</span>
         {m.team_b && <Flag code={m.team_b} size={14} />}
       </span>
@@ -667,7 +672,7 @@ function KoRow({ m }) {
   )
 }
 
-function MatchRow({ m, myPick, lockedIn, now, onPick, expanded, onToggle, roster, meId, matchPreds }) {
+function MatchRow({ m, myPick, lockedIn, now, onPick, expanded, onToggle, roster, meId, matchPreds, onTeam }) {
   const kicked = new Date(m.kickoff_at).getTime() <= now
   const tbd = !m.team_a_locked || !m.team_b_locked
   const locked = kicked || tbd || !!m.result || !!m.excluded || !!lockedIn
@@ -748,9 +753,9 @@ function MatchRow({ m, myPick, lockedIn, now, onPick, expanded, onToggle, roster
       {m.score_a != null && m.score_b != null && (
         <div style={{ textAlign: 'center', fontSize: 11, color: MUTED, marginTop: 5, letterSpacing: 0.3 }}>
           {isLive && <span style={{ color: '#e94560', fontWeight: 700, marginRight: 6 }}><span style={{ animation: 'blink 1.2s infinite' }}>●</span> LIVE</span>}
-          <span style={{ color: m.result === 'a' ? '#86EFAC' : '#A89880', fontWeight: m.result === 'a' ? 700 : 400 }}>{m.team_a}</span>
+          <span {...clickableProps((e) => { e.stopPropagation(); onTeam(m.team_a) })} style={{ color: m.result === 'a' ? '#86EFAC' : '#A89880', fontWeight: m.result === 'a' ? 700 : 400, cursor: 'pointer' }}>{m.team_a}</span>
           {' '}<span style={{ color: INK, fontWeight: 700 }}>{m.score_a}–{m.score_b}</span>{' '}
-          <span style={{ color: m.result === 'b' ? '#86EFAC' : '#A89880', fontWeight: m.result === 'b' ? 700 : 400 }}>{m.team_b}</span>
+          <span {...clickableProps((e) => { e.stopPropagation(); onTeam(m.team_b) })} style={{ color: m.result === 'b' ? '#86EFAC' : '#A89880', fontWeight: m.result === 'b' ? 700 : 400, cursor: 'pointer' }}>{m.team_b}</span>
         </div>
       )}
       {expanded && <PicksPanel m={m} roster={roster} matchPreds={matchPreds} meId={meId} />}
@@ -827,6 +832,78 @@ function HistoryPanel({ history }) {
           </div>
         )
       })}
+    </div>
+  )
+}
+
+function TeamHistoryModal({ team, matches, onClose }) {
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === 'Escape') onClose() }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [onClose])
+
+  const hist = useMemo(() =>
+    matches.filter(m => m.team_a === team || m.team_b === team)
+      .sort((a, b) => new Date(a.kickoff_at) - new Date(b.kickoff_at)),
+    [matches, team])
+
+  let w = 0, d = 0, l = 0
+  for (const m of hist) {
+    if (!m.result) continue
+    const isA = m.team_a === team
+    if (m.result === 'draw') d++
+    else if ((m.result === 'a' && isA) || (m.result === 'b' && !isA)) w++
+    else l++
+  }
+
+  return (
+    <div onClick={onClose} role="dialog" aria-modal="true" aria-label={`${team} match history`} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, animation: 'fadeIn 0.2s ease' }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 14, padding: '20px 22px 18px', maxWidth: 380, width: '100%', maxHeight: '85vh', overflowY: 'auto', boxSizing: 'border-box', animation: 'slideUp 0.25s ease' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
+          <Flag code={team} size={22} />
+          <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 22, fontWeight: 800, letterSpacing: 1.5, color: INK, flex: 1 }}>{team}</div>
+          <button onClick={onClose} aria-label="Close" style={{ background: 'none', border: 'none', color: MUTED, cursor: 'pointer', fontSize: 18, padding: 4, lineHeight: 1 }}>✕</button>
+        </div>
+        <div style={{ fontSize: 11, color: MUTED, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 12 }}>
+          World Cup record · <b style={{ color: INK }}>{w}W {d}D {l}L</b>
+        </div>
+        {hist.length === 0
+          ? <div style={{ fontSize: 13, color: MUTED, padding: '8px 0' }}>No matches yet.</div>
+          : hist.map(m => <TeamHistoryRow key={m.id} m={m} team={team} />)}
+      </div>
+    </div>
+  )
+}
+
+function TeamHistoryRow({ m, team }) {
+  const isA = m.team_a === team
+  const opp = isA ? m.team_b : m.team_a
+  const isLive = m.status === 'IN_PLAY' || m.status === 'PAUSED'
+  const hasScore = m.score_a != null && m.score_b != null
+  let pill = null
+  if (m.result === 'draw') pill = { t: 'D', c: MUTED }
+  else if (m.result === 'a') pill = isA ? { t: 'W', c: '#86EFAC' } : { t: 'L', c: '#FCA5A5' }
+  else if (m.result === 'b') pill = isA ? { t: 'L', c: '#FCA5A5' } : { t: 'W', c: '#86EFAC' }
+  const myScore = isA ? m.score_a : m.score_b
+  const oppScore = isA ? m.score_b : m.score_a
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 0', borderBottom: '1px solid rgba(44,40,32,0.6)' }}>
+      <div style={{ width: 58, flexShrink: 0, fontSize: 10, fontWeight: 700, color: GOLD, textTransform: 'uppercase', letterSpacing: 0.5 }}>{stageBadge(m)}</div>
+      <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
+        <span style={{ fontSize: 11, color: MUTED, flexShrink: 0 }}>vs</span>
+        {opp && <Flag code={opp} size={14} />}
+        <span style={{ fontSize: 13, color: INK, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{opp ?? 'TBD'}</span>
+      </div>
+      {hasScore ? (
+        <span style={{ flexShrink: 0, fontSize: 13, fontWeight: 700, color: INK }}>
+          {isLive && <span style={{ color: '#e94560', marginRight: 5 }}><span style={{ animation: 'blink 1.2s infinite' }}>●</span></span>}
+          {myScore}–{oppScore}
+        </span>
+      ) : (
+        <span style={{ flexShrink: 0, fontSize: 11, color: MUTED }}>{new Date(m.kickoff_at).toLocaleDateString([], { month: 'short', day: 'numeric' })}</span>
+      )}
+      {pill && <span style={{ flexShrink: 0, width: 16, textAlign: 'center', fontSize: 11, fontWeight: 800, color: pill.c }}>{pill.t}</span>}
     </div>
   )
 }
