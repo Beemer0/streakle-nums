@@ -732,6 +732,13 @@ function MatchRow({ m, myPick, lockedIn, now, onPick, expanded, onToggle, roster
           )}
         </div>
       </div>
+      {m.score_a != null && m.score_b != null && (
+        <div style={{ textAlign: 'center', fontSize: 11, color: MUTED, marginTop: 5, letterSpacing: 0.3 }}>
+          <span style={{ color: m.result === 'a' ? '#86EFAC' : '#A89880', fontWeight: m.result === 'a' ? 700 : 400 }}>{m.team_a}</span>
+          {' '}<span style={{ color: INK, fontWeight: 700 }}>{m.score_a}–{m.score_b}</span>{' '}
+          <span style={{ color: m.result === 'b' ? '#86EFAC' : '#A89880', fontWeight: m.result === 'b' ? 700 : 400 }}>{m.team_b}</span>
+        </div>
+      )}
       {expanded && <PicksPanel m={m} roster={roster} matchPreds={matchPreds} meId={meId} />}
     </div>
   )
