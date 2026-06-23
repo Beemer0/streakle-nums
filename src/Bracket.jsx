@@ -9,6 +9,15 @@ import { clickableProps } from './a11y'
 
 const GOLD = '#C9A84C', CARD = '#1C1A16', BORDER = '#2C2820', INK = '#F5F0E8', MUTED = '#7A6E5F'
 
+// The viewer's local timezone abbreviation (e.g. "EDT"), shown so everyone knows
+// kickoff times are in their own local time. Computed once; won't flip mid-session.
+const TZ_ABBR = (() => {
+  try {
+    return new Intl.DateTimeFormat(undefined, { timeZoneName: 'short' })
+      .formatToParts(new Date()).find(p => p.type === 'timeZoneName')?.value ?? ''
+  } catch { return '' }
+})()
+
 const css = `
 @keyframes slideUp{from{transform:translateY(12px);opacity:0}to{transform:translateY(0);opacity:1}}
 @keyframes fadeIn{from{opacity:0}to{opacity:1}}
@@ -433,6 +442,7 @@ export default function Bracket() {
             {upcoming.length > 0
               ? <>You've picked <b style={{ color: GOLD }}>{pickedCount}</b> of <b style={{ color: GOLD }}>{upcoming.length}</b> open matches</>
               : 'No open matches right now'}
+            {TZ_ABBR && <div style={{ fontSize: 11, color: '#5A5040', marginTop: 3 }}>Kickoff times shown in {TZ_ABBR} (your local time)</div>}
           </div>
           {pickDays.map(({ day, dayMatches, isPast, scored, correct }) => {
             const lockable = dayMatches
