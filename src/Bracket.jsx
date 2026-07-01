@@ -653,7 +653,8 @@ function BracketView({ matches, onTeam }) {
   if (!stages.length) return <div style={{ textAlign: 'center', fontSize: 13, color: MUTED }}>The knockout schedule isn't set yet.</div>
   return (
     <>
-      {!anyTeams && <div style={{ textAlign: 'center', fontSize: 11, color: MUTED, marginBottom: 14 }}>Teams fill in as the group stage finishes.</div>}
+      {!anyTeams && <div style={{ textAlign: 'center', fontSize: 11, color: MUTED, marginBottom: 6 }}>Teams fill in as the group stage finishes.</div>}
+      {TZ_ABBR && <div style={{ textAlign: 'center', fontSize: 11, color: '#5A5040', marginBottom: 14 }}>Times shown in {TZ_ABBR} (your local time)</div>}
       {stages.map(([key, label]) => (
         <div key={key} style={{ marginBottom: 18 }}>
           <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 13, fontWeight: 700, letterSpacing: 1.5, color: GOLD, textTransform: 'uppercase', marginBottom: 8 }}>{label}</div>
@@ -667,17 +668,21 @@ function BracketView({ matches, onTeam }) {
 function KoRow({ m, onTeam }) {
   const aWin = m.result === 'a', bWin = m.result === 'b'
   const scoreStr = (m.score_a != null && m.score_b != null) ? `${m.score_a}–${m.score_b}` : null
+  const when = `${new Date(m.kickoff_at).toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' })} · ${fmtTime(m.kickoff_at)}`
   return (
-    <div style={{ display: 'flex', alignItems: 'center', background: CARD, border: `1px solid ${BORDER}`, borderRadius: 10, padding: '9px 14px', marginBottom: 6 }}>
-      <span {...(m.team_a ? clickableProps(() => onTeam(m.team_a)) : {})} style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 6, minWidth: 0, fontSize: 13, color: aWin ? '#86EFAC' : '#A89880', fontWeight: aWin ? 700 : 400, cursor: m.team_a ? 'pointer' : 'default' }}>
-        {m.team_a && <Flag code={m.team_a} size={14} />}
-        <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.team_a ?? 'TBD'}</span>
-      </span>
-      <span style={{ flexShrink: 0, padding: '0 10px', fontSize: scoreStr ? 13 : 11, fontWeight: scoreStr ? 700 : 400, color: scoreStr ? INK : MUTED }}>{scoreStr ?? 'vs'}</span>
-      <span {...(m.team_b ? clickableProps(() => onTeam(m.team_b)) : {})} style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 6, minWidth: 0, justifyContent: 'flex-end', fontSize: 13, color: bWin ? '#86EFAC' : '#A89880', fontWeight: bWin ? 700 : 400, cursor: m.team_b ? 'pointer' : 'default' }}>
-        <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.team_b ?? 'TBD'}</span>
-        {m.team_b && <Flag code={m.team_b} size={14} />}
-      </span>
+    <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 10, padding: '8px 14px', marginBottom: 6 }}>
+      <div style={{ fontSize: 10, color: MUTED, textAlign: 'center', marginBottom: 5, letterSpacing: 0.3 }}>{when}</div>
+      <div style={{ display: 'flex', alignItems: 'center' }}>
+        <span {...(m.team_a ? clickableProps(() => onTeam(m.team_a)) : {})} style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 6, minWidth: 0, fontSize: 13, color: aWin ? '#86EFAC' : '#A89880', fontWeight: aWin ? 700 : 400, cursor: m.team_a ? 'pointer' : 'default' }}>
+          {m.team_a && <Flag code={m.team_a} size={14} />}
+          <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.team_a ?? 'TBD'}</span>
+        </span>
+        <span style={{ flexShrink: 0, padding: '0 10px', fontSize: scoreStr ? 13 : 11, fontWeight: scoreStr ? 700 : 400, color: scoreStr ? INK : MUTED }}>{scoreStr ?? 'vs'}</span>
+        <span {...(m.team_b ? clickableProps(() => onTeam(m.team_b)) : {})} style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 6, minWidth: 0, justifyContent: 'flex-end', fontSize: 13, color: bWin ? '#86EFAC' : '#A89880', fontWeight: bWin ? 700 : 400, cursor: m.team_b ? 'pointer' : 'default' }}>
+          <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.team_b ?? 'TBD'}</span>
+          {m.team_b && <Flag code={m.team_b} size={14} />}
+        </span>
+      </div>
     </div>
   )
 }
