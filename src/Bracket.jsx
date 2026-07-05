@@ -671,7 +671,9 @@ function KoRow({ m, onTeam }) {
   const when = `${new Date(m.kickoff_at).toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' })} · ${fmtTime(m.kickoff_at)}`
   return (
     <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 10, padding: '8px 14px', marginBottom: 6 }}>
-      <div style={{ fontSize: 10, color: MUTED, textAlign: 'center', marginBottom: 5, letterSpacing: 0.3 }}>{when}</div>
+      <div style={{ fontSize: 10, color: MUTED, textAlign: 'center', marginBottom: 5, letterSpacing: 0.3 }}>
+        {when}{m.venue && <span style={{ color: '#5A5040' }}> · {m.venue}, {m.city}</span>}
+      </div>
       <div style={{ display: 'flex', alignItems: 'center' }}>
         <span {...(m.team_a ? clickableProps(() => onTeam(m.team_a)) : {})} style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 6, minWidth: 0, fontSize: 13, color: aWin ? '#86EFAC' : '#A89880', fontWeight: aWin ? 700 : 400, cursor: m.team_a ? 'pointer' : 'default' }}>
           {m.team_a && <Flag code={m.team_a} size={14} />}
@@ -771,6 +773,11 @@ function MatchRow({ m, myPick, lockedIn, now, onPick, expanded, onToggle, roster
           <span {...clickableProps((e) => { e.stopPropagation(); onTeam(m.team_a) })} style={{ color: m.result === 'a' ? '#86EFAC' : '#A89880', fontWeight: m.result === 'a' ? 700 : 400, cursor: 'pointer' }}>{m.team_a}</span>
           {' '}<span style={{ color: INK, fontWeight: 700 }}>{m.score_a}–{m.score_b}</span>{' '}
           <span {...clickableProps((e) => { e.stopPropagation(); onTeam(m.team_b) })} style={{ color: m.result === 'b' ? '#86EFAC' : '#A89880', fontWeight: m.result === 'b' ? 700 : 400, cursor: 'pointer' }}>{m.team_b}</span>
+        </div>
+      )}
+      {m.venue && (
+        <div style={{ textAlign: 'center', fontSize: 10, color: '#5A5040', marginTop: 3, letterSpacing: 0.3 }}>
+          {m.venue}, {m.city}
         </div>
       )}
       {expanded && <PicksPanel m={m} roster={roster} matchPreds={matchPreds} meId={meId} />}
@@ -903,22 +910,27 @@ function TeamHistoryRow({ m, team }) {
   const myScore = isA ? m.score_a : m.score_b
   const oppScore = isA ? m.score_b : m.score_a
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 0', borderBottom: '1px solid rgba(44,40,32,0.6)' }}>
-      <div style={{ width: 58, flexShrink: 0, fontSize: 10, fontWeight: 700, color: GOLD, textTransform: 'uppercase', letterSpacing: 0.5 }}>{stageBadge(m)}</div>
-      <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
-        <span style={{ fontSize: 11, color: MUTED, flexShrink: 0 }}>vs</span>
-        {opp && <Flag code={opp} size={14} />}
-        <span style={{ fontSize: 13, color: INK, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{opp ?? 'TBD'}</span>
+    <div style={{ padding: '8px 0', borderBottom: '1px solid rgba(44,40,32,0.6)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div style={{ width: 58, flexShrink: 0, fontSize: 10, fontWeight: 700, color: GOLD, textTransform: 'uppercase', letterSpacing: 0.5 }}>{stageBadge(m)}</div>
+        <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
+          <span style={{ fontSize: 11, color: MUTED, flexShrink: 0 }}>vs</span>
+          {opp && <Flag code={opp} size={14} />}
+          <span style={{ fontSize: 13, color: INK, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{opp ?? 'TBD'}</span>
+        </div>
+        {hasScore ? (
+          <span style={{ flexShrink: 0, fontSize: 13, fontWeight: 700, color: INK }}>
+            {isLive && <span style={{ color: '#e94560', marginRight: 5 }}><span style={{ animation: 'blink 1.2s infinite' }}>●</span></span>}
+            {myScore}–{oppScore}
+          </span>
+        ) : (
+          <span style={{ flexShrink: 0, fontSize: 11, color: MUTED }}>{new Date(m.kickoff_at).toLocaleDateString([], { month: 'short', day: 'numeric' })}</span>
+        )}
+        {pill && <span style={{ flexShrink: 0, width: 16, textAlign: 'center', fontSize: 11, fontWeight: 800, color: pill.c }}>{pill.t}</span>}
       </div>
-      {hasScore ? (
-        <span style={{ flexShrink: 0, fontSize: 13, fontWeight: 700, color: INK }}>
-          {isLive && <span style={{ color: '#e94560', marginRight: 5 }}><span style={{ animation: 'blink 1.2s infinite' }}>●</span></span>}
-          {myScore}–{oppScore}
-        </span>
-      ) : (
-        <span style={{ flexShrink: 0, fontSize: 11, color: MUTED }}>{new Date(m.kickoff_at).toLocaleDateString([], { month: 'short', day: 'numeric' })}</span>
+      {m.venue && (
+        <div style={{ fontSize: 10, color: '#5A5040', marginTop: 2, paddingLeft: 66 }}>{m.venue}, {m.city}</div>
       )}
-      {pill && <span style={{ flexShrink: 0, width: 16, textAlign: 'center', fontSize: 11, fontWeight: 800, color: pill.c }}>{pill.t}</span>}
     </div>
   )
 }

@@ -27,6 +27,8 @@ create table matches (
   score_a         int,                             -- running score (live) / final; null pre-match
   score_b         int,
   status          text,                            -- football-data status: TIMED/IN_PLAY/PAUSED/FINISHED…
+  city            text,                            -- host city (seeded once from the official schedule;
+  venue           text,                            --  the sync never writes these — see seed-venues.sql)
   excluded        boolean not null default false,  -- out of the pool: unpickable, never scored
   updated_at      timestamptz not null default now()
 );
