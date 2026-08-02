@@ -53,14 +53,16 @@ insert into pool_config(pool_id, invite_code) values ('wc2026','REPLACE_ME');
 
 create or replace function is_pool_member() returns boolean
 language sql security definer set search_path = public stable as $$
-  select exists(select 1 from pool_members where user_id = auth.uid());
+  select exists(select 1 from pool_members
+                where user_id = auth.uid() and pool_id = 'wc2026');
 $$;
 revoke all on function is_pool_member() from public;
 grant execute on function is_pool_member() to authenticated;
 
 create or replace function is_pool_admin() returns boolean
 language sql security definer set search_path = public stable as $$
-  select exists(select 1 from pool_members where user_id = auth.uid() and is_admin);
+  select exists(select 1 from pool_members
+                where user_id = auth.uid() and pool_id = 'wc2026' and is_admin);
 $$;
 revoke all on function is_pool_admin() from public;
 grant execute on function is_pool_admin() to authenticated;

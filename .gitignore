@@ -30,3 +30,6 @@ dist-ssr
 
 # Claude Code
 .claude/worktrees/
+
+# Supabase CLI scratch
+supabase/.temp/

@@ -79,6 +79,40 @@ feature. Members join with an invite code, pick winners for every WC 2026 match
   overwrites. First admin is flipped manually:
   `update pool_members set is_admin = true where user_id = '<uid>'`.
 
+## Octagon — UFC PPV pick'em (`/octagon`)
+A second private pool (pool_id `'octagon'`) on the same
+`pool_members`/`pool_config` machinery. Members call every PPV main-card
+fight: winner 10 · method +5 (pays only if the winner is right) · round +5
+(finishes only, independent of the method pick) · underdog +5 (beating the
+admin-flagged favorite) · one ★ Lock of the Night per event doubling that
+fight's subtotal. Draw/NC score nobody; scratched fights are void. Picks lock
+at event start and reveal after start (both RLS-enforced). No seasons —
+instead a lineal pool belt (first winner claims; champ retains on ties = a
+defense; a strictly higher score dethrones; an absent champ forfeits), plus
+all-time and last-6-events form tables. All standings are client-side pure
+functions in `src/octagon/scoring.js` (tested).
+
+- UI: `src/Octagon.jsx` (join / Event / Standings / Admin, `oc-*` classes,
+  `noindex`). Fight cards: fighter buttons, method/round chips, lock toggle;
+  post-start they expand to everyone's picks with per-layer grading colors.
+- Results are admin-entered (there's no free UFC API). Assisted grading:
+  `src/octagon/wiki.js` fetches Wikipedia's CORS-open REST HTML
+  (`en.wikipedia.org/api/rest_v1/page/html/<slug>`), DOM-parses the Results
+  table and proposes winner/method/round per fight (fuzzy name matches
+  flagged); paste-the-table fallback; the admin confirms each. Tested against
+  a saved UFC 323 fixture in `src/octagon/fixtures/` (the wiki test runs in
+  happy-dom via a vitest env pragma).
+- DB: `supabase/octagon.sql` (already applied) — `ufc_events` (`starts_at` =
+  the pick lock), `fights`, `fight_picks` (`event_id` trigger-filled; one lock
+  per event via a partial unique index) + RLS. Pool-scoped helpers
+  `is_member_of(pool)`/`is_admin_of(pool)` and arity-overloaded
+  `join_pool(pool, code)`/`get_pool_members(pool)` RPCs sit beside the wc
+  originals; the wc helpers `is_pool_member/admin()` are now explicitly scoped
+  to `'wc2026'`. Members may delete their own picks pre-start (frees a Lock
+  stranded on a scratched fight — updates there are RLS-blocked). Invite code
+  seeded as `octagon`:
+  `update pool_config set invite_code = '…' where pool_id = 'octagon'`.
+
 ## Current focus — SEO optimization
 Done: `<title>`, meta description, Open Graph + Twitter tags, the OG image
 (`public/og-image.png`), `theme-color`, font-loading perf, `public/robots.txt`,

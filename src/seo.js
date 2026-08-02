@@ -109,6 +109,13 @@ export const PAGE_SEO = {
     path: '/bracket',
     noindex: true, // private pool — keep it out of search results
   },
+  octagon: {
+    title: 'UFC Pick\'em Pool | Streakle',
+    description:
+      'A private UFC pick\'em pool — call every PPV main-card fight and take the belt off your friends.',
+    path: '/octagon',
+    noindex: true, // private pool — keep it out of search results
+  },
 }
 
 // Streakle is a client-rendered SPA, so every route otherwise inherits the
