@@ -1,6 +1,6 @@
 # Streakle — project guide for Claude
 
-Streakle is a daily-puzzle game site (playstreakle.com) with six games. New
+Streakle is a daily-puzzle game site (playstreakle.com) with seven games. New
 puzzles every day; signed-in players build streaks.
 
 ## Stack & commands
@@ -11,18 +11,20 @@ puzzles every day; signed-in players build streaks.
   `npm run build`, `npm test` (Vitest), `npm run lint`.
 
 ## Layout (src/)
-- Six game routes: `Faceoff` (NHL), `Gridiron` (NFL), `Knockout` (MMA) — these
+- Seven game routes: `Faceoff` (NHL), `Gridiron` (NFL), `Knockout` (MMA) — these
   three share a grid-game pattern; `Words` (Wordle), `Link` (Connections),
-  `Nums` (number-swap).
+  `Nums` (number-swap), `Mines` (no-guess minesweeper ladder — see below).
 - `Home.jsx` (landing), `main.jsx` (router + lazy-loaded routes + ErrorBoundary
   + inline LoginPage), `Archive.jsx` (past-puzzle modal), `UserMenu.jsx`.
 - Shared: `AuthContext.jsx`, `supabase.js`, `saveResult.js`, `useStreak.js`,
   `streak.js`, `evaluate.js` (Wordle logic, tested), `a11y.js` (`clickableProps`),
   `AwardIcon.jsx`, `ErrorBoundary.jsx`, `validWords.txt` (~14.8k words).
-- Tests live next to the code as `*.test.js` (`evaluate.test.js`, `streak.test.js`).
+- Tests live next to the code as `*.test.js` (`evaluate.test.js`, `streak.test.js`,
+  `mines/engine.test.js`, the pool scoring suites).
 - Content banks never repeat for months: `Words` has 144 words, `Link` 71 puzzles;
-  the grids + `Nums` generate fresh daily. Validate edits with
-  `node scripts/check-words.mjs` and `node scripts/check-link.mjs`.
+  the grids, `Nums` and `Mines` generate fresh daily. Validate edits with
+  `node scripts/check-words.mjs`, `node scripts/check-link.mjs` and
+  `node scripts/check-mines.mjs`.
 
 ## Conventions
 - Warm "Ink & Gold" palette: `#0F0E0C` bg, `#1C1A16` cards, `#2C2820` borders,
@@ -112,6 +114,38 @@ functions in `src/octagon/scoring.js` (tested).
   stranded on a scratched fight — updates there are RLS-blocked). Invite code
   seeded as `octagon`:
   `update pool_config set invite_code = '…' where pool_id = 'octagon'`.
+
+## Mines — daily no-guess minesweeper ladder (`/mines`)
+Three date-seeded boards a day (Easy 9×9/10, Medium 10×14/22, Hard 10×24/48)
+in a progressive ladder: clear one to unlock the next. Every board is
+solvable by logic alone from a fixed opening. A mine ends the attempt and
+resets the board to its opening; 3 attempts per rung, a third mine ends the
+day. Result = active-dig time + mistakes; only a Hard clear writes
+`completed: true` (so only that counts for ✓ Done and the streak); a third
+mine writes `completed: false`. `game_results.score` = seconds,
+`swaps_used` = mines hit.
+- `src/mines/engine.js` is a pure ESM module (generator, no-guess solver,
+  play primitives) imported unchanged by `Mines.jsx`, `engine.test.js` and
+  `scripts/check-mines.mjs` — nothing to keep in sync. The solver uses
+  trivial, pairwise-difference and ≤8-cell endgame mine-count rules, never
+  backtracking. Generation = seeded layout + solver-guided repair; accepted
+  only when a fresh solve from the opening clears the board.
+- **Any change to `RUNGS`, layout, perturbation, rule order or `mixSeed`
+  rewrites every historical board.** The 2026-09-04 boards are pinned as
+  `FALLBACKS` by a snapshot test — update them deliberately with
+  `node scripts/check-mines.mjs --dump 2026-09-04`. The checker replays
+  2025-01-01..2030-12-31 × 3 rungs (exit 1 on any fallback/unsound/duplicate
+  or Hard > 60 ms); extend `--days` before 2031.
+- `Mines.jsx` keeps a per-day ladder checkpoint in localStorage
+  (`streakle-mines`: rung, attempts, times, phase — never cell state) so a
+  third mine ends the day across reloads. Archive replays never touch it and
+  never call `saveResult`; picking today in the Archive maps back to the
+  persisted ladder (`puzzleDate = null`).
+  The board is a delegated-handler WAI-ARIA grid (roving tabindex, arrows,
+  Enter digs, F flags; tap/hold/right-click on pointers) — it deliberately
+  does NOT use `clickableProps`.
+- `Archive.jsx` `GAME_META.start` lets a game's calendar begin after the
+  site's `LAUNCH_DATE`; the six older games keep the default.
 
 ## Current focus — SEO optimization
 Done: `<title>`, meta description, Open Graph + Twitter tags, the OG image

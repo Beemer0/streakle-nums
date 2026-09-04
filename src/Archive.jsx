@@ -14,6 +14,7 @@ const GAME_META = {
   gridiron: { emoji: '🏈', label: 'Gridiron' },
   faceoff:  { emoji: '🏒', label: 'Faceoff' },
   knockout: { emoji: '🥊', label: 'Knockout' },
+  mines:    { emoji: '💣', label: 'Mines', start: '2026-09-04' }, // shipped after LAUNCH_DATE
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -25,8 +26,8 @@ function getTodayStr() {
   return toLocalStr(new Date())
 }
 
-function isAvailable(dateStr) {
-  const launch = new Date(LAUNCH_DATE + 'T00:00:00')
+function isAvailable(dateStr, launchStr = LAUNCH_DATE) {
+  const launch = new Date(launchStr + 'T00:00:00')
   const date   = new Date(dateStr    + 'T00:00:00')
   const today  = new Date(); today.setHours(23, 59, 59, 999)
   return date >= launch && date <= today
@@ -56,13 +57,14 @@ export default function Archive({ game, onSelectDate, onClose }) {
   const [loading,  setLoading]  = useState(true)
   const [selected, setSelected] = useState(null)
 
+  const meta      = GAME_META[game] ?? { emoji: '🎮', label: game }
+  const launchStr = meta.start ?? LAUNCH_DATE
   const today  = new Date()
-  const launch = new Date(LAUNCH_DATE + 'T00:00:00')
+  const launch = new Date(launchStr + 'T00:00:00')
 
   const [viewYear,  setViewYear]  = useState(today.getFullYear())
   const [viewMonth, setViewMonth] = useState(today.getMonth())
 
-  const meta     = GAME_META[game] ?? { emoji: '🎮', label: game }
   const todayStr = getTodayStr()
   const panelRef = useRef(null)
 
@@ -130,13 +132,13 @@ export default function Archive({ game, onSelectDate, onClose }) {
 
   // ── Stats for current view month ─────────────────────────────────────────
   const calDays   = getCalendarDays(viewYear, viewMonth)
-  const available = calDays.filter(Boolean).filter(isAvailable)
+  const available = calDays.filter(Boolean).filter(d => isAvailable(d, launchStr))
   const completed = available.filter(d => results[d] === true)
   const streak    = user ? calcStreak(Object.keys(results).filter(d => results[d] === true)) : 0
 
   // ── Select handler ───────────────────────────────────────────────────────
   function handleSelect(dateStr) {
-    if (!dateStr || !isAvailable(dateStr) || isLocked(dateStr, user)) return
+    if (!dateStr || !isAvailable(dateStr, launchStr) || isLocked(dateStr, user)) return
     setSelected(dateStr)
     setTimeout(() => { onSelectDate(dateStr); onClose() }, 150)
   }
@@ -329,7 +331,7 @@ export default function Archive({ game, onSelectDate, onClose }) {
                 {calDays.map((dateStr, i) => {
                   if (!dateStr) return <div key={`e${i}`} />
 
-                  const avail   = isAvailable(dateStr)
+                  const avail   = isAvailable(dateStr, launchStr)
                   const locked  = isLocked(dateStr, user)
                   const isToday = dateStr === todayStr
                   const isSel   = dateStr === selected

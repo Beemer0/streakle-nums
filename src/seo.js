@@ -21,8 +21,19 @@ export const PAGE_SEO = {
   home: {
     title: 'Streakle — Start your day with a puzzle',
     description:
-      'Streakle is a daily set of six puzzle games — NHL, NFL and MMA knowledge grids, a word guess, a word-grouping puzzle and a number puzzle. New puzzles daily.',
+      'Streakle is a daily set of seven puzzle games — NHL, NFL and MMA knowledge grids, a word guess, a word-grouping puzzle, a number puzzle and a no-guess minesweeper. New puzzles daily.',
     path: '/',
+  },
+  mines: {
+    title: 'Mines — Daily No-Guess Minesweeper | Streakle',
+    description:
+      'Clear three no-guess minesweeper boards a day — Easy, Medium and Hard — in Mines, a daily logic puzzle. Every board is solvable without guessing. Beat the clock and build your streak.',
+    path: '/mines',
+    jsonLd: gameJsonLd(
+      'Mines',
+      '/mines',
+      'A daily no-guess minesweeper ladder: clear Easy, Medium and Hard boards by logic alone.',
+    ),
   },
   faceoff: {
     title: 'Faceoff — Daily NHL Grid Puzzle | Streakle',

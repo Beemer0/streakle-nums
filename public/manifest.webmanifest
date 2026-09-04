@@ -1,7 +1,7 @@
 {
   "name": "Streakle",
   "short_name": "Streakle",
-  "description": "Daily puzzle games — sports knowledge grids, word, group and number puzzles. New puzzles every day.",
+  "description": "Daily puzzle games — sports knowledge grids, word, group, number and no-guess minesweeper puzzles. New puzzles every day.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0F0E0C",

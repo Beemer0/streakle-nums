@@ -19,6 +19,7 @@ const Knockout = lazy(() => import('./Knockout.jsx'))
 const Privacy  = lazy(() => import('./Privacy.jsx'))
 const Bracket  = lazy(() => import('./Bracket.jsx'))
 const Octagon  = lazy(() => import('./Octagon.jsx'))
+const Mines    = lazy(() => import('./Mines.jsx'))
 
 function SignInBanner() {
   const { user } = useAuth()
@@ -120,6 +121,7 @@ function AppRoutes() {
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/nums" element={<Nums />} />
+            <Route path="/mines" element={<Mines />} />
             <Route path="/link" element={<Link />} />
             <Route path="/words" element={<Words />} />
             <Route path="/gridiron" element={<Gridiron />} />
