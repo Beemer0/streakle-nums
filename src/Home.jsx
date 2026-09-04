@@ -7,6 +7,16 @@ import { useSeo, PAGE_SEO } from './seo'
 
 const games = [
   {
+    key: 'mines',
+    path: '/mines',
+    title: 'MINES',
+    emoji: '💣',
+    description: 'Sweep three no-guess minefields — Easy, Medium, Hard. Logic only, never luck.',
+    color: '#9A3412',
+    accent: '#FDBA74',
+    badge: 'Sweep It',
+  },
+  {
     key: 'faceoff',
     path: '/faceoff',
     title: 'FACEOFF',
@@ -65,16 +75,6 @@ const games = [
     color: '#1E40AF',
     accent: '#93C5FD',
     badge: 'Swap It',
-  },
-  {
-    key: 'mines',
-    path: '/mines',
-    title: 'MINES',
-    emoji: '💣',
-    description: 'Sweep three no-guess minefields — Easy, Medium, Hard. Logic only, never luck.',
-    color: '#9A3412',
-    accent: '#FDBA74',
-    badge: 'Sweep It',
   },
 ]
 
