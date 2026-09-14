@@ -27,7 +27,11 @@ const css = `
 .mn-grid{user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;touch-action:manipulation}
 .mn-shake{animation:mnShake 0.45s ease}
 .mn-row{display:grid;gap:2px;margin-bottom:2px}
-.mn-cell{aspect-ratio:1;border-radius:4px;display:flex;align-items:center;justify-content:center;cursor:pointer;box-sizing:border-box}
+/* Each row is its own grid, so tracks must never depend on content: a wide
+   emoji font or an enlarged system text size would otherwise widen one row's
+   columns and leave the board jagged. Glyphs are sized from the cell (cqw)
+   with a px fallback for browsers without container-query units. */
+.mn-cell{aspect-ratio:1;min-width:0;min-height:0;overflow:hidden;white-space:nowrap;container-type:inline-size;border-radius:4px;display:flex;align-items:center;justify-content:center;cursor:pointer;box-sizing:border-box}
 .mn-grid[aria-disabled="true"] .mn-cell{cursor:default}
 .mn-cell:focus-visible{outline:2px solid #C9A84C;outline-offset:-2px;z-index:1}
 .mn-hidden{background:#2C2418;border:1px solid #3A3226}
@@ -41,8 +45,8 @@ const css = `
 .mn-mine{background:#1C1A16;border:1px solid #2C2820}
 .mn-wrongflag{background:#4a1a20;border:1px solid #e94560;color:#e94560;font-weight:800}
 .mn-autoflag{background:#1a3a2a;border:1px solid #2d6a30}
-.mn-digit{font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:22px;line-height:1}
-.mn-glyph{font-size:18px;line-height:1}
+.mn-digit{font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:17px;font-size:52cqw;line-height:1}
+.mn-glyph{font-size:15px;font-size:46cqw;line-height:1}
 .mn-bar{display:flex;align-items:center;justify-content:center;gap:14px;margin:0 0 12px;font-variant-numeric:tabular-nums}
 .mn-seg{display:flex;border:1px solid #2C2820;border-radius:8px;overflow:hidden}
 .mn-seg button{background:none;border:none;color:#C9A84C;cursor:pointer;font-size:14px;font-weight:700;padding:0 16px;height:44px;touch-action:manipulation;font-family:inherit}
@@ -60,8 +64,6 @@ const css = `
   .mn-bar{position:fixed;bottom:0;left:0;right:0;z-index:50;margin:0;padding:10px 16px calc(10px + env(safe-area-inset-bottom));background:rgba(15,14,12,0.96);border-top:1px solid #2C2820}
   .mn-main{padding-bottom:96px !important}
 }
-@media(max-width:480px){.mn-digit{font-size:17px}.mn-glyph{font-size:15px}}
-@media(max-width:340px){.mn-digit{font-size:14px}.mn-glyph{font-size:13px}}
 `
 
 function formatDate(dateStr) {
@@ -566,7 +568,7 @@ export default function Mines() {
           onKeyDown={onKeyDown}
         >
           {Array.from({ length: board.rows }, (_, r) => (
-            <div key={r} role="row" className="mn-row" style={{ gridTemplateColumns: `repeat(${board.cols}, 1fr)` }}>
+            <div key={r} role="row" className="mn-row" style={{ gridTemplateColumns: `repeat(${board.cols}, minmax(0, 1fr))` }}>
               {Array.from({ length: board.cols }, (_, c) => {
                 const i = r * board.cols + c
                 return <Cell key={i} idx={i} r={r} c={c} variant={variantOf(i)} n={board.count[i]} focused={i === focusIdx} />
