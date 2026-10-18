@@ -98,7 +98,62 @@ export default function App() {
   useSeo(PAGE_SEO.nums)
   const [showArchive, setShowArchive] = useState(false)
   const [puzzleDate, setPuzzleDate] = useState(null)
+  const [showHow, setShowHow] = useState(false);
 
+  return (
+    <main style={{minHeight:'100vh', display:'flex', flexDirection:'column', alignItems:'center', paddingTop:0, position:'relative', color:'#F5F0E8', overflow:'hidden'}}>
+      <style>{css}</style>
+
+      <UserMenu />
+      <div style={{width:'100%',display:'flex',alignItems:'center',padding:'12px 16px 0',minHeight:44}}>
+        <a href="/" style={{color:'#C9A84C',textDecoration:'none',fontSize:13,fontWeight:600}}>← Back</a>
+      </div>
+
+      {/* Header */}
+      <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:2}}>
+        <div style={{display:'flex',flexDirection:'column',alignItems:'center'}}>
+          <h1 style={{fontSize:32,fontWeight:900,letterSpacing:2,color:'#fff',margin:0}}>NUMS</h1>
+          <div style={{fontSize:11,fontWeight:600,letterSpacing:3,color:'#C9A84C',textTransform:'uppercase',marginTop:-4}}>by Streakle</div>
+        </div>
+        <button onClick={()=>setShowHow(!showHow)} style={{background:'none',border:'1px solid #2C2820',borderRadius:6,color:'#C9A84C',cursor:'pointer',fontSize:13,padding:'3px 10px',marginLeft:8}}>
+          How to play
+        </button>
+        <button onClick={() => setShowArchive(true)} style={{background:'none',border:'1px solid #2C2820',borderRadius:6,color:'#C9A84C',cursor:'pointer',fontSize:13,padding:'3px 10px'}}>
+          📅 Archive
+        </button>
+      </div>
+
+      <div style={{fontSize:13,color:'#7A6E5F',marginBottom:10,marginTop:6}}>{formatDate(puzzleDate)}</div>
+
+      {showHow&&(
+        <div style={{background:'#1C1A16',border:'1px solid #2C2820',borderRadius:10,padding:16,maxWidth:340,marginBottom:12,fontSize:13,lineHeight:1.65,color:'#ccc',animation:'slideUp 0.3s ease'}}>
+          <b style={{color:'#C9A84C'}}>How to play</b><br/>
+          Rearrange numbers so every <b>row</b> and <b>column</b> contains <b>1–7</b> once each.<br/><br/>
+          <b>Tap</b> a cell to select then tap another to swap — or <b>drag</b> a tile directly onto another. 🟢 Green = correct position.<br/><br/>
+          Circles show the <b>sum</b> of the 4 surrounding numbers — use them as clues!<br/><br/>
+          You start with 20 swaps. Going over counts against you — but you can always finish!
+        </div>
+      )}
+
+      {/* Keyed by date: picking a puzzle in the Archive starts a fresh board. */}
+      <NumsBoard key={puzzleDate ?? 'today'} puzzleDate={puzzleDate} streak={streak} />
+
+      <div style={{marginTop:32,fontSize:12,color:'#5A5040',textAlign:'center'}}>
+        <a href="/privacy" style={{color:'#5A5040',textDecoration:'none'}}>Privacy Policy / Politique de confidentialité</a>
+      </div>
+
+      {showArchive && (
+        <Archive
+          game="nums"
+          onSelectDate={(date) => setPuzzleDate(date)}
+          onClose={() => setShowArchive(false)}
+        />
+      )}
+    </main>
+  );
+}
+
+function NumsBoard({ puzzleDate, streak }) {
   const pz = useMemo(() => {
     const seedDate = puzzleDate ?? new Date().toLocaleDateString('en-CA')
     const seed = parseInt(seedDate.replace(/-/g, ''))
@@ -111,7 +166,6 @@ export default function App() {
   const [sel, setSel] = useState(null);
   const [swaps, setSwaps] = useState(20);
   const [solved, setSolved] = useState(false);
-  const [showHow, setShowHow] = useState(false);
   const [starsAnim, setStarsAnim] = useState(false);
   const [confetti, setConfetti] = useState([]);
   const [cellAnim, setCellAnim] = useState({});
@@ -120,23 +174,6 @@ export default function App() {
   const [copied, setCopied] = useState(false);
   const [dragOver, setDragOver] = useState(null); // [r,c] being hovered
   const [dragging, setDragging] = useState(null); // [r,c] being dragged
-  const animIdRef = useRef(0);
-
-  useEffect(() => {
-    if (!puzzleDate) return
-    setBoard(pz.sc.map(r => [...r]))
-    setSwaps(20)
-    setSolved(false)
-    setSel(null)
-    setStarsAnim(false)
-    setConfetti([])
-    setCellAnim({})
-    setFlyingTiles([])
-    setSwapping(false)
-    setCopied(false)
-    setDragOver(null)
-    setDragging(null)
-  }, [puzzleDate])
 
   const triggerCellAnim = (keys, name, dur=500) => {
     setCellAnim(a => { const n={...a}; keys.forEach(k=>n[k]=name); return n; });
@@ -161,10 +198,11 @@ export default function App() {
 
   const doSwap = (r1, c1, r2, c2) => {
     if (swapping) return;
-    const id1=++animIdRef.current, id2=++animIdRef.current;
+    // Keyed by source cell: unique within a swap, and the list empties before
+    // the next swap can start, so every swap mounts (and animates) fresh tiles.
     setFlyingTiles([
-      {id:id1, num:board[r1][c1], fr:r1, fc:c1, tr:r2, tc:c2},
-      {id:id2, num:board[r2][c2], fr:r2, fc:c2, tr:r1, tc:c1},
+      {id:`${r1},${c1}`, num:board[r1][c1], fr:r1, fc:c1, tr:r2, tc:c2},
+      {id:`${r2},${c2}`, num:board[r2][c2], fr:r2, fc:c2, tr:r1, tc:c1},
     ]);
     setSwapping(true);
     setSel(null);
@@ -323,43 +361,10 @@ export default function App() {
   }
 
   return (
-    <main style={{minHeight:'100vh', display:'flex', flexDirection:'column', alignItems:'center', paddingTop:0, position:'relative', color:'#F5F0E8', overflow:'hidden'}}>
-      <style>{css}</style>
-
+    <>
       {confetti.map(c=>(
         <div key={c.id} style={{position:'fixed',left:`${c.x}%`,top:'28%',width:c.size,height:c.size,background:c.color,borderRadius:c.size>10?'50%':2,animation:`confetti 1.3s ${c.delay}ms ease forwards`,pointerEvents:'none',zIndex:100}}/>
       ))}
-
-      <UserMenu />
-      <div style={{width:'100%',display:'flex',alignItems:'center',padding:'12px 16px 0',minHeight:44}}>
-        <a href="/" style={{color:'#C9A84C',textDecoration:'none',fontSize:13,fontWeight:600}}>← Back</a>
-      </div>
-
-      {/* Header */}
-      <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:2}}>
-        <div style={{display:'flex',flexDirection:'column',alignItems:'center'}}>
-          <h1 style={{fontSize:32,fontWeight:900,letterSpacing:2,color:'#fff',margin:0}}>NUMS</h1>
-          <div style={{fontSize:11,fontWeight:600,letterSpacing:3,color:'#C9A84C',textTransform:'uppercase',marginTop:-4}}>by Streakle</div>
-        </div>
-        <button onClick={()=>setShowHow(!showHow)} style={{background:'none',border:'1px solid #2C2820',borderRadius:6,color:'#C9A84C',cursor:'pointer',fontSize:13,padding:'3px 10px',marginLeft:8}}>
-          How to play
-        </button>
-        <button onClick={() => setShowArchive(true)} style={{background:'none',border:'1px solid #2C2820',borderRadius:6,color:'#C9A84C',cursor:'pointer',fontSize:13,padding:'3px 10px'}}>
-          📅 Archive
-        </button>
-      </div>
-
-      <div style={{fontSize:13,color:'#7A6E5F',marginBottom:10,marginTop:6}}>{formatDate(puzzleDate)}</div>
-
-      {showHow&&(
-        <div style={{background:'#1C1A16',border:'1px solid #2C2820',borderRadius:10,padding:16,maxWidth:340,marginBottom:12,fontSize:13,lineHeight:1.65,color:'#ccc',animation:'slideUp 0.3s ease'}}>
-          <b style={{color:'#C9A84C'}}>How to play</b><br/>
-          Rearrange numbers so every <b>row</b> and <b>column</b> contains <b>1–7</b> once each.<br/><br/>
-          <b>Tap</b> a cell to select then tap another to swap — or <b>drag</b> a tile directly onto another. 🟢 Green = correct position.<br/><br/>
-          Circles show the <b>sum</b> of the 4 surrounding numbers — use them as clues!<br/><br/>
-          You start with 20 swaps. Going over counts against you — but you can always finish!
-        </div>
-      )}
 
       <div style={{marginBottom:14,fontSize:15,fontWeight:600,transition:'color 0.4s',
         color: solved?'#4caf50': swaps<0?'#e94560': swaps<=5?'#C9A84C':'#C9A84C'}}>
@@ -419,19 +424,7 @@ export default function App() {
           Selected <b style={{color:'#C9A84C'}}>{board[sel[0]][sel[1]]}</b> — tap another or drag to swap
         </div>
       )}
-
-      <div style={{marginTop:32,fontSize:12,color:'#5A5040',textAlign:'center'}}>
-        <a href="/privacy" style={{color:'#5A5040',textDecoration:'none'}}>Privacy Policy / Politique de confidentialité</a>
-      </div>
-
-      {showArchive && (
-        <Archive
-          game="nums"
-          onSelectDate={(date) => setPuzzleDate(date)}
-          onClose={() => setShowArchive(false)}
-        />
-      )}
-    </main>
+    </>
   );
 }
 
@@ -449,7 +442,7 @@ function FlyingTile({num, fr, fc, tr, tc, cs, total}) {
       {transform:`translate(${mx+perp.x*arc}px,${my+perp.y*arc}px) scale(1.22)`, opacity:1, offset:0.45},
       {transform:`translate(${toX}px,${toY}px) scale(1)`,         opacity:1, offset:1},
     ], {duration:380, easing:'ease-in-out', fill:'forwards'});
-  }, []);
+  }, [fr, fc, tr, tc, total]);
 
   return (
     <div ref={ref} style={{

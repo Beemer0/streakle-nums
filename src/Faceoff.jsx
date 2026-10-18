@@ -611,6 +611,61 @@ export default function FaceoffGame() {
   useSeo(PAGE_SEO.faceoff)
   const [showArchive, setShowArchive] = useState(false)
   const [puzzleDate, setPuzzleDate] = useState(null)
+  const [showHow, setShowHow] = useState(false);
+
+  return (
+    <main style={{minHeight:'100vh',display:'flex',flexDirection:'column',alignItems:'center',paddingTop:0,paddingBottom:40,color:'#F5F0E8',position:'relative',overflow:'hidden'}}>
+      <style>{css}</style>
+
+      <UserMenu />
+      <div style={{width:'100%',display:'flex',alignItems:'center',padding:'12px 16px 0',minHeight:44}}>
+        <a href="/" style={{color:'#C9A84C',textDecoration:'none',fontSize:13,fontWeight:600}}>← Back</a>
+      </div>
+
+      <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:2}}>
+        <div style={{display:'flex',flexDirection:'column',alignItems:'center'}}>
+          <h1 style={{fontSize:30,fontWeight:900,letterSpacing:2,color:'#fff',margin:0}}>FACEOFF</h1>
+          <div style={{fontSize:11,fontWeight:600,letterSpacing:3,color:'#C9A84C',textTransform:'uppercase',marginTop:-4}}>by Streakle</div>
+        </div>
+        <button onClick={()=>setShowHow(!showHow)} style={{background:'none',border:'1px solid #2C2820',borderRadius:6,color:'#C9A84C',cursor:'pointer',fontSize:13,padding:'3px 10px',marginLeft:8}}>
+          How to play
+        </button>
+        <button onClick={() => setShowArchive(true)} style={{background:'none',border:'1px solid #2C2820',borderRadius:6,color:'#C9A84C',cursor:'pointer',fontSize:13,padding:'3px 10px'}}>
+          📅 Archive
+        </button>
+      </div>
+
+      <div style={{fontSize:13,color:'#7A6E5F',marginBottom:8,marginTop:6}}>{formatDate(puzzleDate)}</div>
+
+      {showHow&&(
+        <div style={{background:'#1C1A16',border:'1px solid #2C2820',borderRadius:10,padding:16,maxWidth:340,marginBottom:12,fontSize:13,lineHeight:1.65,color:'#ccc',animation:'slideUp 0.3s ease'}}>
+          <b style={{color:'#C9A84C'}}>How to play</b><br/>
+          Fill the 3×3 grid with NHL players. Each player must satisfy <b>both</b> the row and column criteria.<br/><br/>
+          Rows and columns can be <b>NHL teams</b> (player played for that team) or <b>awards</b> (player won that award).<br/><br/>
+          Each player can only be used <b>once</b>. You have <b>9 guesses</b> — one per cell.<br/><br/>
+          🏒 Rarer answers = higher score. Max score: ~855.
+        </div>
+      )}
+
+      {/* Keyed by date: picking a puzzle in the Archive starts a fresh board. */}
+      <FaceoffBoard key={puzzleDate ?? 'today'} puzzleDate={puzzleDate} streak={streak} />
+
+      <div style={{marginTop:32,fontSize:12,color:'#5A5040',textAlign:'center'}}>
+        <a href="/privacy" style={{color:'#5A5040',textDecoration:'none'}}>Privacy Policy / Politique de confidentialité</a>
+      </div>
+
+      {showArchive && (
+        <Archive
+          game="faceoff"
+          onSelectDate={(date) => setPuzzleDate(date)}
+          onClose={() => setShowArchive(false)}
+        />
+      )}
+    </main>
+  );
+}
+
+function FaceoffBoard({ puzzleDate, streak }) {
   const puzzle = useMemo(() => getDailyPuzzle(puzzleDate), [puzzleDate])
   const [cells, setCells] = useState({});
   const [activeCell, setActiveCell] = useState(null);
@@ -621,27 +676,15 @@ export default function FaceoffGame() {
   const [shakeCell, setShakeCell] = useState(null);
   const [won, setWon] = useState(false);
   const [gameOver, setGameOver] = useState(false);
-  const [showHow, setShowHow] = useState(false);
   const [confetti, setConfetti] = useState([]);
   const [copied, setCopied] = useState(false);
   const [totalScore, setTotalScore] = useState(0);
   const inputRef = useRef(null);
 
+  // Auto-focus input when cell becomes active
   useEffect(() => {
-    if (!puzzleDate) return
-    setCells({})
-    setActiveCell(null)
-    setQuery('')
-    setSuggestions([])
-    setPendingPlayer(null)
-    setGuessesLeft(9)
-    setShakeCell(null)
-    setWon(false)
-    setGameOver(false)
-    setConfetti([])
-    setCopied(false)
-    setTotalScore(0)
-  }, [puzzleDate])
+    if (activeCell) setTimeout(() => inputRef.current?.focus(), 50);
+  }, [activeCell]);
 
   const rowHeaders = puzzle.rows;
   const colHeaders = puzzle.cols;
@@ -666,7 +709,6 @@ export default function FaceoffGame() {
     setQuery('');
     setSuggestions([]);
     setPendingPlayer(null);
-    setTimeout(()=>inputRef.current?.focus(), 50);
   };
 
   const handleQuery = (val) => {
@@ -727,42 +769,10 @@ export default function FaceoffGame() {
   };
 
   return (
-    <main style={{minHeight:'100vh',display:'flex',flexDirection:'column',alignItems:'center',paddingTop:0,paddingBottom:40,color:'#F5F0E8',position:'relative',overflow:'hidden'}}>
-      <style>{css}</style>
-
+    <>
       {confetti.map(c=>(
         <div key={c.id} style={{position:'fixed',left:`${c.x}%`,top:'28%',width:c.size,height:c.size,background:c.color,borderRadius:c.size>10?'50%':2,animation:`confetti 1.3s ${c.delay}ms ease forwards`,pointerEvents:'none',zIndex:100}}/>
       ))}
-
-      <UserMenu />
-      <div style={{width:'100%',display:'flex',alignItems:'center',padding:'12px 16px 0',minHeight:44}}>
-        <a href="/" style={{color:'#C9A84C',textDecoration:'none',fontSize:13,fontWeight:600}}>← Back</a>
-      </div>
-
-      <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:2}}>
-        <div style={{display:'flex',flexDirection:'column',alignItems:'center'}}>
-          <h1 style={{fontSize:30,fontWeight:900,letterSpacing:2,color:'#fff',margin:0}}>FACEOFF</h1>
-          <div style={{fontSize:11,fontWeight:600,letterSpacing:3,color:'#C9A84C',textTransform:'uppercase',marginTop:-4}}>by Streakle</div>
-        </div>
-        <button onClick={()=>setShowHow(!showHow)} style={{background:'none',border:'1px solid #2C2820',borderRadius:6,color:'#C9A84C',cursor:'pointer',fontSize:13,padding:'3px 10px',marginLeft:8}}>
-          How to play
-        </button>
-        <button onClick={() => setShowArchive(true)} style={{background:'none',border:'1px solid #2C2820',borderRadius:6,color:'#C9A84C',cursor:'pointer',fontSize:13,padding:'3px 10px'}}>
-          📅 Archive
-        </button>
-      </div>
-
-      <div style={{fontSize:13,color:'#7A6E5F',marginBottom:8,marginTop:6}}>{formatDate(puzzleDate)}</div>
-
-      {showHow&&(
-        <div style={{background:'#1C1A16',border:'1px solid #2C2820',borderRadius:10,padding:16,maxWidth:340,marginBottom:12,fontSize:13,lineHeight:1.65,color:'#ccc',animation:'slideUp 0.3s ease'}}>
-          <b style={{color:'#C9A84C'}}>How to play</b><br/>
-          Fill the 3×3 grid with NHL players. Each player must satisfy <b>both</b> the row and column criteria.<br/><br/>
-          Rows and columns can be <b>NHL teams</b> (player played for that team) or <b>awards</b> (player won that award).<br/><br/>
-          Each player can only be used <b>once</b>. You have <b>9 guesses</b> — one per cell.<br/><br/>
-          🏒 Rarer answers = higher score. Max score: ~855.
-        </div>
-      )}
 
       <div style={{display:'flex',gap:24,marginBottom:12,fontSize:14}}>
         <div style={{color:'#C9A84C',fontWeight:700}}>Score: {totalScore}</div>
@@ -884,18 +894,6 @@ export default function FaceoffGame() {
           </div>
         </div>
       )}
-
-      <div style={{marginTop:32,fontSize:12,color:'#5A5040',textAlign:'center'}}>
-        <a href="/privacy" style={{color:'#5A5040',textDecoration:'none'}}>Privacy Policy / Politique de confidentialité</a>
-      </div>
-
-      {showArchive && (
-        <Archive
-          game="faceoff"
-          onSelectDate={(date) => setPuzzleDate(date)}
-          onClose={() => setShowArchive(false)}
-        />
-      )}
-    </main>
+    </>
   );
 }

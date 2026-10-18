@@ -1,7 +1,24 @@
-import { createContext, useContext, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { supabase } from './supabase'
+import { AuthContext } from './AuthContext'
 
-const AuthContext = createContext({})
+// Create a profile row on first sign in
+async function createProfile(user) {
+  const { data } = await supabase
+    .from('profiles')
+    .select('id')
+    .eq('id', user.id)
+    .single()
+
+  if (!data) {
+    await supabase.from('profiles').insert({
+      id: user.id,
+      email: user.email,
+      display_name: user.user_metadata?.full_name || user.email,
+      avatar_url: user.user_metadata?.avatar_url,
+    })
+  }
+}
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
@@ -17,29 +34,11 @@ export function AuthProvider({ children }) {
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null)
-      // Create profile on first sign in
       if (session?.user) createProfile(session.user)
     })
 
     return () => subscription.unsubscribe()
   }, [])
-
-  const createProfile = async (user) => {
-    const { data } = await supabase
-      .from('profiles')
-      .select('id')
-      .eq('id', user.id)
-      .single()
-
-    if (!data) {
-      await supabase.from('profiles').insert({
-        id: user.id,
-        email: user.email,
-        display_name: user.user_metadata?.full_name || user.email,
-        avatar_url: user.user_metadata?.avatar_url,
-      })
-    }
-  }
 
   const signOut = async () => {
     await supabase.auth.signOut()
@@ -52,5 +51,3 @@ export function AuthProvider({ children }) {
     </AuthContext.Provider>
   )
 }
-
-export const useAuth = () => useContext(AuthContext)

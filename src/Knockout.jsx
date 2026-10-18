@@ -387,9 +387,9 @@ export default function KnockoutGame() {
   const { streak } = useStreak('knockout');
   useSeo(PAGE_SEO.knockout)
   const [showArchive, setShowArchive] = useState(false);
-  const [puzzleDate, setPuzzleDate] = useState(null);
-  const puzzle = useMemo(() => puzzleDate ? getDailyPuzzle(puzzleDate) : null, [puzzleDate]);
-  const { rows: rowHeaders = [], cols: colHeaders = [] } = puzzle || {};
+  const [puzzleDate, setPuzzleDate] = useState(() => new Date().toLocaleDateString('en-CA'));
+  const puzzle = useMemo(() => getDailyPuzzle(puzzleDate), [puzzleDate]);
+  const { rows: rowHeaders, cols: colHeaders } = puzzle;
 
   const [cells, setCells] = useState({});
   const [activeCell, setActiveCell] = useState(null);
@@ -405,11 +405,6 @@ export default function KnockoutGame() {
   const [totalScore, setTotalScore] = useState(0);
   const [copied, setCopied] = useState(false);
   const inputRef = useRef(null);
-
-  useEffect(() => {
-    const today = new Date().toLocaleDateString('en-CA');
-    setPuzzleDate(today);
-  }, []);
 
   // Auto-focus input when cell becomes active
   useEffect(() => {

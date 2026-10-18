@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import Archive from './Archive'
 import UserMenu from "./UserMenu";
 import { saveResult } from './saveResult';
@@ -613,7 +613,7 @@ const css = `
 @keyframes copied{0%{opacity:0;transform:translateY(4px)}20%{opacity:1;transform:translateY(0)}80%{opacity:1}100%{opacity:0}}
 `;
 
-function FlyingTile({ word, fr, fc, tr, tc, cs, total, color }) {
+function FlyingTile({ word, fr, fc, tr, tc, cs, color }) {
   const ref = useRef(null);
   useEffect(() => {
     const el = ref.current;
@@ -626,7 +626,7 @@ function FlyingTile({ word, fr, fc, tr, tc, cs, total, color }) {
       { transform: `translate(${toX}px,${toY}px) rotateY(-90deg) scale(0.85)`, offset: 0.6 },
       { transform: `translate(${toX}px,${toY}px) rotateY(0deg) scale(1)`, offset: 1 },
     ], { duration: 700, easing: 'cubic-bezier(0.4, 0, 0.2, 1)', fill: 'forwards' });
-  }, []);
+  }, [fr, fc, tr, tc, cs]);
 
   return (
     <div ref={ref} style={{
@@ -649,7 +649,60 @@ export default function GridGame() {
   useSeo(PAGE_SEO.link)
   const [showArchive, setShowArchive] = useState(false)
   const [puzzleDate, setPuzzleDate] = useState(null)
+  const [showHow, setShowHow] = useState(false);
 
+  return (
+    <main style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: 0, color: '#F5F0E8', position: 'relative', overflow: 'hidden' }}>
+      <style>{css}</style>
+      <UserMenu />
+      <div style={{width:'100%',display:'flex',alignItems:'center',padding:'12px 16px 0',minHeight:44}}>
+        <a href="/" style={{color:'#C9A84C',textDecoration:'none',fontSize:13,fontWeight:600}}>← Back</a>
+      </div>
+
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 2 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+          <h1 style={{ fontSize: 32, fontWeight: 900, letterSpacing: 2, color: '#fff', margin: 0 }}>LINK</h1>
+          <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: 3, color: '#C9A84C', textTransform: 'uppercase', marginTop: -4 }}>by Streakle</div>
+        </div>
+        <button onClick={() => setShowHow(!showHow)} style={{ background: 'none', border: '1px solid #2C2820', borderRadius: 6, color: '#C9A84C', cursor: 'pointer', fontSize: 13, padding: '3px 10px', marginLeft: 8 }}>
+          How to play
+        </button>
+        <button onClick={() => setShowArchive(true)} style={{ background: 'none', border: '1px solid #2C2820', borderRadius: 6, color: '#C9A84C', cursor: 'pointer', fontSize: 13, padding: '3px 10px' }}>
+          📅 Archive
+        </button>
+      </div>
+
+      <div style={{ fontSize: 13, color: '#7A6E5F', marginBottom: 10, marginTop: 6 }}>{formatDate(puzzleDate)}</div>
+
+      {showHow && (
+        <div style={{ background: '#1C1A16', border: '1px solid #2C2820', borderRadius: 10, padding: 16, maxWidth: 340, marginBottom: 12, fontSize: 13, lineHeight: 1.65, color: '#ccc', animation: 'slideUp 0.3s ease' }}>
+          <b style={{ color: '#C9A84C' }}>How to play</b><br />
+          Find 4 groups of 4 words that share something in common.<br /><br />
+          Select 4 words and tap <b>Submit</b>. Each correct group flies into place.<br /><br />
+          🟨 Easiest → 🟩 → 🟦 → 🟪 Trickiest<br /><br />
+          You have <b>4 lives</b>. Watch out for words that seem to fit multiple groups!
+        </div>
+      )}
+
+      {/* Keyed by date: picking a puzzle in the Archive starts a fresh board. */}
+      <LinkBoard key={puzzleDate ?? 'today'} puzzleDate={puzzleDate} streak={streak} />
+
+      <div style={{ marginTop: 32, fontSize: 12, color: '#5A5040', textAlign: 'center' }}>
+        <a href="/privacy" style={{ color: '#5A5040', textDecoration: 'none' }}>Privacy Policy / Politique de confidentialité</a>
+      </div>
+
+      {showArchive && (
+        <Archive
+          game="link"
+          onSelectDate={(date) => setPuzzleDate(date)}
+          onClose={() => setShowArchive(false)}
+        />
+      )}
+    </main>
+  );
+}
+
+function LinkBoard({ puzzleDate, streak }) {
   const puzzle = useMemo(() => {
     const seedDate = puzzleDate ?? new Date().toLocaleDateString('en-CA')
     const seed = parseInt(seedDate.replace(/-/g, ''))
@@ -663,7 +716,6 @@ export default function GridGame() {
   const [gameOver, setGameOver] = useState(false);
   const [won, setWon] = useState(false);
   const [shakeWords, setShakeWords] = useState([]);
-  const [showHow, setShowHow] = useState(false);
   const [message, setMessage] = useState(null);
   const [guessHistory, setGuessHistory] = useState([]);
   const [confetti, setConfetti] = useState([]);
@@ -679,24 +731,6 @@ export default function GridGame() {
   const solvedRef2 = useRef([]);
 
   useEffect(() => { solvedRef2.current = solved; }, [solved]);
-
-  useEffect(() => {
-    if (!puzzleDate) return
-    setSelected([])
-    setSolved([])
-    setLives(4)
-    setGameOver(false)
-    setWon(false)
-    setShakeWords([])
-    setMessage(null)
-    setGuessHistory([])
-    setConfetti([])
-    setCopied(false)
-    setOneAway(false)
-    setFlyingTiles([])
-    setAnimating(false)
-    setHiddenWords([])
-  }, [puzzleDate])
 
   const solvedWords = solved.flatMap(i => puzzle.categories[i].words);
   const remaining = puzzle.shuffled.filter(w => !solvedWords.includes(w));
@@ -803,41 +837,10 @@ export default function GridGame() {
   };
 
   return (
-    <main style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: 0, color: '#F5F0E8', position: 'relative', overflow: 'hidden' }}>
-      <style>{css}</style>
-      <UserMenu />
-      <div style={{width:'100%',display:'flex',alignItems:'center',padding:'12px 16px 0',minHeight:44}}>
-        <a href="/" style={{color:'#C9A84C',textDecoration:'none',fontSize:13,fontWeight:600}}>← Back</a>
-      </div>
-
+    <>
       {confetti.map(c => (
         <div key={c.id} style={{ position: 'fixed', left: `${c.x}%`, top: '30%', width: c.size, height: c.size, background: c.color, borderRadius: c.size > 10 ? '50%' : 2, animation: `confetti 1.3s ${c.delay}ms ease forwards`, pointerEvents: 'none', zIndex: 100 }} />
       ))}
-
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 2 }}>
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-          <h1 style={{ fontSize: 32, fontWeight: 900, letterSpacing: 2, color: '#fff', margin: 0 }}>LINK</h1>
-          <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: 3, color: '#C9A84C', textTransform: 'uppercase', marginTop: -4 }}>by Streakle</div>
-        </div>
-        <button onClick={() => setShowHow(!showHow)} style={{ background: 'none', border: '1px solid #2C2820', borderRadius: 6, color: '#C9A84C', cursor: 'pointer', fontSize: 13, padding: '3px 10px', marginLeft: 8 }}>
-          How to play
-        </button>
-        <button onClick={() => setShowArchive(true)} style={{ background: 'none', border: '1px solid #2C2820', borderRadius: 6, color: '#C9A84C', cursor: 'pointer', fontSize: 13, padding: '3px 10px' }}>
-          📅 Archive
-        </button>
-      </div>
-
-      <div style={{ fontSize: 13, color: '#7A6E5F', marginBottom: 10, marginTop: 6 }}>{formatDate(puzzleDate)}</div>
-
-      {showHow && (
-        <div style={{ background: '#1C1A16', border: '1px solid #2C2820', borderRadius: 10, padding: 16, maxWidth: 340, marginBottom: 12, fontSize: 13, lineHeight: 1.65, color: '#ccc', animation: 'slideUp 0.3s ease' }}>
-          <b style={{ color: '#C9A84C' }}>How to play</b><br />
-          Find 4 groups of 4 words that share something in common.<br /><br />
-          Select 4 words and tap <b>Submit</b>. Each correct group flies into place.<br /><br />
-          🟨 Easiest → 🟩 → 🟦 → 🟪 Trickiest<br /><br />
-          You have <b>4 lives</b>. Watch out for words that seem to fit multiple groups!
-        </div>
-      )}
 
       <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
         {Array.from({ length: 4 }, (_, i) => (
@@ -893,7 +896,7 @@ export default function GridGame() {
         </div>
 
         {flyingTiles.map((ft, i) => (
-          <FlyingTile key={`${ft.word}-${i}`} {...ft} cs={56} total={TILE_GAP} color={ft.color} />
+          <FlyingTile key={`${ft.word}-${i}`} {...ft} cs={56} color={ft.color} />
         ))}
       </div>
 
@@ -947,18 +950,6 @@ export default function GridGame() {
           </div>
         </div>
       )}
-
-      <div style={{ marginTop: 32, fontSize: 12, color: '#5A5040', textAlign: 'center' }}>
-        <a href="/privacy" style={{ color: '#5A5040', textDecoration: 'none' }}>Privacy Policy / Politique de confidentialité</a>
-      </div>
-
-      {showArchive && (
-        <Archive
-          game="link"
-          onSelectDate={(date) => setPuzzleDate(date)}
-          onClose={() => setShowArchive(false)}
-        />
-      )}
-    </main>
+    </>
   );
 }

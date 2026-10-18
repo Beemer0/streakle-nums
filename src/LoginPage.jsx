@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useAuth } from './AuthContext.jsx'
+import { useAuth } from './AuthContext.js'
 import { supabase } from './supabase.js'
 import { useSeo, PAGE_SEO } from './seo.js'
 

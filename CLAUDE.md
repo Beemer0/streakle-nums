@@ -18,7 +18,7 @@ puzzles every day; signed-in players build streaks.
 - `Home.jsx` (landing), `main.jsx` (entry: providers + render only), `App.jsx`
   (router + lazy-loaded routes + ErrorBoundary), `LoginPage.jsx`, `Archive.jsx`
   (past-puzzle modal), `UserMenu.jsx`.
-- Shared: `AuthContext.jsx`, `supabase.js`, `saveResult.js`, `useStreak.js`,
+- Shared: `AuthContext.js` (`useAuth`), `AuthProvider.jsx`, `supabase.js`, `saveResult.js`, `useStreak.js`,
   `streak.js`, `evaluate.js` (Wordle logic, tested), `a11y.js` (`clickableProps`),
   `AwardIcon.jsx`, `ErrorBoundary.jsx`, `validWords.txt` (~14.8k words).
 - Tests live next to the code as `*.test.js` (`evaluate.test.js`, `streak.test.js`,

@@ -1,7 +1,7 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { Analytics } from '@vercel/analytics/react'
-import { AuthProvider } from './AuthContext.jsx'
+import { AuthProvider } from './AuthProvider.jsx'
 import './index.css'
 import AppRoutes from './App.jsx'
 

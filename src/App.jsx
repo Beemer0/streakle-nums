@@ -1,6 +1,6 @@
 import { lazy, Suspense } from 'react'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
-import { useAuth } from './AuthContext.jsx'
+import { useAuth } from './AuthContext.js'
 import Home from './Home.jsx'
 import ErrorBoundary from './ErrorBoundary.jsx'
 import LoginPage from './LoginPage.jsx'

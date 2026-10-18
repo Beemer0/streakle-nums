@@ -195,6 +195,88 @@ export default function WordsGame() {
   useSeo(PAGE_SEO.words)
   const [showArchive, setShowArchive] = useState(false)
   const [puzzleDate, setPuzzleDate] = useState(null)
+  const [showHow, setShowHow] = useState(false);
+  const [hc, setHc] = useState(() => {
+    try { return localStorage.getItem('streakle-hc') === '1' } catch { return false }
+  });
+  const palette = hc ? { ...CLR, correct: '#f5793a', present: '#85c0f9' } : CLR;
+  const toggleHc = () => setHc(v => {
+    const n = !v;
+    try { localStorage.setItem('streakle-hc', n ? '1' : '0') } catch { /* storage unavailable */ }
+    return n;
+  });
+
+  return (
+    <main style={{minHeight:'100vh',display:'flex',flexDirection:'column',alignItems:'center',paddingTop:0,paddingBottom:32,color:'#F5F0E8',position:'relative',overflow:'hidden'}}>
+      <style>{css}</style>
+      <UserMenu />
+      <div style={{width:'100%',display:'flex',alignItems:'center',padding:'12px 16px 0',minHeight:44}}>
+        <a href="/" style={{color:'#C9A84C',textDecoration:'none',fontSize:13,fontWeight:600}}>← Back</a>
+      </div>
+
+      <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:2}}>
+        <div style={{display:'flex',flexDirection:'column',alignItems:'center'}}>
+          <h1 style={{fontSize:32,fontWeight:900,letterSpacing:2,color:'#fff',margin:0}}>WORDS</h1>
+          <div style={{fontSize:11,fontWeight:600,letterSpacing:3,color:'#C9A84C',textTransform:'uppercase',marginTop:-4}}>by Streakle</div>
+        </div>
+        <button onClick={()=>setShowHow(!showHow)} style={{background:'none',border:'1px solid #2C2820',borderRadius:6,color:'#C9A84C',cursor:'pointer',fontSize:13,padding:'3px 10px',marginLeft:8}}>
+          How to play
+        </button>
+        <button onClick={() => setShowArchive(true)} style={{background:'none',border:'1px solid #2C2820',borderRadius:6,color:'#C9A84C',cursor:'pointer',fontSize:13,padding:'3px 10px'}}>
+          📅 Archive
+        </button>
+      </div>
+
+      <div style={{fontSize:13,color:'#7A6E5F',marginBottom:10,marginTop:6}}>{formatDate(puzzleDate)}</div>
+
+      {streak > 0 && (
+        <div style={{fontSize:13, color:'#C9A84C', fontWeight:600, marginBottom:8}}>
+          🔥 {streak} day streak
+        </div>
+      )}
+
+      {showHow&&(
+        <div style={{background:'#1C1A16',border:'1px solid #2C2820',borderRadius:10,padding:16,maxWidth:320,marginBottom:12,fontSize:13,lineHeight:1.65,color:'#ccc',animation:'slideUp 0.3s ease'}}>
+          <b style={{color:'#C9A84C'}}>How to play</b><br/>
+          Guess the 5-letter word in 6 tries.<br/><br/>
+          {hc?'🟧':'🟩'} Right letter, right spot<br/>
+          {hc?'🟦':'🟨'} Right letter, wrong spot<br/>
+          ⬛ Letter not in the word<br/><br/>
+          After the game, discover something fascinating about the word!
+          <div style={{marginTop:14,paddingTop:12,borderTop:'1px solid #2C2820',display:'flex',alignItems:'center',justifyContent:'space-between',gap:12}}>
+            <span>High contrast colours</span>
+            <button onClick={toggleHc} role="switch" aria-checked={hc} aria-label="High contrast colours" style={{
+              background:hc?'#f5793a':'#2C2820',border:'none',borderRadius:11,width:44,height:22,
+              cursor:'pointer',position:'relative',transition:'background 0.2s',flexShrink:0,
+            }}>
+              <span style={{
+                position:'absolute',top:2,left:hc?24:2,width:18,height:18,borderRadius:'50%',
+                background:'#fff',transition:'left 0.2s',
+              }}/>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Keyed by date: picking a puzzle in the Archive starts a fresh board. */}
+      <WordsBoard key={puzzleDate ?? 'today'} puzzleDate={puzzleDate} hc={hc} palette={palette} />
+
+      <div style={{marginTop:32,fontSize:12,color:'#5A5040',textAlign:'center'}}>
+        <a href="/privacy" style={{color:'#5A5040',textDecoration:'none'}}>Privacy Policy / Politique de confidentialité</a>
+      </div>
+
+      {showArchive && (
+        <Archive
+          game="words"
+          onSelectDate={(date) => setPuzzleDate(date)}
+          onClose={() => setShowArchive(false)}
+        />
+      )}
+    </main>
+  );
+}
+
+function WordsBoard({ puzzleDate, hc, palette }) {
   const daily = useMemo(() => getDailyWord(puzzleDate), [puzzleDate])
   const [guesses, setGuesses] = useState(Array(ROWS).fill(''));
   const [current, setCurrent] = useState(0);
@@ -205,21 +287,11 @@ export default function WordsGame() {
   const [bounceRow, setBounceRow] = useState(null);
   const [gameOver, setGameOver] = useState(false);
   const [won, setWon] = useState(false);
-  const [showHow, setShowHow] = useState(false);
   const [message, setMessage] = useState(null);
   const [confetti, setConfetti] = useState([]);
   const [copied, setCopied] = useState(false);
   const [showFact, setShowFact] = useState(false);
   const [revealingTiles, setRevealingTiles] = useState({});
-  const [hc, setHc] = useState(() => {
-    try { return localStorage.getItem('streakle-hc') === '1' } catch { return false }
-  });
-  const palette = hc ? { ...CLR, correct: '#f5793a', present: '#85c0f9' } : CLR;
-  const toggleHc = () => setHc(v => {
-    const n = !v;
-    try { localStorage.setItem('streakle-hc', n ? '1' : '0') } catch { /* storage unavailable */ }
-    return n;
-  });
   const revealingRef = useRef(false);
 
   const showMsg = (msg, dur=1800) => { setMessage(msg); setTimeout(()=>setMessage(null), dur); };
@@ -300,25 +372,6 @@ export default function WordsGame() {
     return ()=>window.removeEventListener('keydown',handler);
   }, [handleKey]);
 
-  useEffect(() => {
-    if (!puzzleDate) return
-    setGuesses(Array(ROWS).fill(''))
-    setCurrent(0)
-    setInput('')
-    setTileStates({})
-    setKeyStates({})
-    setShakeRow(null)
-    setBounceRow(null)
-    setGameOver(false)
-    setWon(false)
-    setMessage(null)
-    setConfetti([])
-    setCopied(false)
-    setShowFact(false)
-    setRevealingTiles({})
-    revealingRef.current = false
-  }, [puzzleDate])
-
   const getLetter=(r,c)=>{
     if (guesses[r]) return guesses[r][c]||'';
     if (r===current) return input[c]||'';
@@ -347,60 +400,10 @@ export default function WordsGame() {
   };
 
   return (
-    <main style={{minHeight:'100vh',display:'flex',flexDirection:'column',alignItems:'center',paddingTop:0,paddingBottom:32,color:'#F5F0E8',position:'relative',overflow:'hidden'}}>
-      <style>{css}</style>
-      <UserMenu />
-      <div style={{width:'100%',display:'flex',alignItems:'center',padding:'12px 16px 0',minHeight:44}}>
-        <a href="/" style={{color:'#C9A84C',textDecoration:'none',fontSize:13,fontWeight:600}}>← Back</a>
-      </div>
-
+    <>
       {confetti.map(c=>(
         <div key={c.id} style={{position:'fixed',left:`${c.x}%`,top:'28%',width:c.size,height:c.size,background:c.color,borderRadius:c.size>10?'50%':2,animation:`confetti 1.3s ${c.delay}ms ease forwards`,pointerEvents:'none',zIndex:100}}/>
       ))}
-
-      <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:2}}>
-        <div style={{display:'flex',flexDirection:'column',alignItems:'center'}}>
-          <h1 style={{fontSize:32,fontWeight:900,letterSpacing:2,color:'#fff',margin:0}}>WORDS</h1>
-          <div style={{fontSize:11,fontWeight:600,letterSpacing:3,color:'#C9A84C',textTransform:'uppercase',marginTop:-4}}>by Streakle</div>
-        </div>
-        <button onClick={()=>setShowHow(!showHow)} style={{background:'none',border:'1px solid #2C2820',borderRadius:6,color:'#C9A84C',cursor:'pointer',fontSize:13,padding:'3px 10px',marginLeft:8}}>
-          How to play
-        </button>
-        <button onClick={() => setShowArchive(true)} style={{background:'none',border:'1px solid #2C2820',borderRadius:6,color:'#C9A84C',cursor:'pointer',fontSize:13,padding:'3px 10px'}}>
-          📅 Archive
-        </button>
-      </div>
-
-      <div style={{fontSize:13,color:'#7A6E5F',marginBottom:10,marginTop:6}}>{formatDate(puzzleDate)}</div>
-
-      {streak > 0 && (
-        <div style={{fontSize:13, color:'#C9A84C', fontWeight:600, marginBottom:8}}>
-          🔥 {streak} day streak
-        </div>
-      )}
-
-      {showHow&&(
-        <div style={{background:'#1C1A16',border:'1px solid #2C2820',borderRadius:10,padding:16,maxWidth:320,marginBottom:12,fontSize:13,lineHeight:1.65,color:'#ccc',animation:'slideUp 0.3s ease'}}>
-          <b style={{color:'#C9A84C'}}>How to play</b><br/>
-          Guess the 5-letter word in 6 tries.<br/><br/>
-          {hc?'🟧':'🟩'} Right letter, right spot<br/>
-          {hc?'🟦':'🟨'} Right letter, wrong spot<br/>
-          ⬛ Letter not in the word<br/><br/>
-          After the game, discover something fascinating about the word!
-          <div style={{marginTop:14,paddingTop:12,borderTop:'1px solid #2C2820',display:'flex',alignItems:'center',justifyContent:'space-between',gap:12}}>
-            <span>High contrast colours</span>
-            <button onClick={toggleHc} role="switch" aria-checked={hc} aria-label="High contrast colours" style={{
-              background:hc?'#f5793a':'#2C2820',border:'none',borderRadius:11,width:44,height:22,
-              cursor:'pointer',position:'relative',transition:'background 0.2s',flexShrink:0,
-            }}>
-              <span style={{
-                position:'absolute',top:2,left:hc?24:2,width:18,height:18,borderRadius:'50%',
-                background:'#fff',transition:'left 0.2s',
-              }}/>
-            </button>
-          </div>
-        </div>
-      )}
 
       {message&&(
         <div style={{position:'fixed',top:80,left:'50%',transform:'translateX(-50%)',background:'#F5F0E8',borderRadius:8,padding:'8px 20px',fontSize:14,fontWeight:700,color:'#0F0E0C',zIndex:50,animation:'slideUp 0.2s ease',whiteSpace:'nowrap'}}>
@@ -498,18 +501,6 @@ export default function WordsGame() {
           ))}
         </div>
       )}
-
-      <div style={{marginTop:32,fontSize:12,color:'#5A5040',textAlign:'center'}}>
-        <a href="/privacy" style={{color:'#5A5040',textDecoration:'none'}}>Privacy Policy / Politique de confidentialité</a>
-      </div>
-
-      {showArchive && (
-        <Archive
-          game="words"
-          onSelectDate={(date) => setPuzzleDate(date)}
-          onClose={() => setShowArchive(false)}
-        />
-      )}
-    </main>
+    </>
   );
 }
