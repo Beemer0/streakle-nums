@@ -1,6 +1,6 @@
 # Streakle — project guide for Claude
 
-Streakle is a daily-puzzle game site (playstreakle.com) with seven games. New
+Streakle is a daily-puzzle game site (playstreakle.com) with eight games. New
 puzzles every day; signed-in players build streaks.
 
 ## Stack & commands
@@ -11,20 +11,22 @@ puzzles every day; signed-in players build streaks.
   `npm run build`, `npm test` (Vitest), `npm run lint`.
 
 ## Layout (src/)
-- Seven game routes: `Faceoff` (NHL), `Gridiron` (NFL), `Knockout` (MMA) — these
+- Eight game routes: `Faceoff` (NHL), `Gridiron` (NFL), `Knockout` (MMA) — these
   three share a grid-game pattern; `Words` (Wordle), `Link` (Connections),
-  `Nums` (number-swap), `Mines` (no-guess minesweeper ladder — see below).
-- `Home.jsx` (landing), `main.jsx` (router + lazy-loaded routes + ErrorBoundary
-  + inline LoginPage), `Archive.jsx` (past-puzzle modal), `UserMenu.jsx`.
+  `Nums` (number-swap), `Mines` (no-guess minesweeper ladder), `Weave`
+  (Waffle-style word swap) — the last two are described below.
+- `Home.jsx` (landing), `main.jsx` (entry: providers + render only), `App.jsx`
+  (router + lazy-loaded routes + ErrorBoundary), `LoginPage.jsx`, `Archive.jsx`
+  (past-puzzle modal), `UserMenu.jsx`.
 - Shared: `AuthContext.jsx`, `supabase.js`, `saveResult.js`, `useStreak.js`,
   `streak.js`, `evaluate.js` (Wordle logic, tested), `a11y.js` (`clickableProps`),
   `AwardIcon.jsx`, `ErrorBoundary.jsx`, `validWords.txt` (~14.8k words).
 - Tests live next to the code as `*.test.js` (`evaluate.test.js`, `streak.test.js`,
-  `mines/engine.test.js`, the pool scoring suites).
+  `mines/engine.test.js`, `weave/engine.test.js`, the pool scoring suites).
 - Content banks never repeat for months: `Words` has 144 words, `Link` 71 puzzles;
-  the grids, `Nums` and `Mines` generate fresh daily. Validate edits with
-  `node scripts/check-words.mjs`, `node scripts/check-link.mjs` and
-  `node scripts/check-mines.mjs`.
+  the grids, `Nums`, `Mines` and `Weave` generate fresh daily. Validate edits with
+  `node scripts/check-words.mjs`, `node scripts/check-link.mjs`,
+  `node scripts/check-mines.mjs` and `node scripts/check-weave.mjs`.
 
 ## Conventions
 - Warm "Ink & Gold" palette: `#0F0E0C` bg, `#1C1A16` cards, `#2C2820` borders,
@@ -146,6 +148,40 @@ mine writes `completed: false`. `game_results.score` = seconds,
   does NOT use `clickableProps`.
 - `Archive.jsx` `GAME_META.start` lets a game's calendar begin after the
   site's `LAUNCH_DATE`; the six older games keep the default.
+
+## Weave — daily Waffle-style word swap (`/weave`)
+A 5×5 lattice of six crossing five-letter words (rows and columns 0/2/4),
+scrambled; swap any two tiles. Green = right spot (locked), yellow = still
+missing from the tile's row or column word, grey = neither. Every scramble is
+exactly 10 swaps from solved (PAR); you get 15, the leftovers are stars, and
+the puzzle ENDS at 0 swaps (`completed: false`). `game_results.score` = stars,
+`swaps_used` = swaps spent.
+- `src/weave/engine.js` is a pure ESM module (fill search, scramble,
+  duplicate-aware min-swap solver, colouring) imported unchanged by
+  `Weave.jsx`, `engine.test.js` and `scripts/check-weave.mjs`. Answers come
+  from `src/weave/answers.js` (2,105 hand-picked common words, all in
+  `validWords.txt`; no plain plurals, no US/UK spelling variants).
+- No word repeats within a 128-day block (`BLOCK_DAYS` from
+  `BLOCK_EPOCH`): each day bans the words used earlier in its block, so a
+  block is generated in order and cached (~20 ms cold). Candidates are also
+  kept with letter-position odds so Y-/E-heavy crossings don't force the
+  same few words. Repeats only happen across block edges (~15 within a week
+  over 2025–2030).
+- Yellows: each yellow accounts for one missing letter; a word's missing
+  letters go first to tiles in only that word, then to crossing tiles in
+  reading order, across word first (tested in `engine.test.js`).
+- **Any change to the search, scramble, `mixSeed`, the block constants or
+  `answers.js` rewrites every historical grid.** The 2026-10-17 puzzle is
+  pinned as `FALLBACK` by a snapshot test — update it deliberately with
+  `node scripts/check-weave.mjs --dump 2026-10-17`. The checker replays
+  2025-01-01..2030-12-31 (exit 1 on any fallback, non-PAR scramble,
+  in-block repeat, duplicate grid or > 50 ms); extend `--days` before 2031.
+- `Weave.jsx` keeps today's board + swaps left in localStorage
+  (`streakle-weave`) so a reload never refunds a swap; archive replays never
+  touch it and never call `saveResult`. The board is keyed by date, tiles are
+  real buttons (tap-tap or pointer drag, Escape clears), swaps FLIP-animate
+  unless reduced motion is on, and it honours Words' `streakle-hc`
+  high-contrast setting.
 
 ## Current focus — SEO optimization
 Done: `<title>`, meta description, Open Graph + Twitter tags, the OG image

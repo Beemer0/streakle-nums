@@ -15,6 +15,7 @@ const GAME_META = {
   faceoff:  { emoji: '🏒', label: 'Faceoff' },
   knockout: { emoji: '🥊', label: 'Knockout' },
   mines:    { emoji: '💣', label: 'Mines', start: '2026-09-04' }, // shipped after LAUNCH_DATE
+  weave:    { emoji: '🧶', label: 'Weave', start: '2026-10-17' },
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────

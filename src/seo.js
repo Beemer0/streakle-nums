@@ -21,8 +21,19 @@ export const PAGE_SEO = {
   home: {
     title: 'Streakle — Start your day with a puzzle',
     description:
-      'Streakle is a daily set of seven puzzle games — NHL, NFL and MMA knowledge grids, a word guess, a word-grouping puzzle, a number puzzle and a no-guess minesweeper. New puzzles daily.',
+      'Streakle is a daily set of eight puzzle games — NHL, NFL and MMA knowledge grids, a word guess, a word-grouping puzzle, a word-swap puzzle, a number puzzle and a no-guess minesweeper. New puzzles daily.',
     path: '/',
+  },
+  weave: {
+    title: 'Weave — Daily Word Swap Puzzle | Streakle',
+    description:
+      'Swap scrambled letter tiles until three words read across and three read down in Weave, a daily word puzzle. Solve it in 10 swaps for a perfect five stars.',
+    path: '/weave',
+    jsonLd: gameJsonLd(
+      'Weave',
+      '/weave',
+      'A daily word-swap puzzle: unscramble six crossing five-letter words in as few swaps as you can.',
+    ),
   },
   mines: {
     title: 'Mines — Daily No-Guess Minesweeper | Streakle',

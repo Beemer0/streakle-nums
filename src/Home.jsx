@@ -7,6 +7,16 @@ import { useSeo, PAGE_SEO } from './seo'
 
 const games = [
   {
+    key: 'weave',
+    path: '/weave',
+    title: 'WEAVE',
+    emoji: '🧶',
+    description: 'Swap scrambled letters until three words read across and three down.',
+    color: '#115E59',
+    accent: '#5EEAD4',
+    badge: 'Untangle It',
+  },
+  {
     key: 'mines',
     path: '/mines',
     title: 'MINES',
