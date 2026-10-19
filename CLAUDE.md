@@ -1,6 +1,6 @@
 # Streakle — project guide for Claude
 
-Streakle is a daily-puzzle game site (playstreakle.com) with eight games. New
+Streakle is a daily-puzzle game site (playstreakle.com) with nine games. New
 puzzles every day; signed-in players build streaks.
 
 ## Stack & commands
@@ -11,10 +11,11 @@ puzzles every day; signed-in players build streaks.
   `npm run build`, `npm test` (Vitest), `npm run lint`.
 
 ## Layout (src/)
-- Eight game routes: `Faceoff` (NHL), `Gridiron` (NFL), `Knockout` (MMA) — these
+- Nine game routes: `Faceoff` (NHL), `Gridiron` (NFL), `Knockout` (MMA) — these
   three share a grid-game pattern; `Words` (Wordle), `Link` (Connections),
   `Nums` (number-swap), `Mines` (no-guess minesweeper ladder), `Weave`
-  (Waffle-style word swap) — the last two are described below.
+  (Waffle-style word swap), `Scramble` (crossing anagram ladder) — the last
+  three are described below.
 - `Home.jsx` (landing), `main.jsx` (entry: providers + render only), `App.jsx`
   (router + lazy-loaded routes + ErrorBoundary), `LoginPage.jsx`, `Archive.jsx`
   (past-puzzle modal), `UserMenu.jsx`.
@@ -22,11 +23,13 @@ puzzles every day; signed-in players build streaks.
   `streak.js`, `evaluate.js` (Wordle logic, tested), `a11y.js` (`clickableProps`),
   `AwardIcon.jsx`, `ErrorBoundary.jsx`, `validWords.txt` (~14.8k words).
 - Tests live next to the code as `*.test.js` (`evaluate.test.js`, `streak.test.js`,
-  `mines/engine.test.js`, `weave/engine.test.js`, the pool scoring suites).
+  `mines/engine.test.js`, `weave/engine.test.js`, `scramble/engine.test.js`,
+  the pool scoring suites).
 - Content banks never repeat for months: `Words` has 144 words, `Link` 71 puzzles;
-  the grids, `Nums`, `Mines` and `Weave` generate fresh daily. Validate edits with
-  `node scripts/check-words.mjs`, `node scripts/check-link.mjs`,
-  `node scripts/check-mines.mjs` and `node scripts/check-weave.mjs`.
+  the grids, `Nums`, `Mines`, `Weave` and `Scramble` generate fresh daily.
+  Validate edits with `node scripts/check-words.mjs`, `node scripts/check-link.mjs`,
+  `node scripts/check-mines.mjs`, `node scripts/check-weave.mjs` and
+  `node scripts/check-scramble.mjs`.
 
 ## Conventions
 - Warm "Ink & Gold" palette: `#0F0E0C` bg, `#1C1A16` cards, `#2C2820` borders,
@@ -182,6 +185,37 @@ the puzzle ENDS at 0 swaps (`completed: false`). `game_results.score` = stars,
   real buttons (tap-tap or pointer drag, Escape clears), swaps FLIP-animate
   unless reduced motion is on, and it honours Words' `streakle-hc`
   high-contrast setting.
+
+## Scramble — daily crossing anagram ladder (`/scramble`)
+Six scrambled words a day, 4/5/5/6/6/7 letters (`LENGTHS`), solved in order
+on a Scrabble-style board: each later word crosses an earlier one at a shared
+letter and words only touch where they cross, so a solved word's letters drop
+into the words it crosses and the rack holds only the rest. Tap tiles (or
+type) to fill the highlighted word; a full wrong word is a mistake. Score =
+active time + 30 s per hint (a hint reveals one letter). The 3rd mistake fails
+the day (`completed: false`, saved at once) but play continues to the end.
+`game_results.score` = seconds incl. hint penalty, `swaps_used` = mistakes.
+- `src/scramble/engine.js` is a pure ESM module (layout search, racks, play
+  helpers) imported unchanged by `Scramble.jsx`, `engine.test.js` and
+  `scripts/check-scramble.mjs`. Banks: `src/scramble/words.js` (2,604 words
+  by length). Every entry was checked against the public-domain ENABLE list:
+  it is a real word AND its letters spell no other ENABLE word, so the answer
+  is never ambiguous. Re-run that check (download ENABLE, compare letter
+  signatures) for any new word; the checker only re-checks in-bank anagrams.
+- Layout: each rung compares up to `GEN_SAMPLE` fitting candidates and takes
+  the spot with the most crossings, then the tightest board (≤ 9×9). No word
+  repeats within a 64-day block (same block-chain scheme as Weave; ~70 ms
+  cold, worst case).
+- **Any change to `LENGTHS`, the layout search, rack shuffle, `mixSeed`, block
+  constants or `words.js` rewrites every historical board.** The 2026-10-18
+  board is pinned as `FALLBACK` — update it with
+  `node scripts/check-scramble.mjs --dump 2026-10-18`. The checker replays
+  2025-01-01..2030-12-31 (exit 1 on any fallback, stray letter run, rung not
+  crossing an earlier one, bad rack, in-block repeat, duplicate or > 60 ms).
+- `Scramble.jsx` keeps today's rung, hints, mistakes and clock in localStorage
+  (`streakle-scramble`) so a reload never refunds a mistake; archive replays
+  never touch it or call `saveResult`. Keyed by date like Weave; honours
+  `streakle-hc`.
 
 ## Current focus — SEO optimization
 Done: `<title>`, meta description, Open Graph + Twitter tags, the OG image

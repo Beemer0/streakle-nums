@@ -17,6 +17,7 @@ const Bracket  = lazy(() => import('./Bracket.jsx'))
 const Octagon  = lazy(() => import('./Octagon.jsx'))
 const Mines    = lazy(() => import('./Mines.jsx'))
 const Weave    = lazy(() => import('./Weave.jsx'))
+const Scramble = lazy(() => import('./Scramble.jsx'))
 
 function SignInBanner() {
   const { user } = useAuth()
@@ -58,6 +59,7 @@ export default function AppRoutes() {
             <Route path="/nums" element={<Nums />} />
             <Route path="/mines" element={<Mines />} />
             <Route path="/weave" element={<Weave />} />
+            <Route path="/scramble" element={<Scramble />} />
             <Route path="/link" element={<Link />} />
             <Route path="/words" element={<Words />} />
             <Route path="/gridiron" element={<Gridiron />} />

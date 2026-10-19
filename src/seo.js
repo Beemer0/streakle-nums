@@ -21,8 +21,19 @@ export const PAGE_SEO = {
   home: {
     title: 'Streakle — Start your day with a puzzle',
     description:
-      'Streakle is a daily set of eight puzzle games — NHL, NFL and MMA knowledge grids, a word guess, a word-grouping puzzle, a word-swap puzzle, a number puzzle and a no-guess minesweeper. New puzzles daily.',
+      'Streakle is a daily set of nine puzzle games — NHL, NFL and MMA knowledge grids, a word guess, a word-grouping puzzle, a word-swap puzzle, an anagram ladder, a number puzzle and a no-guess minesweeper. New puzzles daily.',
     path: '/',
+  },
+  scramble: {
+    title: 'Scramble — Daily Anagram Puzzle | Streakle',
+    description:
+      'Unscramble six crossing words a day, from 4 to 7 letters, in Scramble, a daily anagram puzzle. Every word you solve fills in letters of the next. Beat the clock and build your streak.',
+    path: '/scramble',
+    jsonLd: gameJsonLd(
+      'Scramble',
+      '/scramble',
+      'A daily anagram ladder: unscramble six crossing words, from 4 to 7 letters, on a Scrabble-style board.',
+    ),
   },
   weave: {
     title: 'Weave — Daily Word Swap Puzzle | Streakle',
