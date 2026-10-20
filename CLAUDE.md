@@ -18,7 +18,7 @@ puzzles every day; signed-in players build streaks.
   three are described below.
 - `Home.jsx` (landing), `main.jsx` (entry: providers + render only), `App.jsx`
   (router + lazy-loaded routes + ErrorBoundary), `LoginPage.jsx`, `Archive.jsx`
-  (past-puzzle modal), `UserMenu.jsx`.
+  (past-puzzle modal), `UserMenu.jsx`, `PoolHistory.jsx` (`/pools`, below).
 - Shared: `AuthContext.js` (`useAuth`), `AuthProvider.jsx`, `supabase.js`, `saveResult.js`, `useStreak.js`,
   `streak.js`, `evaluate.js` (Wordle logic, tested), `a11y.js` (`clickableProps`),
   `AwardIcon.jsx`, `ErrorBoundary.jsx`, `validWords.txt` (~14.8k words).
@@ -117,6 +117,23 @@ functions in `src/octagon/scoring.js` (tested).
   stranded on a scratched fight — updates there are RLS-blocked). Invite code
   seeded as `octagon`:
   `update pool_config set invite_code = '…' where pool_id = 'octagon'`.
+
+## Pool History (`/pools`)
+The account menu (`UserMenu.jsx`) shows pool members a "🏆 Pool History"
+item; `src/PoolHistory.jsx` lists their pools — live ones under Active, then
+archived ones under Past with a winner / your-finish recap from
+`pool_archive.standings` — each row linking to the pool page. Guests and
+non-members are redirected to `/`; nothing names a pool until membership is
+known. `noindex`.
+- `src/pools.js` is the registry (`POOLS`: id, name, kind, path, emoji) plus
+  pure grouping/recap helpers (tested). **A new pool needs an entry there**
+  (alongside its page and route); its members then see it automatically, and it
+  moves from Active to Past once it gets a `pool_archive` row — no code change.
+- `src/usePoolMemberships.js` asks `is_member_of(pool)` for each registered
+  pool, cached per user per page load and shared by UserMenu, Home (the World
+  Cup banner) and PoolHistory. Not a `pool_members` select: that table's RLS
+  is `is_pool_member()`, hard-scoped to `wc2026`, so World Cup members can read
+  every pool's rows while an Octagon-only member reads none.
 
 ## Mines — daily no-guess minesweeper ladder (`/mines`)
 Three date-seeded boards a day (Easy 9×9/10, Medium 10×14/22, Hard 10×24/48)

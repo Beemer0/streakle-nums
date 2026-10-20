@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from './AuthContext'
 import { clickableProps } from './a11y'
+import { usePoolMemberships } from './usePoolMemberships'
 
 export default function UserMenu() {
   const { user, signOut } = useAuth()
+  const { poolIds } = usePoolMemberships()
   const [open, setOpen] = useState(false)
 
   useEffect(() => {
@@ -43,6 +45,21 @@ export default function UserMenu() {
         }}>
           <div style={{ fontSize: 13, fontWeight: 600, color: '#F5F0E8', marginBottom: 2 }}>{name}</div>
           <div style={{ fontSize: 11, color: '#7A6E5F', marginBottom: 12 }}>{user.email}</div>
+          {/* Pool members only: the pools they belong to, live and finished. */}
+          {poolIds?.length > 0 && (
+            <div style={{ borderTop: '1px solid #2C2820', padding: '6px 0' }}>
+              <a href="/pools" style={{
+                display: 'block', borderRadius: 6, padding: '8px 10px',
+                color: '#F5F0E8', fontSize: 13, fontWeight: 600, textDecoration: 'none',
+                transition: 'background 0.2s',
+              }}
+                onMouseOver={e => e.currentTarget.style.background = 'rgba(201,168,76,0.08)'}
+                onMouseOut={e => e.currentTarget.style.background = 'none'}
+              >
+                🏆 Pool History
+              </a>
+            </div>
+          )}
           <div style={{ borderTop: '1px solid #2C2820', paddingTop: 10 }}>
             <button onClick={signOut} style={{
               width: '100%', background: 'none', border: '1px solid rgba(252,165,165,0.25)',

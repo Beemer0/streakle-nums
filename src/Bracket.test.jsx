@@ -104,7 +104,8 @@ describe('archived World Cup pool', () => {
     const pickButtons = [...host.querySelectorAll('button.bk-btn')]
     expect(pickButtons.length).toBeGreaterThan(0)
     expect(pickButtons.every(b => b.disabled)).toBe(true)
-    expect(writes.filter(([, op]) => op !== 'get_pool_members')).toEqual([])
+    // The read-only RPCs: the roster, and the account menu's membership lookup.
+    expect(writes.filter(([, op]) => !['get_pool_members', 'is_member_of'].includes(op))).toEqual([])
   })
 
   it('tells signed-in non-members the pool has ended, with no join form', async () => {

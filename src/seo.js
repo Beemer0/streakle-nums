@@ -149,6 +149,12 @@ export const PAGE_SEO = {
     path: '/octagon',
     noindex: true, // private pool — keep it out of search results
   },
+  pools: {
+    title: 'Pool History | Streakle',
+    description: 'The private Streakle pools you belong to — live pools and final results.',
+    path: '/pools',
+    noindex: true, // members-only — keep it out of search results
+  },
 }
 
 // Streakle is a client-rendered SPA, so every route otherwise inherits the

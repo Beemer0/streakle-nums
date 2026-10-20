@@ -15,6 +15,7 @@ const Knockout = lazy(() => import('./Knockout.jsx'))
 const Privacy  = lazy(() => import('./Privacy.jsx'))
 const Bracket  = lazy(() => import('./Bracket.jsx'))
 const Octagon  = lazy(() => import('./Octagon.jsx'))
+const PoolHistory = lazy(() => import('./PoolHistory.jsx'))
 const Mines    = lazy(() => import('./Mines.jsx'))
 const Weave    = lazy(() => import('./Weave.jsx'))
 const Scramble = lazy(() => import('./Scramble.jsx'))
@@ -67,6 +68,7 @@ export default function AppRoutes() {
             <Route path="/knockout" element={<Knockout />} />
             <Route path="/bracket" element={<Bracket />} />
             <Route path="/octagon" element={<Octagon />} />
+            <Route path="/pools" element={<PoolHistory />} />
             <Route path="/privacy" element={<Privacy />} />
             <Route path="/login" element={<LoginPage />} />
           </Routes>

@@ -4,6 +4,7 @@ import { supabase } from './supabase'
 import UserMenu from './UserMenu'
 import { calcStreak } from './streak'
 import { useSeo, PAGE_SEO } from './seo'
+import { usePoolMemberships } from './usePoolMemberships'
 
 const games = [
   {
@@ -115,21 +116,11 @@ export default function Home() {
   const { user } = useAuth()
   const [todayResults, setTodayResults] = useState({})
   const [streaks, setStreaks] = useState({})
-  const [inPool, setInPool] = useState(false)
+  // Shares the account menu's membership lookup — no extra request.
+  const { poolIds } = usePoolMemberships()
+  const inWorldCupPool = !!poolIds?.includes('wc2026')
 
   useSeo(PAGE_SEO.home)
-
-  // RLS returns rows only for pool members, so a non-empty result means "in".
-  useEffect(() => {
-    if (!user) return
-    let active = true
-    supabase
-      .from('pool_members')
-      .select('user_id')
-      .limit(1)
-      .then(({ data }) => { if (active) setInPool(!!data?.length) })
-    return () => { active = false }
-  }, [user])
 
   useEffect(() => {
     if (!user) return
@@ -214,7 +205,7 @@ export default function Home() {
       </div>
 
       {/* ── World Cup pool results (members only; the pool is archived) ── */}
-      {user && inPool && (
+      {inWorldCupPool && (
         <a href="/bracket" style={{
           width: '100%', maxWidth: 820, boxSizing: 'border-box',
           background: 'rgba(201,168,76,0.07)',
