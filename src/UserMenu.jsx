@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useAuth } from './AuthContext'
 import { clickableProps } from './a11y'
 import { usePoolMemberships } from './usePoolMemberships'
@@ -7,10 +7,17 @@ export default function UserMenu() {
   const { user, signOut } = useAuth()
   const { poolIds } = usePoolMemberships()
   const [open, setOpen] = useState(false)
+  const triggerRef = useRef(null)
 
+  // Escape closes the menu and hands focus back to the avatar, so a keyboard
+  // user on a menu item isn't dropped to the top of the page.
   useEffect(() => {
     if (!open) return
-    const onKey = (e) => { if (e.key === 'Escape') setOpen(false) }
+    const onKey = (e) => {
+      if (e.key !== 'Escape') return
+      setOpen(false)
+      triggerRef.current?.focus()
+    }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [open])
@@ -22,7 +29,7 @@ export default function UserMenu() {
 
   return (
     <div style={{ position: 'absolute', right: 16, top: 20, zIndex: 50 }}>
-      <div {...clickableProps(() => setOpen(!open))} aria-haspopup="menu" aria-expanded={open} aria-label="Account menu" style={{
+      <div ref={triggerRef} {...clickableProps(() => setOpen(!open))} aria-haspopup="menu" aria-expanded={open} aria-label="Account menu" style={{
         width: 36, height: 36, borderRadius: '50%',
         background: '#1C1A16', border: '2px solid #2C2820',
         cursor: 'pointer', overflow: 'hidden',
@@ -56,7 +63,7 @@ export default function UserMenu() {
                 onMouseOver={e => e.currentTarget.style.background = 'rgba(201,168,76,0.08)'}
                 onMouseOut={e => e.currentTarget.style.background = 'none'}
               >
-                🏆 Pool History
+                <span aria-hidden="true">🏆</span> Pool History
               </a>
             </div>
           )}

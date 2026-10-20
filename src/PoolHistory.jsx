@@ -64,7 +64,7 @@ function PoolRow({ pool, lines }) {
           ? { background: GOLD, color: '#0F0E0C' }
           : { border: '1px solid rgba(201,168,76,0.35)', color: GOLD }),
       }}>
-        <span className="ph-cta-label">{isLive ? 'Open pool ' : 'Final results '}</span>→
+        <span className="ph-cta-label">{isLive ? 'Open pool ' : 'Final results '}</span><span aria-hidden="true">→</span>
       </span>
     </a>
   )

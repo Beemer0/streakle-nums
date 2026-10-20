@@ -6,6 +6,7 @@ import { useSeo, PAGE_SEO } from './seo'
 import { scoreEvent, eventRanking, deriveBelt, formRanking, METHOD_LABELS, POINTS } from './octagon/scoring'
 import { fetchResults, parsePasted, matchFights } from './octagon/wiki'
 import { clickableProps } from './a11y'
+import { refreshPoolMemberships } from './usePoolMemberships'
 
 const GOLD = '#C9A84C', CARD = '#1C1A16', BORDER = '#2C2820', INK = '#F5F0E8', MUTED = '#7A6E5F'
 const GREEN = '#86EFAC', RED = '#FCA5A5'
@@ -124,6 +125,7 @@ export default function Octagon() {
     if (error || data !== true) { setJoinState('bad'); return }
     setJoinState('idle')
     setCode('')
+    refreshPoolMemberships() // the account menu's Pool History item
     await loadAll()
   }
 

@@ -4,6 +4,7 @@ import { act } from 'react'
 import { createRoot } from 'react-dom/client'
 import { MemoryRouter, Routes, Route } from 'react-router-dom'
 import { AuthContext } from './AuthContext'
+import { POOLS } from './pools'
 
 // The World Cup archive as pool_archive returns it to its members.
 const ARCHIVES = [{
@@ -18,20 +19,29 @@ const ARCHIVES = [{
 }]
 
 // Which pools the signed-in user belongs to, as is_member_of answers; the
-// archive read mirrors its members-only RLS.
+// archive read mirrors its members-only RLS. rpcGate, when set, holds every
+// is_member_of answer back until it resolves.
 let memberOf = {}
 let rpcError = null
 let archiveError = null
+let rpcGate = null
+let rpcCalls = 0
 vi.mock('./supabase', () => ({
   supabase: {
-    rpc: (name, args) => Promise.resolve(rpcError
-      ? { data: null, error: rpcError }
-      : { data: name === 'is_member_of' && !!memberOf[args.pool], error: null }),
+    rpc: (name, args) => {
+      rpcCalls += 1
+      const answer = () => (rpcError
+        ? { data: null, error: rpcError }
+        : { data: name === 'is_member_of' && !!memberOf[args.pool], error: null })
+      return rpcGate ? rpcGate.then(answer) : Promise.resolve(answer())
+    },
     from: (table) => {
       const rows = table === 'pool_archive' ? ARCHIVES.filter(a => memberOf[a.pool_id]) : []
-      const result = archiveError ? { data: null, error: archiveError } : { data: rows, error: null }
-      const chain = { then: (resolve) => resolve(result) }
-      chain.select = () => chain
+      const result = archiveError && table === 'pool_archive'
+        ? { data: null, error: archiveError }
+        : { data: rows, error: null }
+      const chain = { then: (resolve, reject) => Promise.resolve(result).then(resolve, reject) }
+      for (const m of ['select', 'eq']) chain[m] = () => chain
       return chain
     },
   },
@@ -39,36 +49,49 @@ vi.mock('./supabase', () => ({
 
 const { default: PoolHistory } = await import('./PoolHistory.jsx')
 const { default: UserMenu } = await import('./UserMenu.jsx')
+const { default: Home } = await import('./Home.jsx')
+const { refreshPoolMemberships } = await import('./usePoolMemberships.js')
 
-// Memberships are cached per user for the page load, so every test signs in
-// as someone new unless it needs a specific standings row.
 let nextId = 0
 const newUser = (id = `u-${++nextId}`) => ({ id, email: `${id}@example.com`, user_metadata: {} })
 
+const flush = () => act(async () => { await new Promise(r => setTimeout(r, 0)) })
+
 let host, root
+function tree(user, page) {
+  return (
+    <AuthContext.Provider value={{ user, signOut: () => {} }}>
+      <MemoryRouter initialEntries={['/pools']}>
+        <Routes>
+          <Route path="/pools" element={page} />
+          <Route path="/" element={<p>Home page</p>} />
+        </Routes>
+      </MemoryRouter>
+    </AuthContext.Provider>
+  )
+}
 async function render(user, page = <PoolHistory />) {
   host = document.createElement('div')
   document.body.appendChild(host)
   root = createRoot(host)
-  await act(async () => {
-    root.render(
-      <AuthContext.Provider value={{ user, signOut: () => {} }}>
-        <MemoryRouter initialEntries={['/pools']}>
-          <Routes>
-            <Route path="/pools" element={page} />
-            <Route path="/" element={<p>Home page</p>} />
-          </Routes>
-        </MemoryRouter>
-      </AuthContext.Provider>,
-    )
-  })
-  await act(async () => { await new Promise(r => setTimeout(r, 0)) })
+  await act(async () => { root.render(tree(user, page)) })
+  await flush()
+}
+// Same root, new props: components stay mounted (a sign-in switch, say).
+async function rerender(user, page = <PoolHistory />) {
+  await act(async () => { root.render(tree(user, page)) })
+  await flush()
 }
 const text = () => host.textContent
 const links = () => [...host.querySelectorAll('main a')].map(a => [a.getAttribute('href'), a.textContent])
 const headings = () => [...host.querySelectorAll('h2')].map(h => h.textContent)
+const POOL_NAMES = /Octagon|World Cup|Mehdi/
 
-beforeEach(() => { memberOf = {}; rpcError = null; archiveError = null })
+// Each test starts from a fresh page load: no cached memberships.
+beforeEach(() => {
+  memberOf = {}; rpcError = null; archiveError = null; rpcGate = null; rpcCalls = 0
+  refreshPoolMemberships()
+})
 afterEach(() => { act(() => root.unmount()); host.remove() })
 
 describe('Pool History page', () => {
@@ -119,7 +142,8 @@ describe('Pool History page', () => {
     await render(newUser())
     expect(host.querySelector('[role="alert"]').textContent).toContain('Couldn\'t load this page')
     expect([...host.querySelectorAll('button')].map(b => b.textContent)).toContain('Try again')
-    expect(text()).not.toMatch(/Octagon|World Cup|Pool History/i)
+    expect(text()).not.toMatch(POOL_NAMES)
+    expect(text()).not.toMatch(/Pool History/i)
     quiet.mockRestore()
   })
 
@@ -165,5 +189,97 @@ describe('account menu', () => {
   it('renders nothing for guests', async () => {
     await render(null, <UserMenu />)
     expect(host.innerHTML).toBe('')
+  })
+
+  it('hands focus back to the avatar when Escape closes it', async () => {
+    memberOf = { wc2026: true }
+    await render(newUser(), <UserMenu />)
+    await openMenu()
+    poolLink().focus()
+    await act(async () => { window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' })) })
+    expect(poolLink()).toBeUndefined()
+    expect(document.activeElement).toBe(host.querySelector('[aria-label="Account menu"]'))
+  })
+
+  it('adds the item after an in-page join, once memberships refresh', async () => {
+    await render(newUser(), <UserMenu />)
+    await openMenu()
+    expect(poolLink()).toBeUndefined()
+    memberOf = { octagon: true }
+    await act(async () => { refreshPoolMemberships() })
+    await flush()
+    expect(poolLink().getAttribute('href')).toBe('/pools')
+  })
+
+  it('never shows one user\'s pools to the next', async () => {
+    memberOf = { wc2026: true }
+    await render(newUser(), <UserMenu />)
+    await openMenu()
+    expect(poolLink()).toBeDefined()
+    memberOf = {}
+    let release
+    rpcGate = new Promise(r => { release = r })
+    await rerender(newUser(), <UserMenu />)
+    expect(poolLink()).toBeUndefined() // while the new user's lookup is pending
+    await act(async () => { release() })
+    await flush()
+    expect(poolLink()).toBeUndefined()
+  })
+})
+
+describe('membership lookup', () => {
+  it('names no pool until membership is known, even if the archive arrives first', async () => {
+    memberOf = { octagon: true, wc2026: true }
+    let release
+    rpcGate = new Promise(r => { release = r })
+    await render(newUser())
+    expect(host.querySelector('[role="status"]').textContent).toBe('Loading…')
+    expect(text()).not.toMatch(POOL_NAMES)
+    await act(async () => { release() })
+    await flush()
+    expect(headings()).toEqual(['Active', 'Past'])
+  })
+
+  it('asks once per page load, shared by the menu and the page', async () => {
+    memberOf = { wc2026: true }
+    const user = newUser()
+    await render(user) // PoolHistory plus its UserMenu
+    expect(rpcCalls).toBe(POOLS.length)
+    act(() => root.unmount()); host.remove()
+    await render(user)
+    expect(rpcCalls).toBe(POOLS.length)
+  })
+
+  it('asks again after a failed lookup', async () => {
+    const quiet = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const user = newUser()
+    rpcError = { message: 'network down' }
+    await render(user)
+    expect(host.querySelector('[role="alert"]')).not.toBeNull()
+    act(() => root.unmount()); host.remove()
+    rpcError = null
+    memberOf = { wc2026: true }
+    await render(user)
+    expect(headings()).toEqual(['Past'])
+    quiet.mockRestore()
+  })
+})
+
+describe('Home World Cup banner', () => {
+  const banner = () => [...host.querySelectorAll('a')].find(a => a.getAttribute('href') === '/bracket')
+
+  it('links World Cup members to the final results', async () => {
+    memberOf = { wc2026: true }
+    await render(newUser(), <Home />)
+    expect(banner().textContent).toContain('Final results')
+  })
+
+  it('stays hidden for Octagon-only members and guests', async () => {
+    memberOf = { octagon: true }
+    await render(newUser(), <Home />)
+    expect(banner()).toBeUndefined()
+    act(() => root.unmount()); host.remove()
+    await render(null, <Home />)
+    expect(banner()).toBeUndefined()
   })
 })
