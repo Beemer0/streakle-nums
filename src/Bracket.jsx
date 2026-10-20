@@ -64,6 +64,9 @@ function Flag({ code, size = 16 }) {
 // Clock that re-renders subscribers when the 30s bucket rolls over, so
 // kickoff locks flip without a reload. The granularity is fine — the lock
 // that matters is server-side (RLS checks kickoff_at > now()).
+// Match rows are read-only now (every match has kicked off), so picking is a no-op.
+const noop = () => {}
+
 const NOW_BUCKET_MS = 30000
 const subscribeClock = (cb) => {
   const t = setInterval(cb, 5000)
@@ -80,12 +83,9 @@ export default function Bracket() {
   const [roster, setRoster] = useState(null) // null = loading, [] = not a member
   const [matches, setMatches] = useState([])
   const [preds, setPreds] = useState([])
-  const [view, setView] = useState('picks')
-  const [code, setCode] = useState('')
-  const [joinState, setJoinState] = useState('idle') // idle | busy | bad
-  const [flash, setFlash] = useState(null)
+  const [archive, setArchive] = useState(null) // the frozen pool_archive row (members only)
+  const [view, setView] = useState('board')
   const [showRules, setShowRules] = useState(false)
-  const [confirmDay, setConfirmDay] = useState(null)
   const [openMatch, setOpenMatch] = useState(null)
   const [openStanding, setOpenStanding] = useState(null)
   const [openPastDays, setOpenPastDays] = useState(() => new Set()) // finished days the user re-opened
@@ -97,35 +97,25 @@ export default function Bracket() {
 
   const me = user && Array.isArray(roster) ? roster.find(r => r.user_id === user.id) : null
   const isMember = !!me
-  const isAdmin = !!me?.is_admin
 
+  // The pool ended with the 2026-07-19 final and is archived: one load, no
+  // polling (the results sync is switched off), nothing writable.
   const loadAll = useCallback(() => {
-    // For non-members RLS returns empty sets for all three — harmless.
+    // For non-members RLS returns empty sets for all four — harmless.
     return Promise.all([
       supabase.rpc('get_pool_members'),
       supabase.from('matches').select('*').order('kickoff_at'),
       supabase.from('predictions').select('user_id,match_id,pick,locked_at'),
-    ]).then(([r, m, p]) => {
+      supabase.from('pool_archive').select('tournament,standings,archived_at').eq('pool_id', 'wc2026').maybeSingle(),
+    ]).then(([r, m, p, a]) => {
       setRoster(r.data ?? [])
       setMatches(m.data ?? [])
       setPreds(p.data ?? [])
+      setArchive(a.data ?? null)
     })
   }, [])
 
   useEffect(() => { if (user) loadAll() }, [user, loadAll])
-
-  // Poll just the matches every 60s so live scores, results and tables refresh
-  // without a reload. (The sync writes to the DB on its own cron; this reads.)
-  useEffect(() => {
-    if (!user) return
-    const t = setInterval(() => {
-      supabase.from('matches').select('*').order('kickoff_at')
-        .then(({ data }) => { if (data) setMatches(data) })
-    }, 60000)
-    return () => clearInterval(t)
-  }, [user])
-
-  const showFlash = (msg) => { setFlash(msg); setTimeout(() => setFlash(null), 2500) }
 
   const myPicks = useMemo(() => {
     const map = {}
@@ -173,13 +163,29 @@ export default function Bracket() {
 
   const onTeam = useCallback((code) => { if (code) setHistoryTeam(code) }, [])
 
+  // Final standings come from the frozen snapshot, so they never change even
+  // if a member later deletes their account (their picks would cascade away).
+  // Avatars still come from the live roster. Without a snapshot, compute live.
   const standings = useMemo(() => {
     if (!Array.isArray(roster)) return []
+    const avatar = new Map(roster.map(r => [r.user_id, r.avatar_url]))
+    if (Array.isArray(archive?.standings)) {
+      return archive.standings.map(s => ({
+        user_id: s.user_id, display_name: s.name, avatar_url: avatar.get(s.user_id) ?? null,
+        rank: s.rank, total: s.points, correct: s.correct, byStage: s.by_stage ?? {},
+      }))
+    }
     const totals = score(preds, matches)
-    return roster
+    const sorted = roster
       .map(r => ({ ...r, ...(totals[r.user_id] ?? { total: 0, correct: 0, byStage: {} }) }))
       .sort((a, b) => b.total - a.total || b.correct - a.correct)
-  }, [roster, preds, matches])
+    // Ties (same points and correct picks) share a rank: 1, 2, 2, 4.
+    let rank = 0
+    return sorted.map((s, i) => {
+      if (i === 0 || s.total !== sorted[i - 1].total || s.correct !== sorted[i - 1].correct) rank = i + 1
+      return { ...s, rank }
+    })
+  }, [roster, preds, matches, archive])
 
   const matchById = useMemo(() => new Map(matches.map(m => [m.id, m])), [matches])
 
@@ -237,67 +243,6 @@ export default function Bracket() {
     return out
   }, [preds, matchById, now])
 
-  const handleJoin = async (e) => {
-    e.preventDefault()
-    if (!code.trim() || joinState === 'busy') return
-    setJoinState('busy')
-    const { data, error } = await supabase.rpc('join_pool', { code: code.trim() })
-    if (error || data !== true) { setJoinState('bad'); return }
-    setJoinState('idle')
-    setCode('')
-    await loadAll()
-  }
-
-  const savePick = async (m, pick) => {
-    if (!user) return
-    if (myLocked.has(m.id)) { showFlash('That pick is locked in — no changes') ; return }
-    const prev = preds
-    setPreds(ps => [
-      ...ps.filter(p => !(p.user_id === user.id && p.match_id === m.id)),
-      { user_id: user.id, match_id: m.id, pick },
-    ])
-    const { error } = await supabase.from('predictions').upsert(
-      { user_id: user.id, match_id: m.id, pick, updated_at: new Date().toISOString() },
-      { onConflict: 'user_id,match_id' },
-    )
-    if (error) {
-      setPreds(prev)
-      showFlash('Could not save — this match may already be locked')
-    }
-  }
-
-  // Locks every draft pick for the given matches — RLS makes the rows
-  // immutable from then on, so this is enforced server-side, not just here.
-  const lockPicks = async (ids) => {
-    const stamp = new Date().toISOString()
-    const { error } = await supabase.from('predictions')
-      .update({ locked_at: stamp })
-      .eq('user_id', user.id)
-      .is('locked_at', null)
-      .in('match_id', ids)
-    if (error) { showFlash(`Could not lock: ${error.message}`); return }
-    setPreds(ps => ps.map(p =>
-      p.user_id === user.id && ids.includes(p.match_id) && !p.locked_at
-        ? { ...p, locked_at: stamp }
-        : p
-    ))
-    setConfirmDay(null)
-  }
-
-  const handleLockDay = (day, ids) => {
-    if (confirmDay === day) { lockPicks(ids); return }
-    setConfirmDay(day)
-    setTimeout(() => setConfirmDay(c => (c === day ? null : c)), 3500)
-  }
-
-  const setResult = async (m, result) => {
-    const { error } = await supabase.from('matches')
-      .update({ result, result_source: 'admin', updated_at: new Date().toISOString() })
-      .eq('id', m.id)
-    if (error) showFlash(`Update failed: ${error.message}`)
-    else setMatches(ms => ms.map(x => x.id === m.id ? { ...x, result, result_source: 'admin' } : x))
-  }
-
   // Others' picks only become visible post-kickoff via RLS, so a page left open
   // since before kickoff needs a refetch when a match is expanded. Render cached
   // picks immediately; the fresh rows land async. Guard against an empty/failed
@@ -327,7 +272,7 @@ export default function Bracket() {
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: 2 }}>
         <h1 style={{ fontSize: 32, fontWeight: 900, letterSpacing: 2, color: '#fff', margin: 0 }}>BRACKET</h1>
         <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: 3, color: GOLD, textTransform: 'uppercase', marginTop: 2 }}>
-          World Cup 2026 · by Streakle
+          World Cup 2026 · Final results
         </div>
         <button onClick={() => setShowRules(true)} style={{ background: 'none', border: `1px solid ${BORDER}`, borderRadius: 6, color: GOLD, cursor: 'pointer', fontSize: 12, padding: '3px 12px', marginTop: 8 }}>
           📖 Rules
@@ -345,11 +290,6 @@ export default function Bracket() {
   const page = (children) => (
     <main style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', color: INK, position: 'relative' }}>
       {header}
-      {flash && (
-        <div style={{ position: 'fixed', top: 80, left: '50%', transform: 'translateX(-50%)', background: CARD, border: `1px solid ${BORDER}`, borderRadius: 8, padding: '8px 20px', fontSize: 14, fontWeight: 600, color: '#FCA5A5', zIndex: 50, animation: 'slideUp 0.3s ease', whiteSpace: 'nowrap' }}>
-          {flash}
-        </div>
-      )}
       {children}
       {footer}
       {showRules && <RulesModal onClose={() => setShowRules(false)} />}
@@ -364,7 +304,7 @@ export default function Bracket() {
         <div style={{ fontSize: 32, marginBottom: 10 }}>⚽</div>
         <div style={{ fontSize: 18, fontWeight: 700, color: '#fff', marginBottom: 8 }}>Private prediction pool</div>
         <div style={{ fontSize: 13, color: MUTED, marginBottom: 24, lineHeight: 1.6 }}>
-          Pick winners for every World Cup match and battle your friends on the leaderboard. Sign in to join.
+          The World Cup 2026 pool has ended. Members can sign in to see the final standings and everyone's picks.
         </div>
         <a href="/login" style={{ display: 'block', background: GOLD, color: '#0F0E0C', borderRadius: 8, padding: '11px 24px', fontSize: 14, fontWeight: 700, textDecoration: 'none' }}>
           Sign in
@@ -378,43 +318,48 @@ export default function Bracket() {
     return page(<div style={{ marginTop: 64, fontSize: 14, color: MUTED }}>Loading the pool…</div>)
   }
 
-  // ── Signed in, not a member ──
+  // ── Signed in, not a member: registration is closed ──
   if (!isMember) {
     return page(
-      <form onSubmit={handleJoin} style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 16, padding: '36px 32px', maxWidth: 340, width: '90%', textAlign: 'center', marginTop: 48, animation: joinState === 'bad' ? 'shake 0.45s ease' : 'slideUp 0.4s ease' }}>
-        <div style={{ fontSize: 32, marginBottom: 10 }}>⚽</div>
-        <div style={{ fontSize: 18, fontWeight: 700, color: '#fff', marginBottom: 8 }}>Join the pool</div>
-        <div style={{ fontSize: 13, color: MUTED, marginBottom: 20, lineHeight: 1.6 }}>
-          Enter the invite code you got from the pool admin.
+      <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 16, padding: '36px 32px', maxWidth: 340, width: '90%', textAlign: 'center', marginTop: 48, animation: 'slideUp 0.4s ease' }}>
+        <div style={{ fontSize: 32, marginBottom: 10 }}>🏁</div>
+        <div style={{ fontSize: 18, fontWeight: 700, color: '#fff', marginBottom: 8 }}>This pool has ended</div>
+        <div style={{ fontSize: 13, color: MUTED, lineHeight: 1.6 }}>
+          The World Cup 2026 pool closed after the final. Its results are visible to members only.
         </div>
-        <input
-          value={code}
-          onChange={e => { setCode(e.target.value); if (joinState === 'bad') setJoinState('idle') }}
-          placeholder="Invite code"
-          autoFocus
-          style={{ width: '100%', boxSizing: 'border-box', background: '#0F0E0C', border: `2px solid ${joinState === 'bad' ? '#e94560' : BORDER}`, borderRadius: 8, color: '#fff', fontSize: 15, padding: '10px 14px', outline: 'none', textAlign: 'center', letterSpacing: 1, marginBottom: 8 }}
-        />
-        {joinState === 'bad' && <div style={{ fontSize: 12, color: '#FCA5A5', marginBottom: 8 }}>Wrong code — try again</div>}
-        <button type="submit" disabled={!code.trim() || joinState === 'busy'} style={{ width: '100%', background: code.trim() ? GOLD : CARD, border: 'none', borderRadius: 8, padding: '11px 24px', fontSize: 14, fontWeight: 700, color: code.trim() ? '#0F0E0C' : '#555', cursor: code.trim() ? 'pointer' : 'default', transition: 'background 0.2s' }}>
-          {joinState === 'busy' ? 'Joining…' : 'Join'}
-        </button>
-      </form>
+      </div>
     )
   }
 
-  // ── Member ──
-  const upcoming = matches.filter(m => !m.excluded && new Date(m.kickoff_at).getTime() > now && m.team_a_locked && m.team_b_locked)
-  const pickedCount = upcoming.filter(m => myPicks[m.id]).length
-
+  // ── Member: the archived results ──
   const tabs = [
-    ['picks', 'Picks'],
     ['board', 'Standings'],
+    ['picks', 'My picks'],
     ['tournament', 'Tournament'],
-    ...(isAdmin ? [['admin', 'Admin']] : []),
   ]
+  const champions = standings.filter(s => s.rank === 1)
+  const cup = archive?.tournament
+  const myScored = pickDays.reduce((n, d) => n + d.scored, 0)
+  const myCorrect = pickDays.reduce((n, d) => n + d.correct, 0)
 
   return page(
     <>
+      {champions.length > 0 && (
+        <div style={{ background: 'rgba(201,168,76,0.08)', border: '1px solid rgba(201,168,76,0.3)', borderRadius: 12, padding: '14px 20px', marginTop: 14, maxWidth: 420, width: '90%', boxSizing: 'border-box', textAlign: 'center', animation: 'slideUp 0.4s ease' }}>
+          <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 2, color: GOLD, textTransform: 'uppercase' }}>🏆 Pool champion</div>
+          <div style={{ fontSize: 20, fontWeight: 800, color: INK, marginTop: 4 }}>
+            {champions.map(s => s.display_name ?? 'Player').join(' & ')}
+          </div>
+          <div style={{ fontSize: 13, color: MUTED, marginTop: 2 }}>{champions[0].total} points · {champions[0].correct} correct picks</div>
+          {cup?.champion && (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, flexWrap: 'wrap', fontSize: 12, color: '#A89880', marginTop: 10, paddingTop: 10, borderTop: `1px solid ${BORDER}` }}>
+              World Cup won by <Flag code={cup.champion} size={14} /> <b style={{ color: INK }}>{cup.champion}</b>
+              {cup.runner_up && <>· {cup.final_score} vs <Flag code={cup.runner_up} size={14} /> {cup.runner_up}</>}
+            </div>
+          )}
+        </div>
+      )}
+
       <div style={{ display: 'flex', gap: 8, marginTop: 14, marginBottom: 18 }}>
         {tabs.map(([key, label]) => (
           <button key={key} onClick={() => setView(key)} style={{
@@ -431,24 +376,17 @@ export default function Bracket() {
 
       {matches.length === 0 && (
         <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 12, padding: '20px 24px', maxWidth: 420, width: '90%', textAlign: 'center', fontSize: 13, color: MUTED, lineHeight: 1.65 }}>
-          The match schedule hasn't been synced yet.
-          {isAdmin && <> Deploy and invoke the <b style={{ color: GOLD }}>sync-matches</b> Edge Function to seed it — see <b style={{ color: GOLD }}>supabase/schema.sql</b>.</>}
+          Couldn't load the matches — try reloading the page.
         </div>
       )}
 
       {view === 'picks' && matches.length > 0 && (
         <div style={{ width: '100%', maxWidth: 560, padding: '0 12px', boxSizing: 'border-box' }}>
           <div style={{ textAlign: 'center', fontSize: 12, color: MUTED, marginBottom: 14 }}>
-            {upcoming.length > 0
-              ? <>You've picked <b style={{ color: GOLD }}>{pickedCount}</b> of <b style={{ color: GOLD }}>{upcoming.length}</b> open matches</>
-              : 'No open matches right now'}
+            You got <b style={{ color: GOLD }}>{myCorrect}</b> of <b style={{ color: GOLD }}>{myScored}</b> scored picks right · tap a day, then a match to see everyone's picks
             {TZ_ABBR && <div style={{ fontSize: 11, color: '#5A5040', marginTop: 3 }}>Kickoff times shown in {TZ_ABBR} (your local time)</div>}
           </div>
           {pickDays.map(({ day, dayMatches, isPast, scored, correct }) => {
-            const lockable = dayMatches
-              .filter(m => myPicks[m.id] && !myLocked.has(m.id) && !m.excluded && !m.result
-                && new Date(m.kickoff_at).getTime() > now)
-              .map(m => m.id)
             const collapsed = isPast && !openPastDays.has(day)
             const isCurrent = day === currentDayLabel
             const nMatch = `${dayMatches.length} match${dayMatches.length !== 1 ? 'es' : ''}`
@@ -482,7 +420,7 @@ export default function Bracket() {
                 )}
                 {dayMatches.map(m => (
                   <MatchRow
-                    key={m.id} m={m} myPick={myPicks[m.id]} lockedIn={myLocked.has(m.id)} now={now} onPick={savePick}
+                    key={m.id} m={m} myPick={myPicks[m.id]} lockedIn={myLocked.has(m.id)} now={now} onPick={noop}
                     expanded={openMatch === m.id}
                     onToggle={() => toggleMatch(m)}
                     roster={roster}
@@ -491,20 +429,6 @@ export default function Bracket() {
                     onTeam={onTeam}
                   />
                 ))}
-                {lockable.length > 0 && (
-                  <button onClick={() => handleLockDay(day, lockable)} style={{
-                    width: '100%', marginTop: 2, padding: '9px 12px',
-                    background: confirmDay === day ? GOLD : 'none',
-                    border: `1px solid ${confirmDay === day ? GOLD : BORDER}`,
-                    borderRadius: 8, color: confirmDay === day ? '#0F0E0C' : GOLD,
-                    fontSize: 12, fontWeight: 700, letterSpacing: 0.5, cursor: 'pointer',
-                    transition: 'background 0.15s',
-                  }}>
-                    {confirmDay === day
-                      ? `Tap again to lock ${lockable.length} pick${lockable.length !== 1 ? 's' : ''} — can't be undone`
-                      : `🔒 Lock in ${lockable.length} pick${lockable.length !== 1 ? 's' : ''} for this day`}
-                  </button>
-                )}
               </div>
             )
           })}
@@ -527,8 +451,8 @@ export default function Bracket() {
                 {...(expandable ? { ...clickableProps(() => setOpenStanding(c => c === s.user_id ? null : s.user_id)), 'aria-expanded': open } : {})}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <div style={{ width: 24, fontSize: 15, fontWeight: 800, color: i === 0 ? GOLD : MUTED, textAlign: 'center' }}>
-                    {i === 0 ? '👑' : i + 1}
+                  <div style={{ width: 24, fontSize: 15, fontWeight: 800, color: s.rank === 1 ? GOLD : MUTED, textAlign: 'center' }}>
+                    {s.rank === 1 ? '👑' : s.rank}
                   </div>
                   {s.avatar_url
                     ? <img src={s.avatar_url} alt="" width={28} height={28} style={{ borderRadius: '50%', flexShrink: 0 }} referrerPolicy="no-referrer" />
@@ -541,7 +465,7 @@ export default function Bracket() {
                     </div>
                     <div style={{ fontSize: 11, color: MUTED }}>{s.correct} correct</div>
                   </div>
-                  <div style={{ fontSize: 20, fontWeight: 800, color: i === 0 ? GOLD : INK }}>{s.total}</div>
+                  <div style={{ fontSize: 20, fontWeight: 800, color: s.rank === 1 ? GOLD : INK }}>{s.total}</div>
                   {expandable && (
                     <div style={{ color: MUTED, fontSize: 13, marginLeft: 2, flexShrink: 0 }}>{open ? '▴' : '▾'}</div>
                   )}
@@ -552,24 +476,8 @@ export default function Bracket() {
           })}
           <div style={{ textAlign: 'center', fontSize: 11, color: '#5A5040', marginTop: 14, lineHeight: 1.7 }}>
             Group 1 · R32 2 · R16 3 · QF 5 · SF 8 · 3rd place 5 · Final 12 points per correct pick.
-            <br />Other players' picks are visible only after kickoff.
+            {archive?.archived_at && <><br />Final standings, frozen {new Date(archive.archived_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}.</>}
           </div>
-        </div>
-      )}
-
-      {view === 'admin' && isAdmin && (
-        <div style={{ width: '100%', maxWidth: 560, padding: '0 12px', boxSizing: 'border-box' }}>
-          <div style={{ textAlign: 'center', fontSize: 12, color: MUTED, marginBottom: 14, lineHeight: 1.6 }}>
-            Results sync automatically every 5 minutes. Grading here overrides the API for that match — for fixing wrong or stuck scores.
-          </div>
-          {days.map(([day, dayMatches]) => (
-            <div key={day} style={{ marginBottom: 22 }}>
-              <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 17, fontWeight: 800, letterSpacing: 1, color: INK, marginBottom: 8, borderBottom: `1px solid ${BORDER}`, paddingBottom: 4 }}>
-                {day}
-              </div>
-              {dayMatches.map(m => <AdminRow key={m.id} m={m} onSet={setResult} />)}
-            </div>
-          ))}
         </div>
       )}
 
@@ -987,42 +895,6 @@ function RulesModal({ onClose }) {
           automatically a few minutes after full-time. Matches marked
           <b> "Not scored"</b> don't count for anyone.
         </p>
-      </div>
-    </div>
-  )
-}
-
-function AdminRow({ m, onSet }) {
-  const options = m.stage === 'group' ? ['a', 'draw', 'b'] : ['a', 'b']
-  const label = { a: m.team_a ?? 'A', draw: 'Draw', b: m.team_b ?? 'B' }
-  return (
-    <div className="bk-row" style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 10, padding: '8px 12px', marginBottom: 6 }}>
-      <div className="bk-time">
-        <div className="bk-kick" style={{ fontSize: 12, fontWeight: 700, color: INK }}>{fmtTime(m.kickoff_at)}</div>
-        <div className="bk-badge" style={{ fontSize: 10, fontWeight: 700, color: GOLD, textTransform: 'uppercase', letterSpacing: 0.5 }}>{stageBadge(m)}</div>
-      </div>
-      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, fontSize: 13, fontWeight: 700, color: INK }}>
-        <Flag code={m.team_a} size={14} /> {m.team_a ?? 'TBD'}
-        <span style={{ color: MUTED, fontWeight: 400 }}>vs</span>
-        {m.team_b ?? 'TBD'} <Flag code={m.team_b} size={14} />
-      </div>
-      <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-        {options.map(key => (
-          <button key={key} onClick={() => onSet(m, key)} style={{
-            padding: '5px 8px',
-            background: m.result === key ? 'rgba(134,239,172,0.12)' : '#0F0E0C',
-            border: `1px solid ${m.result === key ? '#4caf50' : BORDER}`,
-            borderRadius: 6, color: m.result === key ? '#86EFAC' : MUTED,
-            fontSize: 11, fontWeight: 700, cursor: 'pointer',
-          }}>
-            {label[key]}
-          </button>
-        ))}
-        {m.result && (
-          <span style={{ fontSize: 9, fontWeight: 700, color: m.result_source === 'admin' ? '#FCA5A5' : MUTED, textTransform: 'uppercase', letterSpacing: 0.5, marginLeft: 4 }}>
-            {m.result_source}
-          </span>
-        )}
       </div>
     </div>
   )

@@ -53,38 +53,36 @@ A full code audit + fix pass: bug fixes, route code-splitting, accessibility
 security headers, a generated OG image, and a Vitest test foundation. All
 verified working on the live site.
 
-## World Cup 2026 bracket pool (`/bracket`)
+## World Cup 2026 bracket pool (`/bracket`) — ARCHIVED 2026-10-20
 A private prediction pool for the owner's friends — the site's first multi-user
-feature. Members join with an invite code, pick winners for every WC 2026 match
-(a/b/draw in groups, a/b in knockouts), and are ranked on a leaderboard
-(points: group 1, R32 2, R16 3, QF 5, SF 8, 3rd-place 5, final 12 —
-`src/bracket/scoring.js`, tested).
+feature. 8 members picked winners for every WC 2026 match (a/b/draw in
+groups, a/b in knockouts); points: group 1, R32 2, R16 3, QF 5, SF 8,
+3rd-place 5, final 12 (`src/bracket/scoring.js`, tested). The pool ended with
+the 2026-07-19 final (ESP 1–0 ARG); Mehdi Saeed won it with 113 points.
 
-- UI: `src/Bracket.jsx` (signed-out / join-with-code / picks / standings /
-  tournament / admin-override views). Members-only banner on Home. `noindex` via
-  `PAGE_SEO`. Picks auto-collapses finished days; Standings expands per-player
-  pick history; Tournament has live Groups tables (ranked pts/GD/GF, top-2 +
-  best-8 thirds) and a stacked-rounds Bracket — all computed client-side from
-  the loaded matches. `matches.score_a/score_b` (running/final score) +
-  `matches.status` (TIMED/IN_PLAY/PAUSED/FINISHED) from the sync feed goal
-  difference, scorelines, and a LIVE badge on in-progress matches. The client
-  polls matches every 60s; the sync cron runs every 2 min for fresh live scores.
-- DB: `supabase/schema.sql` — `pool_members`, `matches`, `predictions`,
-  `pool_config` + RLS. Joining goes ONLY through the `join_pool(code)`
-  SECURITY DEFINER RPC (no INSERT policy on `pool_members` — that's deliberate;
-  don't add one). `get_pool_members()` RPC returns the roster with names.
-  Picks lock at kickoff server-side (RLS checks `kickoff_at > now()`).
-  Players can also "lock in" a matchday's picks early (`predictions.locked_at`;
-  the RLS update policy makes locked rows immutable).
-  `matches.excluded = true` takes a match out of the pool entirely (unpickable,
-  never scored) — used for the June 11 2026 openers, which kicked off before
-  the friends joined; the pool starts June 12. The sync never writes this column.
-- Results sync automatically: `supabase/functions/sync-matches/index.ts` (Edge
-  Function) pulls football-data.org every 5 min via pg_cron (setup commented at
-  the bottom of schema.sql; needs the `FOOTBALL_DATA_TOKEN` secret). Admin
-  grading in the UI sets `result_source='admin'`, which the sync never
-  overwrites. First admin is flipped manually:
-  `update pool_members set is_admin = true where user_id = '<uid>'`.
+**It is now a read-only results page.** Nothing writes to it any more:
+- The results sync is off: the pg_cron job was unscheduled and the
+  `sync-matches` Edge Function + `FOOTBALL_DATA_TOKEN` secret deleted (the
+  source stays in `supabase/functions/sync-matches` for a future pool).
+- Registration is closed: the `wc2026` invite-code row in `pool_config` is
+  deleted, so both `join_pool` overloads refuse it, and the World Cup-only
+  `join_pool(code)` function is dropped. Don't re-add an INSERT policy on
+  `pool_members` — Octagon's `join_pool(pool, code)` is still the only way in.
+- Results are frozen: the admin-override policy on `matches` is dropped;
+  picks were already immutable (every match has kicked off).
+- `pool_archive` (members-only RLS via `is_member_of`) holds the final
+  standings and tournament result, computed once with `scoring.js`. The
+  Standings tab reads it rather than recomputing, so the record survives a
+  member deleting their account (their predictions cascade away).
+- `src/Bracket.jsx`: champion banner; Standings (per-player pick history),
+  My picks (read-only, collapsed by day, tap a match for everyone's picks)
+  and Tournament (group tables + bracket). No polling, no join form, no admin
+  view. Non-members see "This pool has ended". Home shows members a
+  "World Cup 2026 Pool · Final results" link. Still `noindex`.
+- Tables kept as-is: `pool_members` (wc2026 rows), `matches`, `predictions`.
+  `supabase/schema.sql` documents the original schema plus an "Archive"
+  section with everything above. An off-site CSV export (standings, matches,
+  picks) went to the owner's machine — not the repo, which is public.
 
 ## Octagon — UFC PPV pick'em (`/octagon`)
 A second private pool (pool_id `'octagon'`) on the same

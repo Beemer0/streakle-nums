@@ -213,7 +213,7 @@ export default function Home() {
         New puzzles every day
       </div>
 
-      {/* ── World Cup pool (members only) ── */}
+      {/* ── World Cup pool results (members only; the pool is archived) ── */}
       {user && inPool && (
         <a href="/bracket" style={{
           width: '100%', maxWidth: 820, boxSizing: 'border-box',
@@ -223,8 +223,8 @@ export default function Home() {
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           textDecoration: 'none', animation: 'fadeIn 0.5s ease',
         }}>
-          <span style={{ fontSize: 14, fontWeight: 700, color: '#F5F0E8' }}>⚽ World Cup 2026 Pool</span>
-          <span style={{ fontSize: 12, fontWeight: 700, color: '#C9A84C' }}>Make your picks →</span>
+          <span style={{ fontSize: 14, fontWeight: 700, color: '#F5F0E8' }}>🏆 World Cup 2026 Pool</span>
+          <span style={{ fontSize: 12, fontWeight: 700, color: '#C9A84C' }}>Final results →</span>
         </a>
       )}
 

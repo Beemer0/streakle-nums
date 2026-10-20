@@ -138,7 +138,7 @@ export const PAGE_SEO = {
   bracket: {
     title: 'World Cup 2026 Pool | Streakle',
     description:
-      'A private World Cup 2026 prediction pool — pick winners for every match and climb the leaderboard.',
+      'The final standings of a private World Cup 2026 prediction pool — every pick, every result.',
     path: '/bracket',
     noindex: true, // private pool — keep it out of search results
   },

@@ -1,6 +1,9 @@
 -- ════════════════════════════════════════════════════════════════════════════
 -- World Cup 2026 bracket pool — schema, helpers, RLS
 -- Paste this whole file into the Supabase SQL editor and run it once.
+--
+-- ARCHIVED 2026-10-20: the pool is closed and read-only. See the "Archive"
+-- section at the bottom for what was switched off and the pool_archive table.
 -- ════════════════════════════════════════════════════════════════════════════
 
 -- ── Tables ──────────────────────────────────────────────────────────────────
@@ -173,3 +176,46 @@ create policy pc_none on pool_config for select using (false);
 --      $$);
 --
 --    To stop after the final: select cron.unschedule('sync-matches');
+
+-- ════════════════════════════════════════════════════════════════════════════
+-- Archive (applied 2026-10-20, after the 2026-07-19 final)
+-- ════════════════════════════════════════════════════════════════════════════
+-- The pool is over. Every statement below is scoped to wc2026 — the Octagon
+-- pool shares pool_members / pool_config and is untouched.
+--
+-- 1. Results sync switched off: the cron job was unscheduled, and the
+--    sync-matches Edge Function and its FOOTBALL_DATA_TOKEN secret deleted
+--    (the source stays in supabase/functions/sync-matches for reuse).
+--      select cron.unschedule('sync-matches');
+--      npx supabase functions delete sync-matches
+--      npx supabase secrets unset FOOTBALL_DATA_TOKEN
+--
+-- 2. Registration ended: the invite code row is gone, so join_pool(code) and
+--    join_pool('wc2026', code) both find no code and return false; the
+--    World Cup-only join_pool(code) function is then dropped.
+delete from pool_config where pool_id = 'wc2026';
+drop function if exists join_pool(text);  -- run once the read-only /bracket is live
+--
+-- 3. Results frozen: no more admin overrides. (Picks were already immutable —
+--    every match has kicked off.)
+drop policy if exists m_update_admin on matches;
+
+-- 4. A frozen record of the final standings, computed once with
+--    src/bracket/scoring.js. /bracket shows it instead of recomputing, so the
+--    result survives a member deleting their account (their predictions would
+--    cascade away) or a later scoring change.
+--    tournament: { champion, runner_up, final_score, final_date, third_place,
+--                  fourth_place, matches, scored_matches }
+--    standings:  [{ rank, user_id, name, points, correct, picks, by_stage }]
+create table if not exists pool_archive (
+  pool_id      text primary key,
+  title        text not null,
+  archived_at  timestamptz not null default now(),
+  tournament   jsonb not null,
+  standings    jsonb not null
+);
+alter table pool_archive enable row level security;
+drop policy if exists pa_select on pool_archive;
+create policy pa_select on pool_archive for select using (is_member_of(pool_id));
+-- (The wc2026 row itself was inserted from a production dump; no client can
+-- write to this table.)
