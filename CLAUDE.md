@@ -131,7 +131,9 @@ known. `noindex`.
   moves from Active to Past once it gets a `pool_archive` row — no code change.
 - `src/usePoolMemberships.js` asks `is_member_of(pool)` for each registered
   pool, cached per user per page load and shared by UserMenu, Home (the World
-  Cup banner) and PoolHistory. Not a `pool_members` select: that table's RLS
+  Cup banner) and PoolHistory. A pool's in-page join form must call
+  `refreshPoolMemberships()` after a successful join (Octagon's does), or the
+  menu item waits for the next page load. Not a `pool_members` select: that table's RLS
   is `is_pool_member()`, hard-scoped to `wc2026`, so World Cup members can read
   every pool's rows while an Octagon-only member reads none.
 
