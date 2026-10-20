@@ -193,7 +193,8 @@ letter words that fit inside it (aiming for one 6, two 5s, two 4s; at least
 two 5+). Players spell words from the letters in ANY order (tap or type,
 Enter); a found word fills its cells, and its letters show in crossing words.
 Guesses not on the board cost nothing — no fail state. A hint reveals one
-cell (+30 s) of the unfinished word with the fewest hidden cells; a word
+random hidden cell anywhere on the board (+30 s; the page passes
+Math.random into `nextHint`, so the engine stays deterministic); a word
 whose cells all fill in counts as found. Score = active time + hint penalty;
 `game_results.score` = seconds, `swaps_used` = hints, always `completed: true`.
 - `src/scramble/engine.js` is a pure ESM module (root/sub-word selection,

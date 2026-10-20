@@ -373,22 +373,23 @@ export function completeFound(puzzle, found, hinted) {
   return done.length ? [...found, ...done] : found
 }
 
-// The cell a hint reveals: the first hidden cell of the unfinished word with
-// the fewest hidden cells (ties → shorter word, then board order), so hints
-// help finish words rather than scatter letters. Null when nothing is hidden.
-export function nextHint(puzzle, revealed) {
-  const before = (a, b) => {
-    for (let j = 0; j < a.length; j++) if (a[j] !== b[j]) return a[j] < b[j]
-    return false
-  }
-  let best = null
-  puzzle.placements.forEach((p, i) => {
-    const hidden = cellsOf(p).filter(([r, c]) => !revealed.has(key(r, c)))
-    if (!hidden.length) return
-    const rank = [hidden.length, p.word.length, i]
-    if (!best || before(rank, best.rank)) best = { rank, cell: key(hidden[0][0], hidden[0][1]) }
-  })
-  return best?.cell ?? null
+// Every board cell not yet showing a letter, in reading order (row, then
+// column).
+export function hiddenCells(puzzle, revealed) {
+  return [...boardCells(puzzle).values()]
+    .filter(cell => !revealed.has(key(cell.r, cell.c)))
+    .sort((a, b) => a.r - b.r || a.c - b.c)
+    .map(cell => key(cell.r, cell.c))
+}
+
+// The cell a hint reveals: a random hidden cell anywhere on the board.
+// `rand` returns a number in [0, 1) — the page passes Math.random, tests a
+// fixed value — so the engine itself stays deterministic. Null when nothing
+// is hidden.
+export function nextHint(puzzle, revealed, rand) {
+  const hidden = hiddenCells(puzzle, revealed)
+  if (!hidden.length) return null
+  return hidden[Math.min(hidden.length - 1, Math.floor(rand() * hidden.length))]
 }
 
 // Seconds on the clock plus the hint penalty, as saved and shared.

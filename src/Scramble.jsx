@@ -63,6 +63,8 @@ const blurAfterClick = (e) => { if (e.detail > 0) e.currentTarget.blur() }
 // Wall-clock reads for the game clock. Only ever called from event handlers
 // and effects — never while rendering.
 const clockNow = () => Date.now()
+// Picks which hidden letter a hint reveals (the engine stays deterministic).
+const randomUnit = () => Math.random()
 
 const withCompleted = (pz, g) => {
   const found = completeFound(pz, g.found, g.hinted)
@@ -332,7 +334,7 @@ function ScrambleBoard({ seedDate, isToday, palette, keysBlocked }) {
   const hint = () => {
     if (done) return
     settleShake()
-    const cell = nextHint(pz, revealed)
+    const cell = nextHint(pz, revealed, randomUnit)
     if (!cell) return
     startClock()
     setGuess([])

@@ -3,8 +3,8 @@ import { WORDS } from './words.js'
 import {
   POOL_SIZE, BOARD_WORDS, MIN_LEN, MAX_ROWS, MAX_COLS, ACROSS, DOWN, FALLBACK, MIN_LONG_WORDS,
   BLOCK_EPOCH, ROOT_BLOCK_DAYS, WORD_BLOCK_DAYS, HINT_SECONDS,
-  mixSeed, generatePuzzle, spellable, subwords, cellsOf, boardCells, cellKey,
-  revealedCells, completedWords, completeFound, nextHint, scoreSeconds, formatTime, shareLine,
+  mulberry32, mixSeed, generatePuzzle, spellable, subwords, cellsOf, boardCells, cellKey,
+  revealedCells, completedWords, completeFound, hiddenCells, nextHint, scoreSeconds, formatTime, shareLine,
 } from './engine.js'
 
 const sig = w => [...w].sort().join('')
@@ -146,19 +146,23 @@ describe('play helpers', () => {
     expect(completeFound(LAUNCH, found, ['5,0', '6,0', '7,0'])).toEqual([iPatient, iPain])
   })
 
-  it('hints the word closest to finished, shortest first', () => {
+  it('hints a random hidden cell, anywhere on the board', () => {
     const iPatient = LAUNCH.words.indexOf('PATIENT')
-    // With PATIENT found, PANE (E given) and PAIN (P given) have 3 hidden
-    // cells each and 4 letters; PANE comes first on the board, so its first
-    // hidden cell, the P at the top, goes first.
     const revealed = revealedCells(LAUNCH, [iPatient], [])
-    expect(nextHint(LAUNCH, revealed)).toBe('1,4')
-    revealed.add('1,4'); revealed.add('2,4'); revealed.add('3,4')
-    // PANE done; its P is also PINE's first letter, so PINE and PAIN now tie
-    // at 3 hidden cells and PINE (earlier on the board) gets its I next.
-    expect(nextHint(LAUNCH, revealed)).toBe('1,5')
+    const hidden = hiddenCells(LAUNCH, revealed)
+    // The board has 22 cells; PATIENT shows 7 of them.
+    expect(hidden).toHaveLength(boardCells(LAUNCH).size - 7)
+    expect(hidden.some(k => revealed.has(k))).toBe(false)
+    expect(hidden[0]).toBe('0,2') // reading order: PAINT's top letter first
+    // rand picks by position in reading order; the ends are both reachable.
+    expect(nextHint(LAUNCH, revealed, () => 0)).toBe(hidden[0])
+    expect(nextHint(LAUNCH, revealed, () => 0.9999)).toBe(hidden.at(-1))
+    // Over many draws every hidden cell comes up, and nothing revealed does.
+    const rng = mulberry32(42)
+    const seen = new Set(Array.from({ length: 500 }, () => nextHint(LAUNCH, revealed, rng)))
+    expect([...seen].sort()).toEqual([...hidden].sort())
     const all = revealedCells(LAUNCH, LAUNCH.words.map((_, i) => i), [])
-    expect(nextHint(LAUNCH, all)).toBeNull()
+    expect(nextHint(LAUNCH, all, rng)).toBeNull()
   })
 
   it('scores time plus the hint penalty and formats it', () => {
