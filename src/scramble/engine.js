@@ -1,48 +1,49 @@
-// Scramble — the pure engine behind /scramble. No React, no DOM, no Date, no
-// Math.random: every board is a deterministic function of the date string, so
-// all players get the same puzzle. Imported unchanged by Scramble.jsx,
+// Scramble — the pure engine behind /scramble. No React, no DOM, no clock, no
+// Math.random (dates only go through Date.UTC arithmetic): every board is a
+// deterministic function of the date string, so all players get the same
+// puzzle. Imported unchanged by Scramble.jsx,
 // engine.test.js and scripts/check-scramble.mjs.
 //
-// A day is a ladder of six words (LENGTHS) laid out like a Scrabble board:
-// every word after the first crosses at least one earlier word at a shared
-// letter, and words only touch where they cross. Solving a rung locks its
-// letters in, so later rungs start with some letters already placed and the
-// rack holds only the rest, scrambled.
+// A day is one set of POOL_SIZE letters — a scrambled 7-letter root word —
+// and a Scrabble-style board of BOARD_WORDS words built from those letters:
+// the root itself plus shorter words (4–6 letters) that fit inside it. Every
+// word crosses the board at a shared letter and words only touch where they
+// cross. Players find the words in any order; a found word's letters show up
+// in the words that cross it.
 //
-// ANY change to LENGTHS, the layout search, the rack shuffle, mixSeed, the
-// block constants or words.js rewrites every historical board. The FALLBACK
+// ANY change to the constants, the layout search, the pool shuffle, mixSeed,
+// the block scheme or words.js rewrites every historical board. The FALLBACK
 // snapshot test makes that deliberate.
 
 import { WORDS } from './words.js'
 
-export const LENGTHS = [4, 5, 5, 6, 6, 7]
-export const RUNGS = LENGTHS.length
-export const MAX_MISTAKES = 3      // a third wrong word fails the day (play continues)
+export const POOL_SIZE = 7
+export const BOARD_WORDS = 6
+export const MIN_LEN = 4
 export const HINT_SECONDS = 30     // each revealed letter adds this to the time
 export const MAX_COLS = 9, MAX_ROWS = 9
 export const ACROSS = 'across', DOWN = 'down'
 
-export const GEN_LAYOUTS = 40      // full-board attempts per day
-export const GEN_CANDIDATES = 80   // words tried per rung before restarting
-export const GEN_SAMPLE = 6        // candidates that fit, compared per rung
-// Each rung takes the spot with the most crossings among GEN_SAMPLE fitting
-// candidates, then one whose board area is within this factor of the most
-// compact such spot — more crossings means more given letters and a tighter
-// board, and the slack keeps shapes varied.
+export const GEN_ROOTS = 60        // root words tried per day before the fallback
+export const GEN_LAYOUTS = 4       // board attempts per root
+export const GEN_SAMPLE = 8        // fitting candidates compared per placement
+// Each placement takes the spot with the most crossings among GEN_SAMPLE
+// fitting candidates, then one whose board area is within this factor of
+// the most compact such spot — tight, well-crossed boards, varied shapes.
 export const COMPACT_SLACK = 1.2
 
 // The launch-day board (2026-10-18), pasted from `check-scramble.mjs --dump`.
 // It pins the engine (snapshot test) and is the last-resort fallback.
 export const FALLBACK = {
+  pool: 'INTTPAE',
   placements: [
-    { word: 'LOGO', row: 1, col: 4, dir: 'across' },
-    { word: 'MOTIF', row: 0, col: 7, dir: 'down' },
-    { word: 'WOMAN', row: 0, col: 5, dir: 'down' },
-    { word: 'AGENDA', row: 3, col: 0, dir: 'across' },
-    { word: 'HIGHLY', row: 1, col: 1, dir: 'down' },
-    { word: 'UNKNOWN', row: 2, col: 3, dir: 'down' },
+    { word: 'PATIENT', row: 4, col: 0, dir: 'across' },
+    { word: 'INEPT', row: 0, col: 6, dir: 'down' },
+    { word: 'PAINT', row: 0, col: 2, dir: 'down' },
+    { word: 'PINE', row: 1, col: 4, dir: 'across' },
+    { word: 'PANE', row: 1, col: 4, dir: 'down' },
+    { word: 'PAIN', row: 4, col: 0, dir: 'down' },
   ],
-  racks: ['OOGL', 'ITFM', 'AMNW', 'GDEAN', 'HHLYI', 'KUNWON'],
 }
 
 export function mulberry32(seed) {
@@ -76,9 +77,64 @@ function shuffled(arr, rng) {
   return a
 }
 
+// ── Letters ──
+
+function letterCounts(word) {
+  const c = new Array(26).fill(0)
+  for (let i = 0; i < word.length; i++) c[word.charCodeAt(i) - 65]++
+  return c
+}
+
+// True if `word` can be spelled from `letters`, each tile used at most once.
+export function spellable(word, letters) {
+  const have = letterCounts(letters)
+  for (let i = 0; i < word.length; i++) {
+    if (--have[word.charCodeAt(i) - 65] < 0) return false
+  }
+  return true
+}
+
+const letterMask = (counts) => counts.reduce((m, n, i) => (n ? m | (1 << i) : m), 0)
+
+let SHORT = null
+// The 4–6 letter bank words with their letter counts and letter-set masks,
+// in bank order — built once so subwords() is a cheap scan.
+function shortWords() {
+  if (!SHORT) {
+    SHORT = []
+    for (let len = MIN_LEN; len < POOL_SIZE; len++) {
+      for (const w of WORDS[len]) { const counts = letterCounts(w); SHORT.push({ w, counts, mask: letterMask(counts) }) }
+    }
+  }
+  return SHORT
+}
+
+const SUBS = new Map()
+// The 4–6 letter bank words that fit inside `root`, in bank order (memoised).
+// The mask test rejects any word using a letter the root lacks.
+export function subwords(root) {
+  let list = SUBS.get(root)
+  if (!list) {
+    const have = letterCounts(root)
+    const mask = letterMask(have)
+    list = []
+    for (const e of shortWords()) {
+      if ((e.mask & ~mask) !== 0) continue
+      let ok = true
+      for (let i = 0; i < 26 && ok; i++) ok = e.counts[i] <= have[i]
+      if (ok) list.push(e.w)
+    }
+    SUBS.set(root, list)
+  }
+  return list
+}
+
+// ── Board geometry ──
+
 const STEP = { [ACROSS]: [0, 1], [DOWN]: [1, 0] }
 const OTHER = { [ACROSS]: DOWN, [DOWN]: ACROSS }
 const key = (r, c) => `${r},${c}`
+export { key as cellKey }
 
 // The [row, col] of each letter of a placement.
 export function cellsOf({ word, row, col, dir }) {
@@ -118,20 +174,27 @@ function place(grid, p) {
   })
 }
 
-function bounds(placements) {
+// A straight word's extent is just its two ends.
+function box(placements) {
   let minR = Infinity, minC = Infinity, maxR = -Infinity, maxC = -Infinity
   for (const p of placements) {
-    for (const [r, c] of cellsOf(p)) {
-      minR = Math.min(minR, r); maxR = Math.max(maxR, r)
-      minC = Math.min(minC, c); maxC = Math.max(maxC, c)
-    }
+    const [dr, dc] = STEP[p.dir]
+    const n = p.word.length - 1
+    minR = Math.min(minR, p.row); maxR = Math.max(maxR, p.row + dr * n)
+    minC = Math.min(minC, p.col); maxC = Math.max(maxC, p.col + dc * n)
   }
+  return { minR, minC, maxR, maxC }
+}
+
+function bounds(placements) {
+  const { minR, minC, maxR, maxC } = box(placements)
   return { minR, minC, rows: maxR - minR + 1, cols: maxC - minC + 1 }
 }
 
 // Every legal spot for `word` that crosses the board, with its board area.
 function options(grid, placements, word) {
   const out = []
+  const base = box(placements)
   for (const p of placements) {
     const dir = OTHER[p.dir]
     const [dr, dc] = STEP[dir]
@@ -141,9 +204,11 @@ function options(grid, placements, word) {
         const spot = { word, row: r - dr * k, col: c - dc * k, dir }
         const crossings = fit(grid, word, spot.row, spot.col, dir)
         if (crossings < 1) continue
-        const b = bounds([...placements, spot])
-        if (b.rows > MAX_ROWS || b.cols > MAX_COLS) continue
-        out.push({ spot, crossings, area: b.rows * b.cols })
+        const n = word.length - 1
+        const rows = Math.max(base.maxR, spot.row + dr * n) - Math.min(base.minR, spot.row) + 1
+        const cols = Math.max(base.maxC, spot.col + dc * n) - Math.min(base.minC, spot.col) + 1
+        if (rows > MAX_ROWS || cols > MAX_COLS) continue
+        out.push({ spot, crossings, area: rows * cols })
       }
     })
   }
@@ -154,7 +219,7 @@ function options(grid, placements, word) {
 // candidates from `pool`, or null if none fits.
 function bestSpot(grid, placements, pool, rng) {
   let all = [], fitting = 0
-  for (const w of pool.slice(0, GEN_CANDIDATES)) {
+  for (const w of pool) {
     const opts = options(grid, placements, w)
     if (!opts.length) continue
     all = all.concat(opts)
@@ -168,66 +233,77 @@ function bestSpot(grid, placements, pool, rng) {
   return near[Math.floor(rng() * near.length)].spot
 }
 
-// One board attempt: rung 0 goes at the origin, across or down; each later
-// rung takes bestSpot among unbanned, unused candidates of its length.
-function layout(rng, banned) {
+// The shorter words' lengths each board aims for, in placement order. 4-letter
+// words fit inside far more roots, so without a target most boards would be
+// four 4s; a placement falls back to other lengths (longest first) only when
+// its target length has no legal spot.
+export const TARGET_LENGTHS = [6, 5, 5, 4, 4]
+export const MIN_LONG_WORDS = 2  // shorter words of 5+ letters a board must have
+
+// One board attempt for `root`: the root goes at the origin, then each word
+// takes bestSpot among the unused candidates of its target length.
+function layout(root, candidates, rng) {
   const grid = new Map()
-  const placements = []
-  const used = new Set()
-  for (let i = 0; i < RUNGS; i++) {
-    const pool = shuffled(WORDS[LENGTHS[i]], rng).filter(w => !banned.has(w) && !used.has(w))
-    if (!pool.length) return null
-    const chosen = i === 0
-      ? { word: pool[0], row: 0, col: 0, dir: rng() < 0.5 ? ACROSS : DOWN }
-      : bestSpot(grid, placements, pool, rng)
-    if (!chosen) return null
-    place(grid, chosen)
-    placements.push(chosen)
-    used.add(chosen.word)
+  const placements = [{ word: root, row: 0, col: 0, dir: rng() < 0.5 ? ACROSS : DOWN }]
+  place(grid, placements[0])
+  const used = new Set([root])
+  const order = shuffled(candidates, rng)
+  for (const target of TARGET_LENGTHS) {
+    const lengths = [target, ...[6, 5, 4].filter(n => n !== target)]
+    let spot = null
+    for (const len of lengths) {
+      spot = bestSpot(grid, placements, order.filter(w => w.length === len && !used.has(w)), rng)
+      if (spot) break
+    }
+    if (!spot) return null
+    place(grid, spot)
+    placements.push(spot)
+    used.add(spot.word)
   }
+  if (placements.slice(1).filter(p => p.word.length >= 5).length < MIN_LONG_WORDS) return null
   const { minR, minC } = bounds(placements)
   return placements.map(p => ({ ...p, row: p.row - minR, col: p.col - minC }))
 }
 
-// Positions (letter indices) of rung i that no earlier rung has filled.
-export function freePositions(placements, i) {
-  const earlier = new Set()
-  for (let j = 0; j < i; j++) cellsOf(placements[j]).forEach(([r, c]) => earlier.add(key(r, c)))
-  return cellsOf(placements[i]).flatMap(([r, c], k) => (earlier.has(key(r, c)) ? [] : [k]))
+// The root's letters, shuffled so they never spell the root.
+function poolFor(root, rng) {
+  let pool = shuffled([...root], rng).join('')
+  for (let t = 0; t < 20 && pool === root; t++) pool = shuffled([...root], rng).join('')
+  return pool
 }
 
-// The rack for each rung: its free letters, shuffled so they never read in
-// answer order (unless every free letter is the same).
-function racksFor(placements, rng) {
-  return placements.map((p, i) => {
-    const letters = freePositions(placements, i).map(k => p.word[k])
-    const inOrder = letters.join('')
-    let rack = shuffled(letters, rng).join('')
-    for (let t = 0; t < 20 && rack === inOrder && new Set(letters).size > 1; t++) rack = shuffled(letters, rng).join('')
-    return rack
-  })
-}
-
-function withShape(placements, racks, meta) {
+function withShape(pool, placements, meta) {
   const { rows, cols } = bounds(placements)
-  return { placements, racks, words: placements.map(p => p.word), rows, cols, meta }
+  return { pool, root: placements[0].word, placements, words: placements.map(p => p.word), rows, cols, meta }
 }
 
-function generateDay(dateStr, banned) {
+// bannedRoots / bannedWords: roots and shorter words used recently (see
+// generatePuzzle). A root needs at least BOARD_WORDS − 1 fresh words inside it.
+function generateDay(dateStr, bannedRoots, bannedWords) {
   const rng = mulberry32(mixSeed(dateSeed(dateStr)))
-  for (let attempt = 0; attempt < GEN_LAYOUTS; attempt++) {
-    const placements = layout(rng, banned)
-    if (placements) return withShape(placements, racksFor(placements, rng), { attempt, fallback: false })
+  const roots = shuffled(WORDS[POOL_SIZE], rng).filter(w => !bannedRoots.has(w)).slice(0, GEN_ROOTS)
+  for (let r = 0; r < roots.length; r++) {
+    const root = roots[r]
+    const candidates = subwords(root).filter(w => !bannedWords.has(w))
+    if (candidates.length < BOARD_WORDS - 1) continue
+    for (let attempt = 0; attempt < GEN_LAYOUTS; attempt++) {
+      const placements = layout(root, candidates, rng)
+      if (placements) return withShape(poolFor(root, rng), placements, { root: r, attempt, fallback: false })
+    }
   }
   return null
 }
 
-// No word repeats within a block: days are tiled into BLOCK_DAYS-day blocks
-// from BLOCK_EPOCH, and each day bans every word used earlier in its block.
-// A day therefore depends on the days before it in the block, so a block is
-// generated in order once and cached.
+// No repeats: days are tiled into ROOT_BLOCK_DAYS-day blocks from
+// BLOCK_EPOCH, and no root repeats within a block. Shorter words are shared
+// between many roots (RAIN fits PAINTER, TRAINED, …), so banning them for a
+// whole block would starve later days; they are banned within each
+// WORD_BLOCK_DAYS-day stretch of the block instead. A day depends on the
+// days before it in its block, so a block is generated in order once and
+// cached.
 export const BLOCK_EPOCH = '2025-01-01'
-export const BLOCK_DAYS = 64
+export const ROOT_BLOCK_DAYS = 64
+export const WORD_BLOCK_DAYS = 16
 const DAY_MS = 86400000
 const dayNumber = (dateStr) => {
   const [y, m, d] = dateStr.split('-').map(Number)
@@ -242,36 +318,78 @@ export function generatePuzzle(dateStr, opts = {}) {
   const { noFallback = false } = opts
   const n = dayNumber(dateStr)
   const epoch = dayNumber(BLOCK_EPOCH)
-  const b = Math.floor((n - epoch) / BLOCK_DAYS)
-  const first = epoch + b * BLOCK_DAYS
+  const b = Math.floor((n - epoch) / ROOT_BLOCK_DAYS)
+  const first = epoch + b * ROOT_BLOCK_DAYS
   let block = BLOCKS.get(b)
-  if (!block) { block = { days: [], banned: new Set() }; BLOCKS.set(b, block) }
+  if (!block) { block = { days: [], roots: new Set(), words: new Set() }; BLOCKS.set(b, block) }
   while (block.days.length <= n - first) {
-    const p = generateDay(dateOf(first + block.days.length), block.banned)
-    if (p) p.words.forEach(w => block.banned.add(w))
+    const k = block.days.length
+    if (k % WORD_BLOCK_DAYS === 0) block.words = new Set()
+    const p = generateDay(dateOf(first + k), block.roots, block.words)
+    if (p) {
+      block.roots.add(p.root)
+      p.words.slice(1).forEach(w => block.words.add(w))
+    }
     block.days.push(p)
   }
   const p = block.days[n - first]
   if (p || noFallback) return p
-  return withShape(FALLBACK.placements, FALLBACK.racks, { attempt: -1, fallback: true })
+  return withShape(FALLBACK.pool, FALLBACK.placements, { root: -1, attempt: -1, fallback: true })
 }
 
 // ── Play helpers ──
 
-// Every board cell: key → { r, c, ch, rungs: [rung indices through it] }.
+// Every board cell: key → { r, c, ch, words: [indices of the words through it] }.
 export function boardCells(puzzle) {
   const map = new Map()
   puzzle.placements.forEach((p, i) => {
     cellsOf(p).forEach(([r, c], k) => {
-      const cell = map.get(key(r, c)) ?? { r, c, ch: p.word[k], rungs: [] }
-      cell.rungs.push(i)
+      const cell = map.get(key(r, c)) ?? { r, c, ch: p.word[k], words: [] }
+      cell.words.push(i)
       map.set(key(r, c), cell)
     })
   })
   return map
 }
 
-export { key as cellKey }
+// Cell keys showing a letter: every cell of a found word, plus hinted cells.
+export function revealedCells(puzzle, found, hinted) {
+  const out = new Set(hinted)
+  found.forEach(i => cellsOf(puzzle.placements[i]).forEach(([r, c]) => out.add(key(r, c))))
+  return out
+}
+
+// Indices of words whose every cell is revealed (found, or filled in by
+// crossings and hints).
+export function completedWords(puzzle, revealed) {
+  return puzzle.placements.flatMap((p, i) => (cellsOf(p).every(([r, c]) => revealed.has(key(r, c))) ? [i] : []))
+}
+
+// `found` plus every word the revealed letters now complete, appended in
+// board order — a word filled in by crossings and hints counts as found.
+// Returns the same array when nothing new completes.
+export function completeFound(puzzle, found, hinted) {
+  const done = completedWords(puzzle, revealedCells(puzzle, found, hinted)).filter(i => !found.includes(i))
+  return done.length ? [...found, ...done] : found
+}
+
+// The cell a hint reveals: the first hidden cell of the unfinished word with
+// the fewest hidden cells (ties → shorter word, then board order), so hints
+// help finish words rather than scatter letters. Null when nothing is hidden.
+export function nextHint(puzzle, revealed) {
+  const before = (a, b) => {
+    for (let j = 0; j < a.length; j++) if (a[j] !== b[j]) return a[j] < b[j]
+    return false
+  }
+  let best = null
+  puzzle.placements.forEach((p, i) => {
+    const hidden = cellsOf(p).filter(([r, c]) => !revealed.has(key(r, c)))
+    if (!hidden.length) return
+    const rank = [hidden.length, p.word.length, i]
+    if (!best || before(rank, best.rank)) best = { rank, cell: key(hidden[0][0], hidden[0][1]) }
+  })
+  return best?.cell ?? null
+}
 
 // Seconds on the clock plus the hint penalty, as saved and shared.
 export const scoreSeconds = (ms, hints) => Math.floor(ms / 1000) + hints * HINT_SECONDS
@@ -282,7 +400,13 @@ export function formatTime(seconds) {
   return `${m}:${String(sec).padStart(2, '0')}`
 }
 
-// One emoji per rung: 🟩 clean, 🟨 took a hint, 🟥 had a wrong guess, ⬛ unsolved.
-export function shareLine(rungs) {
-  return rungs.map(r => (!r.solved ? '⬛' : r.mistakes > 0 ? '🟥' : r.hints > 0 ? '🟨' : '🟩')).join('')
+// One square per word, shortest first: 🟩 found unaided, 🟨 a hint touched
+// it, ⬛ not found yet.
+export function shareLine(puzzle, found, hinted) {
+  const hintSet = new Set(hinted)
+  return puzzle.placements
+    .map((p, i) => ({ i, len: p.word.length, helped: cellsOf(p).some(([r, c]) => hintSet.has(key(r, c))) }))
+    .sort((a, b) => a.len - b.len || a.i - b.i)
+    .map(w => (!found.includes(w.i) ? '⬛' : w.helped ? '🟨' : '🟩'))
+    .join('')
 }

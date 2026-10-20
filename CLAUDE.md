@@ -14,7 +14,7 @@ puzzles every day; signed-in players build streaks.
 - Nine game routes: `Faceoff` (NHL), `Gridiron` (NFL), `Knockout` (MMA) — these
   three share a grid-game pattern; `Words` (Wordle), `Link` (Connections),
   `Nums` (number-swap), `Mines` (no-guess minesweeper ladder), `Weave`
-  (Waffle-style word swap), `Scramble` (crossing anagram ladder) — the last
+  (Waffle-style word swap), `Scramble` (anagram crossword) — the last
   three are described below.
 - `Home.jsx` (landing), `main.jsx` (entry: providers + render only), `App.jsx`
   (router + lazy-loaded routes + ErrorBoundary), `LoginPage.jsx`, `Archive.jsx`
@@ -186,36 +186,41 @@ the puzzle ENDS at 0 swaps (`completed: false`). `game_results.score` = stars,
   unless reduced motion is on, and it honours Words' `streakle-hc`
   high-contrast setting.
 
-## Scramble — daily crossing anagram ladder (`/scramble`)
-Six scrambled words a day, 4/5/5/6/6/7 letters (`LENGTHS`), solved in order
-on a Scrabble-style board: each later word crosses an earlier one at a shared
-letter and words only touch where they cross, so a solved word's letters drop
-into the words it crosses and the rack holds only the rest. Tap tiles (or
-type) to fill the highlighted word; a full wrong word is a mistake. Score =
-active time + 30 s per hint (a hint reveals one letter). The 3rd mistake fails
-the day (`completed: false`, saved at once) but play continues to the end.
-`game_results.score` = seconds incl. hint penalty, `swaps_used` = mistakes.
-- `src/scramble/engine.js` is a pure ESM module (layout search, racks, play
-  helpers) imported unchanged by `Scramble.jsx`, `engine.test.js` and
-  `scripts/check-scramble.mjs`. Banks: `src/scramble/words.js` (2,604 words
-  by length). Every entry was checked against the public-domain ENABLE list:
-  it is a real word AND its letters spell no other ENABLE word, so the answer
-  is never ambiguous. Re-run that check (download ENABLE, compare letter
-  signatures) for any new word; the checker only re-checks in-bank anagrams.
-- Layout: each rung compares up to `GEN_SAMPLE` fitting candidates and takes
-  the spot with the most crossings, then the tightest board (≤ 9×9). No word
-  repeats within a 64-day block (same block-chain scheme as Weave; ~70 ms
-  cold, worst case).
-- **Any change to `LENGTHS`, the layout search, rack shuffle, `mixSeed`, block
-  constants or `words.js` rewrites every historical board.** The 2026-10-18
-  board is pinned as `FALLBACK` — update it with
+## Scramble — daily anagram crossword (`/scramble`)
+One set of 7 letters a day (a shuffled 7-letter root word) and a
+Scrabble-style board of 6 words built from them: the root plus five 4–6
+letter words that fit inside it (aiming for one 6, two 5s, two 4s; at least
+two 5+). Players spell words from the letters in ANY order (tap or type,
+Enter); a found word fills its cells, and its letters show in crossing words.
+Guesses not on the board cost nothing — no fail state. A hint reveals one
+cell (+30 s) of the unfinished word with the fewest hidden cells; a word
+whose cells all fill in counts as found. Score = active time + hint penalty;
+`game_results.score` = seconds, `swaps_used` = hints, always `completed: true`.
+- `src/scramble/engine.js` is a pure ESM module (root/sub-word selection,
+  layout search, play helpers) imported unchanged by `Scramble.jsx`,
+  `engine.test.js` and `scripts/check-scramble.mjs`. Bank:
+  `src/scramble/words.js` (3,868 common words, 4–7 letters, spell-checked
+  against ENABLE). Because every arrangement of a board word's letters is
+  always available, a word is banked only if no other word in the
+  hand-picked common list is its anagram (TEAM/MEAT/MATE are out).
+- Layout: the root goes first; each later word takes the spot with the most
+  crossings, then the tightest board (≤ 9×9); words only touch where they
+  cross. No root repeats within a 64-day block; shorter words (shared by
+  many roots) don't repeat within each 16-day stretch. A cold load late in
+  a block replays the block first (~30 ms desktop worst case; the checker
+  gates it at 120 ms in fresh engine instances).
+- **Any change to the constants, layout search, pool shuffle, `mixSeed`,
+  block scheme or `words.js` rewrites every historical board.** The
+  2026-10-18 board is pinned as `FALLBACK` — update it with
   `node scripts/check-scramble.mjs --dump 2026-10-18`. The checker replays
-  2025-01-01..2030-12-31 (exit 1 on any fallback, stray letter run, rung not
-  crossing an earlier one, bad rack, in-block repeat, duplicate or > 60 ms).
-- `Scramble.jsx` keeps today's rung, hints, mistakes and clock in localStorage
-  (`streakle-scramble`) so a reload never refunds a mistake; archive replays
-  never touch it or call `saveResult`. Keyed by date like Weave; honours
-  `streakle-hc`.
+  2025-01-01..2030-12-31 (exit 1 on any fallback, stray letter run,
+  unspellable word, disconnected board, repeat or slow generation).
+- `Scramble.jsx` keeps today's found words, hinted cells, hints and clock in
+  localStorage (`streakle-scramble`, v2 — the old ladder's v1 is ignored — and bound to
+  the board by a pool+words signature, so a same-day engine change resets it);
+  archive replays never touch it or call `saveResult`, and a result is only
+  saved while the board's date is still today. Keyed by date like Weave;
+  the clock pauses when hidden and on unmount; honours `streakle-hc`.
 
 ## Current focus — SEO optimization
 Done: `<title>`, meta description, Open Graph + Twitter tags, the OG image

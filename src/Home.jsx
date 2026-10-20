@@ -11,7 +11,7 @@ const games = [
     path: '/scramble',
     title: 'SCRAMBLE',
     emoji: '🔀',
-    description: 'Unscramble six crossing words, 4 to 7 letters — each one you solve helps the next.',
+    description: 'Find six crossing words hidden in seven letters — in any order you like.',
     color: '#9D174D',
     accent: '#F9A8D4',
     badge: 'Unscramble It',
