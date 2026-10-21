@@ -185,6 +185,10 @@ const CLR = { empty:'var(--surface)', active:'var(--surface-gold)', correct:'var
 const PALETTE = { ...CLR, ink:{ correct:'var(--ink)', present:'var(--bg)', absent:'var(--ink-2)' } };
 const PALETTE_HC = { ...CLR, correct:'var(--hc-correct)', present:'var(--hc-present)', ink:{ correct:'var(--bg)', present:'var(--bg)', absent:'var(--ink-2)' } };
 
+// Board + keyboard fit the visible height on short phones: under the ~146px
+// GameShell header, 42px of row gaps, the 20px board margin and 8px of air,
+// tiles and keys share what's left (tile = key + 2px) and only reach full
+// size (52/50) from 678px tall. Keys stop at 42px; tiles take the rest.
 const css = `
 @keyframes shake{0%,100%{transform:translateX(0)}15%{transform:translateX(-6px)}30%{transform:translateX(6px)}45%{transform:translateX(-4px)}60%{transform:translateX(4px)}75%{transform:translateX(-2px)}90%{transform:translateX(2px)}}
 @keyframes bounce{0%,100%{transform:translateY(0)}40%{transform:translateY(-10px)}}
@@ -192,13 +196,15 @@ const css = `
 @keyframes cardFlip{0%{transform:rotateY(0deg)}100%{transform:rotateY(180deg)}}
 @keyframes slideUp{from{transform:translateY(20px);opacity:0}to{transform:translateY(0);opacity:1}}
 @keyframes confetti{0%{transform:translateY(0) rotate(0deg);opacity:1}100%{transform:translateY(130px) rotate(720deg);opacity:0}}
-.wd-board{--wd-tile:52px}
+.wd-board,.wd-kb{--wd-vh:100vh;--wd-key:clamp(42px,calc((var(--wd-vh) - 210px) / 9 - 2px),50px)}
+@supports (height:100dvh){.wd-board,.wd-kb{--wd-vh:100dvh}}
+.wd-board{--wd-tile:clamp(34px,calc((var(--wd-vh) - 216px - 3 * var(--wd-key)) / 6),52px)}
 .wd-kb{display:flex;flex-direction:column;gap:6px;width:min(500px,calc(100vw - 16px))}
 .wd-kb-row{display:flex;gap:5px}
 .wd-kb-row:nth-child(2)::before,.wd-kb-row:nth-child(2)::after{content:'';flex:.5 1 0}
-.wd-key{flex:1 1 0;min-width:0;height:50px;padding:0;border:none;border-radius:6px;font-size:14px;font-weight:700;cursor:pointer;user-select:none;transition:background .3s,color .3s}
+.wd-key{flex:1 1 0;min-width:0;height:var(--wd-key);padding:0;border:none;border-radius:6px;font-size:14px;font-weight:700;cursor:pointer;user-select:none;transition:background .3s,color .3s}
 .wd-key-wide{flex:1.5 1 0;font-size:11px}
-@media (min-width:600px) and (min-height:800px){.wd-board{--wd-tile:60px}.wd-key{height:56px;font-size:15px}.wd-key-wide{font-size:12px}}
+@media (min-width:600px) and (min-height:800px){.wd-board{--wd-tile:60px}.wd-kb{--wd-key:56px}.wd-key{font-size:15px}.wd-key-wide{font-size:12px}}
 `;
 
 export default function WordsGame() {
