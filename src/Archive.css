@@ -1,0 +1,311 @@
+/* Archive — the past-puzzle calendar every game opens (see Archive.jsx). */
+
+.ar-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.72);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  animation: arFadeIn 0.2s ease;
+}
+
+/* Same card as the result card: --surface, a 3px stripe on top (here the
+   game's own colour), radius 14. */
+.ar-panel {
+  width: 100%;
+  max-width: 400px;
+  max-height: 100%;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 20px 20px 18px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-top: 3px solid var(--ar-game);
+  border-radius: 14px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+  color: var(--ink);
+  animation: arPanelIn 0.3s cubic-bezier(0.2, 0.9, 0.3, 1.15);
+}
+
+/* ── Header: icon, title + scope, close ─────────────────────────────────── */
+.ar-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.ar-head-text {
+  flex: 1;
+  min-width: 0;
+}
+.ar-title {
+  font-family: var(--font-display);
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  line-height: 1;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+.ar-sub {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 4px;
+}
+
+/* Close and month arrows: GameShell's outlined button, square. */
+.ar-btn {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  background: none;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  color: var(--ink-2);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+.ar-btn:not(:disabled):hover {
+  background: rgba(var(--gold-rgb), 0.08);
+  border-color: rgba(var(--gold-rgb), 0.45);
+  color: var(--gold);
+}
+.ar-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+/* ── Streak + month progress (signed in) ────────────────────────────────── */
+.ar-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 16px;
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  animation: arRise 0.35s ease;
+}
+.ar-stats-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+.ar-streak {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--muted);
+}
+.ar-fire { font-size: 18px; }
+.ar-streak-num {
+  font-family: var(--font-display);
+  font-size: 30px;
+  font-weight: 800;
+  line-height: 1;
+  color: var(--gold);
+}
+.ar-count {
+  font-size: 13px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.ar-count b {
+  color: var(--success-text);
+  font-weight: 700;
+}
+.ar-bar {
+  height: 6px;
+  background: rgba(var(--ink-rgb), 0.06);
+  border-radius: 99px;
+  overflow: hidden;
+}
+.ar-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--correct), var(--success-text));
+  border-radius: 99px;
+  transition: width 0.7s cubic-bezier(0.34, 1.4, 0.64, 1);
+}
+
+/* ── Sign-in nudge (guests) ─────────────────────────────────────────────── */
+.ar-nudge {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  padding: 11px 14px;
+  background: rgba(var(--gold-rgb), 0.06);
+  border: 1px solid rgba(var(--gold-rgb), 0.3);
+  border-radius: 10px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--gold);
+}
+.ar-nudge svg {
+  flex-shrink: 0;
+  margin-top: 3px;
+}
+
+/* ── Calendar ───────────────────────────────────────────────────────────── */
+.ar-cal {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+.ar-monthbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.ar-month {
+  font-family: var(--font-display);
+  font-size: 21px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: var(--ink);
+}
+.ar-dow,
+.ar-days {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 5px;
+}
+.ar-dow div {
+  text-align: center;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+.ar-loading {
+  text-align: center;
+  color: var(--muted);
+  padding: 28px 0;
+  font-size: 13px;
+}
+
+/* A day, in rising precedence: default, today, won/lost, picked. */
+.ar-day {
+  position: relative;
+  aspect-ratio: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  padding: 0;
+  background: rgba(var(--ink-rgb), 0.03);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text-2);
+  cursor: pointer;
+  transition: transform 0.13s ease, background 0.13s, border-color 0.13s;
+  /* backwards, not both: a held end frame would override the hover scale. */
+  animation: arRise 0.28s ease backwards;
+}
+.ar-day:not(:disabled):hover {
+  transform: scale(1.08);
+  border-color: rgba(var(--gold-rgb), 0.6);
+  z-index: 1;
+}
+.ar-day:disabled { cursor: default; }
+.ar-day.is-off { visibility: hidden; }
+.ar-day.is-locked {
+  background: transparent;
+  color: var(--faint);
+}
+
+.ar-num {
+  font-size: 13px;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.ar-mark {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 10px;
+}
+.ar-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--danger-text);
+}
+
+.ar-day.is-today { border-color: rgba(var(--gold-rgb), 0.45); }
+.ar-day.is-today .ar-num { color: var(--gold); font-weight: 800; }
+
+.ar-day.is-won,
+.ar-swatch.is-won {
+  background: var(--correct-wash);
+  border-color: var(--correct);
+}
+.ar-day.is-won { color: var(--ink); }
+.ar-day.is-won .ar-mark { color: var(--success-text); }
+.ar-day.is-lost,
+.ar-swatch.is-lost {
+  background: var(--danger-wash);
+  border-color: rgba(var(--danger-text-rgb), 0.4);
+}
+.ar-day.is-lost { color: var(--ink-2); }
+
+.ar-day.is-selected {
+  background: var(--surface-gold);
+  border-color: var(--gold);
+}
+
+/* ── Legend ─────────────────────────────────────────────────────────────── */
+.ar-legend {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px 16px;
+  font-size: 11px;
+  color: var(--muted);
+}
+.ar-key {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.ar-swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  background: rgba(var(--ink-rgb), 0.03);
+  border: 1px solid var(--border-strong);
+}
+
+@media (max-width: 480px) {
+  .ar-panel { padding: 18px 16px 16px; gap: 14px; }
+  .ar-title { font-size: 25px; letter-spacing: 1px; }
+  .ar-dow, .ar-days { gap: 4px; }
+}
+
+@keyframes arFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes arPanelIn {
+  from { opacity: 0; transform: translateY(16px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes arRise {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}

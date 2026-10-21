@@ -2,22 +2,26 @@ import { useState, useEffect, useRef } from 'react'
 import { useAuth } from './AuthContext'
 import { supabase } from './supabase'
 import { calcStreak } from './streak'
+import { GAME_BY_KEY } from './games'
+import GameIcon from './GameIcon'
+import './Archive.css'
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 const LAUNCH_DATE = '2026-05-16'
 const FREE_DAYS   = 7
 
+// Games that shipped after LAUNCH_DATE start their calendar later.
 const GAME_META = {
-  nums:     { emoji: '🔢', label: 'Nums' },
-  link:     { emoji: '🔗', label: 'Link' },
-  words:    { emoji: '🔤', label: 'Words' },
-  gridiron: { emoji: '🏈', label: 'Gridiron' },
-  faceoff:  { emoji: '🏒', label: 'Faceoff' },
-  knockout: { emoji: '🥊', label: 'Knockout' },
-  mines:    { emoji: '💣', label: 'Mines', start: '2026-09-04' }, // shipped after LAUNCH_DATE
-  weave:    { emoji: '🧶', label: 'Weave', start: '2026-10-17' },
-  scramble: { emoji: '🔀', label: 'Scramble', start: '2026-10-18' },
+  mines:    { start: '2026-09-04' },
+  weave:    { start: '2026-10-17' },
+  scramble: { start: '2026-10-18' },
 }
+
+const LEGEND = [
+  { className: 'is-won',  label: 'Completed' },
+  { className: 'is-lost', label: 'Attempted' },
+  { className: '',        label: 'Not played' },
+]
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function toLocalStr(date) {
@@ -52,6 +56,26 @@ function getCalendarDays(year, month) {
   return cells
 }
 
+// ─── Icons (16px grid, currentColor, like GameShell's) ────────────────────────
+function Glyph({ size = 16, strokeWidth = 1.8, children }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 16 16" fill="none" stroke="currentColor"
+      strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      {children}
+    </svg>
+  )
+}
+const CloseIcon = () => <Glyph size={14}><path d="M3.5 3.5l9 9M12.5 3.5l-9 9" /></Glyph>
+const PrevIcon  = () => <Glyph><path d="M10 3.5L5.5 8l4.5 4.5" /></Glyph>
+const NextIcon  = () => <Glyph><path d="M6 3.5L10.5 8 6 12.5" /></Glyph>
+const CheckIcon = () => <Glyph size={10} strokeWidth={2.4}><path d="M3 8.5l3.2 3.2L13 4.5" /></Glyph>
+const LockIcon  = ({ size = 13 }) => (
+  <Glyph size={size} strokeWidth={1.6}>
+    <rect x="3" y="7" width="10" height="7" rx="1.6" />
+    <path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2" />
+  </Glyph>
+)
+
 // ─── Component ────────────────────────────────────────────────────────────────
 export default function Archive({ game, onSelectDate, onClose }) {
   const { user } = useAuth()
@@ -59,8 +83,8 @@ export default function Archive({ game, onSelectDate, onClose }) {
   const [loading,  setLoading]  = useState(true)
   const [selected, setSelected] = useState(null)
 
-  const meta      = GAME_META[game] ?? { emoji: '🎮', label: game }
-  const launchStr = meta.start ?? LAUNCH_DATE
+  const info      = GAME_BY_KEY[game]
+  const launchStr = GAME_META[game]?.start ?? LAUNCH_DATE
   const today  = new Date()
   const launch = new Date(launchStr + 'T00:00:00')
 
@@ -148,286 +172,127 @@ export default function Archive({ game, onSelectDate, onClose }) {
   const monthName = new Date(viewYear, viewMonth, 1)
     .toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
 
+  const progress = available.length ? Math.round((completed.length / available.length) * 100) : 0
+
   // ─── Render ───────────────────────────────────────────────────────────────
   return (
-    <>
-      <style>{`
-        @keyframes archiveOverlayIn {
-          from { opacity: 0 } to { opacity: 1 }
-        }
-        @keyframes archivePanelIn {
-          from { opacity: 0; transform: translateY(24px) scale(0.96) }
-          to   { opacity: 1; transform: translateY(0)   scale(1)    }
-        }
-        @keyframes fadeUp {
-          from { opacity: 0; transform: translateY(6px) }
-          to   { opacity: 1; transform: translateY(0)   }
-        }
-        .arch-close:hover  { background: rgba(255,255,255,0.14) !important; color: var(--ink) !important; }
-        .arch-nav:hover:not(:disabled) { background: rgba(255,255,255,0.14) !important; }
-        .arch-day { transition: transform 0.13s ease, background 0.13s, border-color 0.13s; }
-        .arch-day:hover:not(.arch-disabled) {
-          transform: scale(1.12);
-          border-color: rgba(255,255,255,0.28) !important;
-          z-index: 2;
-        }
-      `}</style>
+    <div className="ar-backdrop" onClick={(e) => { if (e.target === e.currentTarget) onClose() }}>
+      <div ref={panelRef} className="ar-panel" role="dialog" aria-modal="true" aria-label="Puzzle archive"
+        style={{ '--ar-game': info.color }}>
 
-      {/* ── Backdrop ── */}
-      <div
-        onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
-        style={{
-          position: 'fixed', inset: 0,
-          background: 'rgba(0,0,0,0.72)',
-          backdropFilter: 'blur(10px)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          zIndex: 1000, padding: 16,
-          animation: 'archiveOverlayIn 0.2s ease',
-        }}
-      >
-        {/* ── Panel ── */}
-        <div ref={panelRef} role="dialog" aria-modal="true" aria-label="Puzzle archive" style={{
-          background: 'rgba(15,14,12,0.97)',
-          backdropFilter: 'blur(30px)',
-          border: '1px solid rgba(255,255,255,0.09)',
-          borderRadius: 24,
-          padding: '24px 22px 22px',
-          width: '100%', maxWidth: 400,
-          boxShadow: '0 32px 80px rgba(0,0,0,0.8), inset 0 1px 0 rgba(255,255,255,0.07)',
-          display: 'flex', flexDirection: 'column', gap: 18,
-          animation: 'archivePanelIn 0.25s cubic-bezier(0.34,1.4,0.64,1)',
-        }}>
-
-          {/* ── Header ── */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div>
-              <div style={{ fontSize: 21, fontWeight: 700, color: 'var(--ink)', letterSpacing: '-0.4px' }}>
-                {meta.emoji} {meta.label} Archive
-              </div>
-              <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 3 }}>
-                {user ? 'All puzzles since launch' : 'Last 7 days · sign in for full history'}
-              </div>
+        {/* ── Header ── */}
+        <div className="ar-head">
+          <GameIcon game={info} size={32} />
+          <div className="ar-head-text">
+            <h2 className="ar-title">{info.title} Archive</h2>
+            <div className="ar-sub">
+              {user ? 'All puzzles since launch' : 'Last 7 days · sign in for full history'}
             </div>
-            <button
-              className="arch-close"
-              aria-label="Close archive"
-              onClick={onClose}
-              style={{
-                background: 'rgba(255,255,255,0.07)',
-                border: '1px solid rgba(255,255,255,0.1)',
-                color: 'var(--muted)', fontSize: 15, cursor: 'pointer',
-                padding: '6px 11px', borderRadius: 10,
-                transition: 'background 0.15s, color 0.15s',
-              }}
-            >✕</button>
           </div>
-
-          {/* ── Streak + Stats (logged in) ── */}
-          {user && (
-            <div style={{
-              background: 'rgba(255,255,255,0.04)',
-              border: '1px solid rgba(255,255,255,0.07)',
-              borderRadius: 14, padding: '14px 16px',
-              display: 'flex', flexDirection: 'column', gap: 10,
-              animation: 'fadeUp 0.35s ease',
-            }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-                  <span style={{ fontSize: 22 }}>🔥</span>
-                  <span style={{ fontSize: 24, fontWeight: 800, color: 'var(--gold)', lineHeight: 1 }}>
-                    {streak}
-                  </span>
-                  <span style={{ fontSize: 13, color: 'var(--muted)' }}>day streak</span>
-                </div>
-                <div style={{ fontSize: 13, color: 'var(--muted)' }}>
-                  <span style={{ color: 'var(--success-text)', fontWeight: 600 }}>{completed.length}</span>
-                  <span> / {available.length} this month</span>
-                </div>
-              </div>
-              {/* Progress bar */}
-              <div style={{
-                height: 6, background: 'rgba(255,255,255,0.06)',
-                borderRadius: 99, overflow: 'hidden',
-              }}>
-                <div style={{
-                  height: '100%',
-                  width: available.length
-                    ? `${Math.round((completed.length / available.length) * 100)}%`
-                    : '0%',
-                  background: 'linear-gradient(90deg, var(--correct) 0%, var(--success-text) 100%)',
-                  borderRadius: 99,
-                  transition: 'width 0.7s cubic-bezier(0.34,1.4,0.64,1)',
-                }} />
-              </div>
-            </div>
-          )}
-
-          {/* ── Sign-in nudge (guest) ── */}
-          {!user && (
-            <div style={{
-              background: 'rgba(var(--gold-rgb),0.08)',
-              border: '1px solid rgba(var(--gold-rgb),0.18)',
-              borderRadius: 12, padding: '11px 14px',
-              fontSize: 13, color: 'var(--gold)', lineHeight: 1.5,
-            }}>
-              🔒 You're only seeing the last 7 days. Sign in to play every puzzle since launch.
-            </div>
-          )}
-
-          {/* ── Divider ── */}
-          <div style={{ height: 1, background: 'rgba(255,255,255,0.06)', margin: '0 -4px' }} />
-
-          {/* ── Calendar ── */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-
-            {/* Month navigation */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <button
-                className="arch-nav"
-                aria-label="Previous month"
-                onClick={prevMonth}
-                disabled={!canGoBack}
-                style={{
-                  background: 'rgba(255,255,255,0.07)',
-                  border: '1px solid rgba(255,255,255,0.1)',
-                  color: canGoBack ? 'var(--ink-2)' : 'var(--border-strong)',
-                  cursor: canGoBack ? 'pointer' : 'default',
-                  padding: '5px 13px', borderRadius: 9, fontSize: 18,
-                  transition: 'background 0.15s',
-                }}
-              >‹</button>
-              <span style={{ color: 'var(--ink)', fontWeight: 600, fontSize: 15 }}>{monthName}</span>
-              <button
-                className="arch-nav"
-                aria-label="Next month"
-                onClick={nextMonth}
-                disabled={!canGoForward}
-                style={{
-                  background: 'rgba(255,255,255,0.07)',
-                  border: '1px solid rgba(255,255,255,0.1)',
-                  color: canGoForward ? 'var(--ink-2)' : 'var(--border-strong)',
-                  cursor: canGoForward ? 'pointer' : 'default',
-                  padding: '5px 13px', borderRadius: 9, fontSize: 18,
-                  transition: 'background 0.15s',
-                }}
-              >›</button>
-            </div>
-
-            {/* Day-of-week headers */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4 }}>
-              {['Su','Mo','Tu','We','Th','Fr','Sa'].map(d => (
-                <div key={d} style={{
-                  textAlign: 'center', fontSize: 11,
-                  color: 'var(--muted)', fontWeight: 700, letterSpacing: '0.04em', paddingBottom: 2,
-                }}>{d}</div>
-              ))}
-            </div>
-
-            {/* Day cells */}
-            {loading ? (
-              <div style={{ textAlign: 'center', color: 'var(--muted)', padding: '28px 0', fontSize: 13 }}>
-                Loading…
-              </div>
-            ) : (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 5 }}>
-                {calDays.map((dateStr, i) => {
-                  if (!dateStr) return <div key={`e${i}`} />
-
-                  const avail   = isAvailable(dateStr, launchStr)
-                  const locked  = isLocked(dateStr, user)
-                  const isToday = dateStr === todayStr
-                  const isSel   = dateStr === selected
-                  const played  = dateStr in results
-                  const win     = results[dateStr] === true
-                  const loss    = played && !win
-                  const dayNum  = parseInt(dateStr.split('-')[2], 10)
-                  const col     = i % 7
-
-                  let bg          = 'rgba(255,255,255,0.04)'
-                  let borderColor = 'rgba(255,255,255,0.07)'
-                  let borderLeft  = `1px solid ${borderColor}`
-
-                  if (!avail) {
-                    bg = 'transparent'; borderColor = 'transparent'; borderLeft = 'none'
-                  } else if (isSel) {
-                    bg = 'rgba(var(--gold-rgb),0.2)'; borderColor = 'rgba(var(--gold-rgb),0.55)'
-                  } else if (isToday) {
-                    bg = 'rgba(255,255,255,0.09)'; borderColor = 'rgba(255,255,255,0.22)'
-                  }
-
-                  if (avail && !locked && (win || loss)) {
-                    borderLeft = `3px solid ${win ? 'var(--success-text)' : 'var(--danger-text)'}`
-                  }
-
-                  const dotColor = win ? 'var(--success-text)' : loss ? 'var(--danger-text)' : 'transparent'
-
-                  return (
-                    <button
-                      key={dateStr}
-                      className={`arch-day${!avail || locked ? ' arch-disabled' : ''}`}
-                      onClick={() => handleSelect(dateStr)}
-                      disabled={!avail || locked}
-                      title={locked ? 'Sign in to unlock' : dateStr}
-                      style={{
-                        position: 'relative',
-                        background: bg,
-                        border: `1px solid ${borderColor}`,
-                        borderLeft,
-                        borderRadius: 10,
-                        aspectRatio: '1',
-                        display: 'flex', flexDirection: 'column',
-                        alignItems: 'center', justifyContent: 'center', gap: 3,
-                        cursor: avail && !locked ? 'pointer' : 'default',
-                        opacity: !avail ? 0 : locked ? 0.28 : 1,
-                        padding: 0, color: 'var(--ink)', outline: 'none',
-                        animation: avail
-                          ? `fadeUp 0.28s ease ${col * 0.025}s both`
-                          : 'none',
-                      }}
-                    >
-                      <span style={{
-                        fontSize: 13, lineHeight: 1,
-                        fontWeight: isToday ? 700 : 400,
-                        color: isToday ? 'var(--ink)' : 'var(--text-2)',
-                      }}>{dayNum}</span>
-
-                      <div style={{
-                        width: 5, height: 5, borderRadius: '50%',
-                        background: dotColor,
-                        opacity: dotColor === 'transparent' ? 0 : 1,
-                      }} />
-
-                      {locked && (
-                        <span style={{
-                          fontSize: 8, position: 'absolute', bottom: 3, color: 'var(--border-strong)',
-                        }}>🔒</span>
-                      )}
-                    </button>
-                  )
-                })}
-              </div>
-            )}
-          </div>
-
-          {/* ── Legend ── */}
-          <div style={{
-            display: 'flex', gap: 14, justifyContent: 'center',
-            fontSize: 11, color: 'var(--muted)',
-          }}>
-            {[
-              { color: 'var(--success-text)', label: 'Completed' },
-              { color: 'var(--danger-text)', label: 'Attempted' },
-              { color: 'rgba(255,255,255,0.12)', label: 'Not played' },
-            ].map(({ color, label }) => (
-              <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                <div style={{ width: 7, height: 7, borderRadius: '50%', background: color }} />
-                <span>{label}</span>
-              </div>
-            ))}
-          </div>
-
+          <button type="button" className="ar-btn" aria-label="Close archive" onClick={onClose}>
+            <CloseIcon />
+          </button>
         </div>
+
+        {/* ── Streak + Stats (logged in) ── */}
+        {user && (
+          <div className="ar-stats">
+            <div className="ar-stats-row">
+              <div className="ar-streak">
+                <span className="ar-fire" aria-hidden="true">🔥</span>
+                <span className="ar-streak-num">{streak}</span>
+                <span>day streak</span>
+              </div>
+              <div className="ar-count"><b>{completed.length}</b> / {available.length} this month</div>
+            </div>
+            <div className="ar-bar">
+              <div className="ar-bar-fill" style={{ width: `${progress}%` }} />
+            </div>
+          </div>
+        )}
+
+        {/* ── Sign-in nudge (guest) ── */}
+        {!user && (
+          <div className="ar-nudge">
+            <LockIcon />
+            <span>You're only seeing the last 7 days. Sign in to play every puzzle since launch.</span>
+          </div>
+        )}
+
+        {/* ── Calendar ── */}
+        <div className="ar-cal">
+          <div className="ar-monthbar">
+            <button type="button" className="ar-btn" aria-label="Previous month" onClick={prevMonth} disabled={!canGoBack}>
+              <PrevIcon />
+            </button>
+            <span className="ar-month">{monthName}</span>
+            <button type="button" className="ar-btn" aria-label="Next month" onClick={nextMonth} disabled={!canGoForward}>
+              <NextIcon />
+            </button>
+          </div>
+
+          <div className="ar-dow">
+            {['Su','Mo','Tu','We','Th','Fr','Sa'].map(d => <div key={d}>{d}</div>)}
+          </div>
+
+          {loading ? (
+            <div className="ar-loading">Loading…</div>
+          ) : (
+            <div className="ar-days">
+              {calDays.map((dateStr, i) => {
+                if (!dateStr) return <div key={`e${i}`} />
+
+                const avail   = isAvailable(dateStr, launchStr)
+                const locked  = isLocked(dateStr, user)
+                const open    = avail && !locked
+                const played  = dateStr in results
+                const win     = open && results[dateStr] === true
+                const loss    = open && played && !win
+                const dayNum  = parseInt(dateStr.split('-')[2], 10)
+                const classes = [
+                  'ar-day',
+                  !avail && 'is-off',
+                  avail && locked && 'is-locked',
+                  dateStr === todayStr && 'is-today',
+                  win && 'is-won',
+                  loss && 'is-lost',
+                  dateStr === selected && 'is-selected',
+                ].filter(Boolean).join(' ')
+
+                return (
+                  <button
+                    key={dateStr}
+                    type="button"
+                    className={classes}
+                    onClick={() => handleSelect(dateStr)}
+                    disabled={!open}
+                    title={locked ? 'Sign in to unlock' : dateStr}
+                    style={{ animationDelay: `${(i % 7) * 0.025}s` }}
+                  >
+                    <span className="ar-num">{dayNum}</span>
+                    <span className="ar-mark">
+                      {win && <CheckIcon />}
+                      {loss && <span className="ar-dot" />}
+                      {avail && locked && <LockIcon size={9} />}
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* ── Legend ── */}
+        <div className="ar-legend">
+          {LEGEND.map(({ className, label }) => (
+            <span key={label} className="ar-key">
+              <span className={`ar-swatch ${className}`.trim()} />
+              {label}
+            </span>
+          ))}
+        </div>
+
       </div>
-    </>
+    </div>
   )
 }
