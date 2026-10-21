@@ -265,21 +265,16 @@ describe('membership lookup', () => {
   })
 })
 
-describe('Home World Cup banner', () => {
-  const banner = () => [...host.querySelectorAll('a')].find(a => a.getAttribute('href') === '/bracket')
+describe('Home', () => {
+  // Pools live in the account menu's Pool History; Home links to none of them.
+  const poolLink = () => [...host.querySelectorAll('a')].find(a => ['/bracket', '/octagon', '/pools'].includes(a.getAttribute('href')))
 
-  it('links World Cup members to the final results', async () => {
-    memberOf = { wc2026: true }
+  it('shows no pool link to members or guests', async () => {
+    memberOf = { wc2026: true, octagon: true }
     await render(newUser(), <Home />)
-    expect(banner().textContent).toContain('Final results')
-  })
-
-  it('stays hidden for Octagon-only members and guests', async () => {
-    memberOf = { octagon: true }
-    await render(newUser(), <Home />)
-    expect(banner()).toBeUndefined()
+    expect(poolLink()).toBeUndefined()
     act(() => root.unmount()); host.remove()
     await render(null, <Home />)
-    expect(banner()).toBeUndefined()
+    expect(poolLink()).toBeUndefined()
   })
 })

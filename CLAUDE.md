@@ -77,8 +77,8 @@ the 2026-07-19 final (ESP 1–0 ARG); Mehdi Saeed won it with 113 points.
 - `src/Bracket.jsx`: champion banner; Standings (per-player pick history),
   My picks (read-only, collapsed by day, tap a match for everyone's picks)
   and Tournament (group tables + bracket). No polling, no join form, no admin
-  view. Non-members see "This pool has ended". Home shows members a
-  "World Cup 2026 Pool · Final results" link. Still `noindex`.
+  view. Non-members see "This pool has ended". Members reach it from the
+  account menu's Pool History (Home has no pool link). Still `noindex`.
 - Tables kept as-is: `pool_members` (wc2026 rows), `matches`, `predictions`.
   `supabase/schema.sql` documents the original schema plus an "Archive"
   section with everything above. An off-site CSV export (standings, matches,
@@ -130,8 +130,7 @@ known. `noindex`.
   (alongside its page and route); its members then see it automatically, and it
   moves from Active to Past once it gets a `pool_archive` row — no code change.
 - `src/usePoolMemberships.js` asks `is_member_of(pool)` for each registered
-  pool, cached per user per page load and shared by UserMenu, Home (the World
-  Cup banner) and PoolHistory. A pool's in-page join form must call
+  pool, cached per user per page load and shared by UserMenu and PoolHistory. A pool's in-page join form must call
   `refreshPoolMemberships()` after a successful join (Octagon's does), or the
   menu item waits for the next page load. Not a `pool_members` select: that table's RLS
   is `is_pool_member()`, hard-scoped to `wc2026`, so World Cup members can read
