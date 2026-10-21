@@ -3,7 +3,9 @@ import { useAuth } from './AuthContext'
 import { clickableProps } from './a11y'
 import { usePoolMemberships } from './usePoolMemberships'
 
-export default function UserMenu() {
+// Pinned to the page's top-right corner by default; `isInline` lets a header
+// (GameShell's top bar) place it in its own layout instead.
+export default function UserMenu({ isInline = false }) {
   const { user, signOut } = useAuth()
   const { poolIds } = usePoolMemberships()
   const [open, setOpen] = useState(false)
@@ -28,16 +30,16 @@ export default function UserMenu() {
   const name = user.user_metadata?.full_name || user.email
 
   return (
-    <div style={{ position: 'absolute', right: 16, top: 20, zIndex: 50 }}>
+    <div style={isInline ? { position: 'relative', zIndex: 50 } : { position: 'absolute', right: 16, top: 20, zIndex: 50 }}>
       <div ref={triggerRef} {...clickableProps(() => setOpen(!open))} aria-haspopup="menu" aria-expanded={open} aria-label="Account menu" style={{
         width: 36, height: 36, borderRadius: '50%',
-        background: '#1C1A16', border: '2px solid #2C2820',
+        background: 'var(--surface)', border: '2px solid var(--border)',
         cursor: 'pointer', overflow: 'hidden',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
       }}>
         {avatar
           ? <img src={avatar} alt="" width={36} height={36} style={{ borderRadius: '50%' }} />
-          : <span style={{ fontSize: 14, fontWeight: 700, color: '#C9A84C' }}>
+          : <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--gold)' }}>
               {name?.[0]?.toUpperCase()}
             </span>
         }
@@ -46,35 +48,35 @@ export default function UserMenu() {
       {open && (
         <div style={{
           position: 'absolute', right: 0, top: 44,
-          background: '#1C1A16', border: '1px solid #2C2820',
+          background: 'var(--surface)', border: '1px solid var(--border)',
           borderRadius: 10, padding: 12, minWidth: 200,
           boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
         }}>
-          <div style={{ fontSize: 13, fontWeight: 600, color: '#F5F0E8', marginBottom: 2 }}>{name}</div>
-          <div style={{ fontSize: 11, color: '#7A6E5F', marginBottom: 12 }}>{user.email}</div>
+          <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink)', marginBottom: 2 }}>{name}</div>
+          <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 12 }}>{user.email}</div>
           {/* Pool members only: the pools they belong to, live and finished. */}
           {poolIds?.length > 0 && (
-            <div style={{ borderTop: '1px solid #2C2820', padding: '6px 0' }}>
+            <div style={{ borderTop: '1px solid var(--border)', padding: '6px 0' }}>
               <a href="/pools" style={{
                 display: 'block', borderRadius: 6, padding: '8px 10px',
-                color: '#F5F0E8', fontSize: 13, fontWeight: 600, textDecoration: 'none',
+                color: 'var(--ink)', fontSize: 13, fontWeight: 600, textDecoration: 'none',
                 transition: 'background 0.2s',
               }}
-                onMouseOver={e => e.currentTarget.style.background = 'rgba(201,168,76,0.08)'}
+                onMouseOver={e => e.currentTarget.style.background = 'rgba(var(--gold-rgb),0.08)'}
                 onMouseOut={e => e.currentTarget.style.background = 'none'}
               >
                 <span aria-hidden="true">🏆</span> Pool History
               </a>
             </div>
           )}
-          <div style={{ borderTop: '1px solid #2C2820', paddingTop: 10 }}>
+          <div style={{ borderTop: '1px solid var(--border)', paddingTop: 10 }}>
             <button onClick={signOut} style={{
-              width: '100%', background: 'none', border: '1px solid rgba(252,165,165,0.25)',
-              borderRadius: 6, color: '#FCA5A5', cursor: 'pointer',
+              width: '100%', background: 'none', border: '1px solid rgba(var(--danger-text-rgb),0.25)',
+              borderRadius: 6, color: 'var(--danger-text)', cursor: 'pointer',
               fontSize: 13, fontWeight: 600, padding: '8px',
               transition: 'background 0.2s',
             }}
-              onMouseOver={e => e.currentTarget.style.background = 'rgba(252,165,165,0.07)'}
+              onMouseOver={e => e.currentTarget.style.background = 'rgba(var(--danger-text-rgb),0.07)'}
               onMouseOut={e => e.currentTarget.style.background = 'none'}
             >
               Sign out

@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useMemo } from "react";
 import Archive from './Archive'
-import UserMenu from "./UserMenu";
+import GameShell from "./GameShell";
 import { saveResult } from './saveResult';
 import { useStreak } from './useStreak';
 import AwardIcon from './AwardIcon';
@@ -36,9 +36,9 @@ const BADGE = {
 const LABEL = { ...PROMOTIONS, ...WEIGHT_CLASSES, ...ACHIEVEMENTS };
 
 function getHeaderStyle(key) {
-  if (key in PROMOTIONS)    return { bg:'rgba(201,168,76,0.12)',  color:'#C9A84C' }
-  if (key in WEIGHT_CLASSES) return { bg:'rgba(147,197,253,0.12)', color:'#93C5FD' }
-  return                            { bg:'rgba(134,239,172,0.12)', color:'#86EFAC' }
+  if (key in PROMOTIONS)    return { bg:'rgba(var(--gold-rgb),0.12)',  border:'rgba(var(--gold-rgb),0.25)', color:'var(--gold)' }
+  if (key in WEIGHT_CLASSES) return { bg:'rgba(147,197,253,0.12)', border:'rgba(147,197,253,0.25)', color:'#93C5FD' }
+  return                            { bg:'rgba(var(--success-text-rgb),0.12)', border:'rgba(var(--success-text-rgb),0.25)', color:'var(--success-text)' }
 }
 
 // ── Fighters ─────────────────────────────────────────────────────────────────
@@ -400,7 +400,6 @@ export default function KnockoutGame() {
   const [shakeCell, setShakeCell] = useState(null);
   const [won, setWon] = useState(false);
   const [gameOver, setGameOver] = useState(false);
-  const [showHow, setShowHow] = useState(false);
   const [confetti, setConfetti] = useState([]);
   const [totalScore, setTotalScore] = useState(0);
   const [copied, setCopied] = useState(false);
@@ -478,7 +477,7 @@ export default function KnockoutGame() {
     if (Object.keys(newCells).length === 9) {
       setWon(true);
       saveResult({ game: 'knockout', completed: true, score: newTotal });
-      const colors = ['#C9A84C','#fff','#86EFAC','#FCA5A5','#93C5FD'];
+      const colors = ['var(--gold)','var(--ink)','var(--success-text)','var(--danger-text)','#93C5FD'];
       setConfetti(Array.from({length:30},(_,i)=>({
         id:i, x:Math.random()*100, size:Math.random()*10+6,
         color:colors[i%colors.length], delay:Math.random()*400,
@@ -517,61 +516,41 @@ export default function KnockoutGame() {
     } catch { await navigator.clipboard.writeText(text); setCopied(true); setTimeout(() => setCopied(false), 2000); }
   }
 
+  const howTo = (
+    <>
+      Fill the 3×3 grid with MMA fighters. Each answer must satisfy <b>both</b> the row and column criteria.<br/><br/>
+      Criteria can be a <b>promotion</b> (fighter competed there), a <b>weight class</b> (fighter competed at that weight), or an <b>achievement</b>.<br/><br/>
+      Each fighter can only be used <b>once</b>. You have <b>9 guesses</b> — one per cell.<br/><br/>
+      🏆 Rarer answers score higher. Max score: ~900.
+    </>
+  )
+
   return (
-    <main style={{minHeight:'100vh',display:'flex',flexDirection:'column',alignItems:'center',paddingTop:0,paddingBottom:40,color:'#F5F0E8',position:'relative',overflow:'hidden'}}>
+    <GameShell game="knockout" date={formatDate(puzzleDate)} howTo={howTo} onArchive={() => setShowArchive(true)}>
       <style>{css}</style>
 
       {confetti.map(c=>(
         <div key={c.id} style={{position:'fixed',left:`${c.x}%`,top:'28%',width:c.size,height:c.size,background:c.color,borderRadius:c.size>10?'50%':2,animation:`confetti 1.3s ${c.delay}ms ease forwards`,pointerEvents:'none',zIndex:100}}/>
       ))}
 
-      <UserMenu />
-      <div style={{width:'100%',display:'flex',alignItems:'center',padding:'12px 16px 0',minHeight:44}}>
-        <a href="/" style={{color:'#C9A84C',textDecoration:'none',fontSize:13,fontWeight:600}}>← Back</a>
-      </div>
-
-      {/* Header */}
-      <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:2}}>
-        <div style={{display:'flex',flexDirection:'column',alignItems:'center'}}>
-          <h1 style={{fontSize:30,fontWeight:900,letterSpacing:2,color:'#fff',margin:0}}>KNOCKOUT</h1>
-          <div style={{fontSize:11,fontWeight:600,letterSpacing:3,color:'#C9A84C',textTransform:'uppercase',marginTop:-4}}>by Streakle</div>
-        </div>
-        <button onClick={()=>setShowHow(!showHow)} style={{background:'none',border:'1px solid #2C2820',borderRadius:6,color:'#C9A84C',cursor:'pointer',fontSize:13,padding:'3px 10px',marginLeft:8}}>
-          How to play
-        </button>
-        <button onClick={()=>setShowArchive(true)} style={{background:'none',border:'1px solid #2C2820',borderRadius:6,color:'#C9A84C',cursor:'pointer',fontSize:13,padding:'3px 10px'}}>
-          📅 Archive
-        </button>
-      </div>
-
-      <div style={{fontSize:13,color:'#7A6E5F',marginBottom:8,marginTop:6}}>{formatDate(puzzleDate)}</div>
 
       {/* Legend */}
       <div style={{display:'flex',gap:12,marginBottom:10,fontSize:11,fontWeight:600}}>
-        <span style={{color:'#C9A84C'}}>■ Promotion</span>
+        <span style={{color:'var(--gold)'}}>■ Promotion</span>
         <span style={{color:'#93C5FD'}}>■ Division</span>
-        <span style={{color:'#86EFAC'}}>■ Achievement</span>
+        <span style={{color:'var(--success-text)'}}>■ Achievement</span>
       </div>
 
-      {showHow && (
-        <div style={{background:'#1C1A16',border:'1px solid #2C2820',borderRadius:10,padding:16,maxWidth:340,marginBottom:12,fontSize:13,lineHeight:1.65,color:'#ccc',animation:'slideUp 0.3s ease'}}>
-          <b style={{color:'#C9A84C'}}>How to play</b><br/>
-          Fill the 3×3 grid with MMA fighters. Each answer must satisfy <b>both</b> the row and column criteria.<br/><br/>
-          Criteria can be a <b>promotion</b> (fighter competed there), a <b>weight class</b> (fighter competed at that weight), or an <b>achievement</b>.<br/><br/>
-          Each fighter can only be used <b>once</b>. You have <b>9 guesses</b> — one per cell.<br/><br/>
-          🏆 Rarer answers score higher. Max score: ~900.
-        </div>
-      )}
 
       <div style={{display:'flex',gap:24,marginBottom:8,fontSize:14}}>
-        <div style={{color:'#C9A84C',fontWeight:700}}>Score: {totalScore}</div>
-        <div style={{color:guessesLeft<=3?'#e94560':'#C9A84C',fontWeight:700}}>
+        <div style={{color:'var(--gold)',fontWeight:700}}>Score: {totalScore}</div>
+        <div style={{color:guessesLeft<=3?'var(--danger)':'var(--gold)',fontWeight:700}}>
           {won?'Complete!':gameOver?'Game over':`${guessesLeft} guess${guessesLeft!==1?'es':''} left`}
         </div>
       </div>
 
       {streak > 0 && (
-        <div style={{fontSize:13,color:'#C9A84C',fontWeight:600,marginBottom:8}}>
+        <div style={{fontSize:13,color:'var(--gold)',fontWeight:600,marginBottom:8}}>
           🔥 {streak} day streak
         </div>
       )}
@@ -584,12 +563,12 @@ export default function KnockoutGame() {
 
           {/* Column headers */}
           {colHeaders.map((col,ci)=>{
-            const {bg,color}=getHeaderStyle(col);
+            const {bg,border,color}=getHeaderStyle(col);
             return (
-              <div key={ci} style={{background:'#1C1A16',border:'1px solid #2C2820',borderRadius:8,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:'4px 6px',textAlign:'center'}}>
+              <div key={ci} style={{background:'var(--surface)',border:'1px solid var(--border)',borderRadius:8,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:'4px 6px',textAlign:'center'}}>
                 {col in ACHIEVEMENTS
                   ? <AwardIcon name={col} size={32}/>
-                  : <div style={{background:bg,border:`1px solid ${color}40`,borderRadius:4,padding:'2px 6px',fontSize:9,fontWeight:800,color,letterSpacing:0.5}}>{BADGE[col]}</div>}
+                  : <div style={{background:bg,border:`1px solid ${border}`,borderRadius:4,padding:'2px 6px',fontSize:9,fontWeight:800,color,letterSpacing:0.5}}>{BADGE[col]}</div>}
                 <div style={{fontSize:9,fontWeight:700,color,lineHeight:1.2,marginTop:3}}>{LABEL[col]}</div>
               </div>
             );
@@ -599,8 +578,8 @@ export default function KnockoutGame() {
           {rowHeaders.map((row,ri)=>(
             <React.Fragment key={`row-${ri}`}>
               {/* Row header */}
-              <div style={{background:'#1C1A16',border:'1px solid #2C2820',borderRadius:8,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:'4px 6px',textAlign:'center'}}>
-                {(()=>{const{bg,color}=getHeaderStyle(row);return(<>{row in ACHIEVEMENTS?<AwardIcon name={row} size={32}/>:<div style={{background:bg,border:`1px solid ${color}40`,borderRadius:4,padding:'2px 6px',fontSize:9,fontWeight:800,color,letterSpacing:0.5}}>{BADGE[row]}</div>}<div style={{fontSize:9,fontWeight:700,color,lineHeight:1.2,marginTop:3}}>{LABEL[row]}</div></>);})()}
+              <div style={{background:'var(--surface)',border:'1px solid var(--border)',borderRadius:8,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:'4px 6px',textAlign:'center'}}>
+                {(()=>{const{bg,border,color}=getHeaderStyle(row);return(<>{row in ACHIEVEMENTS?<AwardIcon name={row} size={32}/>:<div style={{background:bg,border:`1px solid ${border}`,borderRadius:4,padding:'2px 6px',fontSize:9,fontWeight:800,color,letterSpacing:0.5}}>{BADGE[row]}</div>}<div style={{fontSize:9,fontWeight:700,color,lineHeight:1.2,marginTop:3}}>{LABEL[row]}</div></>);})()}
               </div>
               {/* Cells */}
               {colHeaders.map((col,ci)=>{
@@ -610,8 +589,8 @@ export default function KnockoutGame() {
                 const isShaking=shakeCell===key;
                 return (
                   <div key={key} {...clickableProps(()=>handleCellClick(ri,ci), filled||gameOver||won)} style={{
-                    background:filled?'#1a3a2a':isActive?'#2C2418':'#1C1A16',
-                    border:`2px solid ${filled?'#4caf50':isActive?'#C9A84C':'#2C2820'}`,
+                    background:filled?'#1a3a2a':isActive?'var(--surface-gold)':'var(--surface)',
+                    border:`2px solid ${filled?'var(--success)':isActive?'var(--gold)':'var(--border)'}`,
                     borderRadius:8,cursor:filled||gameOver||won?'default':'pointer',
                     display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',
                     padding:6,textAlign:'center',userSelect:'none',
@@ -620,11 +599,11 @@ export default function KnockoutGame() {
                   }}>
                     {filled?(
                       <>
-                        <div style={{fontSize:10,fontWeight:700,color:'#4caf50',marginBottom:2}}>+{filled.score}</div>
-                        <div style={{fontSize:11,fontWeight:700,color:'#fff',lineHeight:1.3}}>{filled.player.n}</div>
+                        <div style={{fontSize:10,fontWeight:700,color:'var(--success)',marginBottom:2}}>+{filled.score}</div>
+                        <div style={{fontSize:11,fontWeight:700,color:'var(--ink)',lineHeight:1.3}}>{filled.player.n}</div>
                       </>
                     ):isActive?(
-                      <div style={{fontSize:11,color:'#C9A84C'}}>Type below ↓</div>
+                      <div style={{fontSize:11,color:'var(--gold)'}}>Type below ↓</div>
                     ):(
                       <div style={{fontSize:20,opacity:0.2}}>?</div>
                     )}
@@ -639,27 +618,27 @@ export default function KnockoutGame() {
       {/* Search */}
       {activeCell && !won && !gameOver && (
         <div style={{marginTop:16,width:'100%',maxWidth:340,padding:'0 12px',boxSizing:'border-box',animation:'slideUp 0.3s ease'}}>
-          <div style={{fontSize:12,color:'#7A6E5F',marginBottom:6,textAlign:'center'}}>
+          <div style={{fontSize:12,color:'var(--muted)',marginBottom:6,textAlign:'center'}}>
             {LABEL[rowHeaders[activeCell[0]]]} × {LABEL[colHeaders[activeCell[1]]]}
           </div>
           <input ref={inputRef} value={query} onChange={e=>handleQuery(e.target.value)}
             placeholder="Search MMA fighter..."
-            style={{width:'100%',boxSizing:'border-box',background:'#1C1A16',border:`2px solid ${pendingPlayer?'#4caf50':'#C9A84C'}`,borderRadius:8,color:'#fff',fontSize:15,padding:'10px 14px',outline:'none'}}
+            style={{width:'100%',boxSizing:'border-box',background:'var(--surface)',border:`2px solid ${pendingPlayer?'var(--success)':'var(--gold)'}`,borderRadius:8,color:'var(--ink)',fontSize:15,padding:'10px 14px',outline:'none'}}
           />
           {suggestions.length > 0 && (
-            <div style={{background:'#1C1A16',border:'1px solid #2C2820',borderRadius:8,marginTop:4,overflow:'hidden'}}>
+            <div style={{background:'var(--surface)',border:'1px solid var(--border)',borderRadius:8,marginTop:4,overflow:'hidden'}}>
               {suggestions.map((f,i)=>(
                 <div key={i} {...clickableProps(()=>handleSelect(f))} style={{
                   padding:'10px 14px',cursor:'pointer',fontSize:13,
-                  borderBottom:i<suggestions.length-1?'1px solid #2C2820':'none',
+                  borderBottom:i<suggestions.length-1?'1px solid var(--border)':'none',
                   background:pendingPlayer?.n===f.n?'#1a3a2a':'transparent',
                   transition:'background 0.15s',
                 }}
-                  onMouseOver={e=>e.currentTarget.style.background='#2C2418'}
+                  onMouseOver={e=>e.currentTarget.style.background='var(--surface-gold)'}
                   onMouseOut={e=>e.currentTarget.style.background=pendingPlayer?.n===f.n?'#1a3a2a':'transparent'}
                 >
-                  <span style={{color:'#F5F0E8',fontWeight:600}}>{f.n}</span>
-                  <span style={{color:'#5A5040',fontSize:11,marginLeft:8}}>
+                  <span style={{color:'var(--ink)',fontWeight:600}}>{f.n}</span>
+                  <span style={{color:'var(--faint)',fontSize:11,marginLeft:8}}>
                     {f.w.map(w=>WEIGHT_CLASSES[w]||w).join(' / ')}
                   </span>
                 </div>
@@ -668,12 +647,12 @@ export default function KnockoutGame() {
           )}
           {pendingPlayer && (
             <button onClick={handleConfirm} style={{
-              marginTop:10,width:'100%',background:'#C9A84C',border:'none',
-              borderRadius:8,color:'#0F0E0C',fontSize:14,fontWeight:700,
+              marginTop:10,width:'100%',background:'var(--gold)',border:'none',
+              borderRadius:8,color:'var(--bg)',fontSize:14,fontWeight:700,
               padding:'11px',cursor:'pointer',transition:'background 0.15s',
             }}
-              onMouseOver={e=>e.currentTarget.style.background='#D4B45A'}
-              onMouseOut={e=>e.currentTarget.style.background='#C9A84C'}
+              onMouseOver={e=>e.currentTarget.style.background='var(--gold-hover)'}
+              onMouseOut={e=>e.currentTarget.style.background='var(--gold)'}
             >
               Confirm: {pendingPlayer.n}
             </button>
@@ -684,30 +663,27 @@ export default function KnockoutGame() {
       {/* Result */}
       {(won || gameOver) && (
         <div style={{marginTop:20,textAlign:'center',animation:'slideUp 0.4s ease'}}>
-          <div style={{fontSize:22,fontWeight:800,color:won?'#C9A84C':'#FCA5A5',marginBottom:4}}>
+          <div style={{fontSize:22,fontWeight:800,color:won?'var(--gold)':'var(--danger-text)',marginBottom:4}}>
             {won ? '🥊 Flawless Victory!' : 'Game Over'}
           </div>
-          <div style={{fontSize:14,color:'#7A6E5F',marginBottom:16}}>
-            Final score: <b style={{color:'#C9A84C'}}>{totalScore}</b>
+          <div style={{fontSize:14,color:'var(--muted)',marginBottom:16}}>
+            Final score: <b style={{color:'var(--gold)'}}>{totalScore}</b>
           </div>
           <div style={{position:'relative',display:'inline-block'}}>
-            <button onClick={handleShare} style={{background:'#C9A84C',color:'#0F0E0C',border:'none',borderRadius:8,padding:'10px 28px',fontSize:15,fontWeight:700,cursor:'pointer'}}
-              onMouseOver={e=>e.currentTarget.style.background='#D4B45A'}
-              onMouseOut={e=>e.currentTarget.style.background='#C9A84C'}>
+            <button onClick={handleShare} style={{background:'var(--gold)',color:'var(--bg)',border:'none',borderRadius:8,padding:'10px 28px',fontSize:15,fontWeight:700,cursor:'pointer'}}
+              onMouseOver={e=>e.currentTarget.style.background='var(--gold-hover)'}
+              onMouseOut={e=>e.currentTarget.style.background='var(--gold)'}>
               📋 Share result
             </button>
-            {copied&&<div style={{position:'absolute',top:-32,left:'50%',transform:'translateX(-50%)',background:'#2d6a30',color:'#fff',fontSize:12,fontWeight:600,padding:'4px 12px',borderRadius:6,whiteSpace:'nowrap',animation:'copied 2s ease forwards',pointerEvents:'none'}}>Copied!</div>}
+            {copied&&<div style={{position:'absolute',top:-32,left:'50%',transform:'translateX(-50%)',background:'#2d6a30',color:'var(--ink)',fontSize:12,fontWeight:600,padding:'4px 12px',borderRadius:6,whiteSpace:'nowrap',animation:'copied 2s ease forwards',pointerEvents:'none'}}>Copied!</div>}
           </div>
         </div>
       )}
 
-      <div style={{marginTop:32,fontSize:12,color:'#5A5040',textAlign:'center'}}>
-        <a href="/privacy" style={{color:'#5A5040',textDecoration:'none'}}>Privacy Policy / Politique de confidentialité</a>
-      </div>
 
       {showArchive && (
         <Archive game="knockout" onClose={()=>setShowArchive(false)} onSelectDate={handleSelectDate} />
       )}
-    </main>
+    </GameShell>
   );
 }

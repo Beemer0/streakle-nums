@@ -7,9 +7,9 @@ import { scoreEvent, eventRanking, deriveBelt, formRanking, METHOD_LABELS, POINT
 import { fetchResults, parsePasted, matchFights } from './octagon/wiki'
 import { clickableProps } from './a11y'
 import { refreshPoolMemberships } from './usePoolMemberships'
+import { GOLD, CARD, BORDER, INK, MUTED } from './theme'
 
-const GOLD = '#C9A84C', CARD = '#1C1A16', BORDER = '#2C2820', INK = '#F5F0E8', MUTED = '#7A6E5F'
-const GREEN = '#86EFAC', RED = '#FCA5A5'
+const GREEN = 'var(--success-text)', RED = 'var(--danger-text)'
 
 // The viewer's local timezone abbreviation, same approach as Bracket.
 const TZ_ABBR = (() => {
@@ -337,7 +337,7 @@ export default function Octagon() {
         <a href="/" style={{ color: GOLD, textDecoration: 'none', fontSize: 13, fontWeight: 600 }}>← Back</a>
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: 2 }}>
-        <h1 style={{ fontSize: 32, fontWeight: 900, letterSpacing: 2, color: '#fff', margin: 0 }}>OCTAGON</h1>
+        <h1 style={{ fontSize: 32, fontWeight: 900, letterSpacing: 2, color: 'var(--ink)', margin: 0 }}>OCTAGON</h1>
         <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: 3, color: GOLD, textTransform: 'uppercase', marginTop: 2 }}>
           UFC Pick'em · by Streakle
         </div>
@@ -349,8 +349,8 @@ export default function Octagon() {
   )
 
   const footer = (
-    <div style={{ marginTop: 40, marginBottom: 24, fontSize: 12, color: '#5A5040', textAlign: 'center' }}>
-      <a href="/privacy" style={{ color: '#5A5040', textDecoration: 'none' }}>Privacy Policy / Politique de confidentialité</a>
+    <div style={{ marginTop: 40, marginBottom: 24, fontSize: 12, color: 'var(--faint)', textAlign: 'center' }}>
+      <a href="/privacy" style={{ color: 'var(--faint)', textDecoration: 'none' }}>Privacy Policy / Politique de confidentialité</a>
     </div>
   )
 
@@ -374,12 +374,12 @@ export default function Octagon() {
     return page(
       <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 16, padding: '36px 32px', maxWidth: 340, width: '90%', textAlign: 'center', marginTop: 48, animation: 'slideUp 0.4s ease' }}>
         <div style={{ fontSize: 32, marginBottom: 10 }}>🥊</div>
-        <div style={{ fontSize: 18, fontWeight: 700, color: '#fff', marginBottom: 8 }}>Private UFC pick'em</div>
+        <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--ink)', marginBottom: 8 }}>Private UFC pick'em</div>
         <div style={{ fontSize: 13, color: MUTED, marginBottom: 24, lineHeight: 1.6 }}>
           Pick winners for every PPV main card, steal the belt from your friends,
           defend it event after event. Sign in to join.
         </div>
-        <a href="/login" style={{ display: 'block', background: GOLD, color: '#0F0E0C', borderRadius: 8, padding: '11px 24px', fontSize: 14, fontWeight: 700, textDecoration: 'none' }}>
+        <a href="/login" style={{ display: 'block', background: GOLD, color: 'var(--bg)', borderRadius: 8, padding: '11px 24px', fontSize: 14, fontWeight: 700, textDecoration: 'none' }}>
           Sign in
         </a>
       </div>
@@ -396,7 +396,7 @@ export default function Octagon() {
     return page(
       <form onSubmit={handleJoin} style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 16, padding: '36px 32px', maxWidth: 340, width: '90%', textAlign: 'center', marginTop: 48, animation: joinState === 'bad' ? 'shake 0.45s ease' : 'slideUp 0.4s ease' }}>
         <div style={{ fontSize: 32, marginBottom: 10 }}>🥊</div>
-        <div style={{ fontSize: 18, fontWeight: 700, color: '#fff', marginBottom: 8 }}>Join the pool</div>
+        <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--ink)', marginBottom: 8 }}>Join the pool</div>
         <div style={{ fontSize: 13, color: MUTED, marginBottom: 20, lineHeight: 1.6 }}>
           Enter the invite code you got from the pool admin.
         </div>
@@ -405,10 +405,10 @@ export default function Octagon() {
           onChange={e => { setCode(e.target.value); if (joinState === 'bad') setJoinState('idle') }}
           placeholder="Invite code"
           autoFocus
-          style={{ width: '100%', boxSizing: 'border-box', background: '#0F0E0C', border: `2px solid ${joinState === 'bad' ? '#e94560' : BORDER}`, borderRadius: 8, color: '#fff', fontSize: 15, padding: '10px 14px', outline: 'none', textAlign: 'center', letterSpacing: 1, marginBottom: 8 }}
+          style={{ width: '100%', boxSizing: 'border-box', background: 'var(--bg)', border: `2px solid ${joinState === 'bad' ? 'var(--danger)' : BORDER}`, borderRadius: 8, color: 'var(--ink)', fontSize: 15, padding: '10px 14px', outline: 'none', textAlign: 'center', letterSpacing: 1, marginBottom: 8 }}
         />
         {joinState === 'bad' && <div style={{ fontSize: 12, color: RED, marginBottom: 8 }}>Wrong code — try again</div>}
-        <button type="submit" disabled={!code.trim() || joinState === 'busy'} style={{ width: '100%', background: code.trim() ? GOLD : CARD, border: 'none', borderRadius: 8, padding: '11px 24px', fontSize: 14, fontWeight: 700, color: code.trim() ? '#0F0E0C' : '#555', cursor: code.trim() ? 'pointer' : 'default', transition: 'background 0.2s' }}>
+        <button type="submit" disabled={!code.trim() || joinState === 'busy'} style={{ width: '100%', background: code.trim() ? GOLD : CARD, border: 'none', borderRadius: 8, padding: '11px 24px', fontSize: 14, fontWeight: 700, color: code.trim() ? 'var(--bg)' : 'var(--faint)', cursor: code.trim() ? 'pointer' : 'default', transition: 'background 0.2s' }}>
           {joinState === 'busy' ? 'Joining…' : 'Join'}
         </button>
       </form>
@@ -432,7 +432,7 @@ export default function Octagon() {
           <button key={key} onClick={() => setView(key)} style={{
             background: view === key ? GOLD : 'none',
             border: `1px solid ${view === key ? GOLD : BORDER}`,
-            borderRadius: 20, color: view === key ? '#0F0E0C' : GOLD,
+            borderRadius: 20, color: view === key ? 'var(--bg)' : GOLD,
             cursor: 'pointer', fontSize: 13, fontWeight: 700, padding: '6px 18px',
             transition: 'background 0.15s',
           }}>
@@ -452,7 +452,7 @@ export default function Octagon() {
         <div className="oc-chips" style={{ justifyContent: 'center', maxWidth: 560, padding: '0 12px', marginBottom: 14 }}>
           {events.map(ev => (
             <button key={ev.id} onClick={() => setSelEvent(ev.id)} className="oc-chip" style={{
-              background: effEvent?.id === ev.id ? 'rgba(201,168,76,0.15)' : 'none',
+              background: effEvent?.id === ev.id ? 'rgba(var(--gold-rgb),0.15)' : 'none',
               border: `1px solid ${effEvent?.id === ev.id ? GOLD : BORDER}`,
               borderRadius: 16, color: effEvent?.id === ev.id ? GOLD : MUTED,
               cursor: 'pointer', fontSize: 12, fontWeight: 700, padding: '5px 12px',
@@ -466,7 +466,7 @@ export default function Octagon() {
       {view === 'event' && effEvent && (
         <div style={{ width: '100%', maxWidth: 560, padding: '0 12px', boxSizing: 'border-box' }}>
           <div style={{ textAlign: 'center', marginBottom: 16 }}>
-            <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 24, fontWeight: 800, letterSpacing: 1, color: INK }}>{effEvent.name}</div>
+            <div style={{ fontFamily: 'var(--font-display)', fontSize: 24, fontWeight: 800, letterSpacing: 1, color: INK }}>{effEvent.name}</div>
             <div style={{ fontSize: 12, color: MUTED, marginTop: 2 }}>
               {fmtDay(effEvent.starts_at)} · {fmtTime(effEvent.starts_at)}{TZ_ABBR ? ` ${TZ_ABBR}` : ''}
             </div>
@@ -476,7 +476,7 @@ export default function Octagon() {
                 : <>Picks lock at the event start · You've picked <b style={{ color: GOLD }}>{pickedCount}</b> of <b style={{ color: GOLD }}>{pickable.length}</b> fights</>}
             </div>
             {!started && myLock == null && pickable.length > 0 && (
-              <div style={{ fontSize: 11, color: '#5A5040', marginTop: 3 }}>Don't forget your ★ Lock of the Night (one pick, double points)</div>
+              <div style={{ fontSize: 11, color: 'var(--faint)', marginTop: 3 }}>Don't forget your ★ Lock of the Night (one pick, double points)</div>
             )}
           </div>
 
@@ -553,17 +553,17 @@ function FightCard({ fight: f, mine, started, expanded, onToggle, onWinner, onMe
         onClick={() => onWinner(f, side)}
         disabled={started || f.scratched}
         style={{
-          background: selected ? GOLD : '#0F0E0C',
+          background: selected ? GOLD : 'var(--bg)',
           border: `1px solid ${selected ? GOLD : BORDER}`,
           borderRadius: 10, padding: '12px 6px', cursor: started || f.scratched ? 'default' : 'pointer',
-          color: selected ? '#0F0E0C' : INK, fontSize: 14, fontWeight: 700,
+          color: selected ? 'var(--bg)' : INK, fontSize: 14, fontWeight: 700,
           pointerEvents: started || f.scratched ? 'none' : 'auto',
           opacity: f.scratched ? 0.45 : 1, transition: 'background 0.15s',
         }}
       >
         <div style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{name}</div>
         {underdog && (
-          <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 0.5, color: selected ? '#0F0E0C' : GOLD, marginTop: 2 }}>
+          <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 0.5, color: selected ? 'var(--bg)' : GOLD, marginTop: 2 }}>
             UNDERDOG +{POINTS.underdog}
           </div>
         )}
@@ -573,7 +573,7 @@ function FightCard({ fight: f, mine, started, expanded, onToggle, onWinner, onMe
 
   const chip = (label, active, onClick, key) => (
     <button key={key ?? label} onClick={onClick} className="oc-chip" style={{
-      background: active ? 'rgba(201,168,76,0.18)' : 'none',
+      background: active ? 'rgba(var(--gold-rgb),0.18)' : 'none',
       border: `1px solid ${active ? GOLD : BORDER}`, borderRadius: 14,
       color: active ? GOLD : MUTED, cursor: 'pointer', fontSize: 12, fontWeight: 700, padding: '5px 12px',
     }}>
@@ -643,7 +643,7 @@ function FightCard({ fight: f, mine, started, expanded, onToggle, onWinner, onMe
           )}
           <div style={{ marginTop: 8 }}>
             <button onClick={() => onLock(f)} style={{
-              background: mine.is_lock ? 'rgba(201,168,76,0.18)' : 'none',
+              background: mine.is_lock ? 'rgba(var(--gold-rgb),0.18)' : 'none',
               border: `1px solid ${mine.is_lock ? GOLD : BORDER}`, borderRadius: 14,
               color: mine.is_lock ? GOLD : MUTED, cursor: 'pointer', fontSize: 12, fontWeight: 700, padding: '5px 12px',
             }}>
@@ -654,7 +654,7 @@ function FightCard({ fight: f, mine, started, expanded, onToggle, onWinner, onMe
       )}
 
       {!started && !f.scratched && !mine && (
-        <div style={{ fontSize: 11, color: '#5A5040', marginTop: 8 }}>
+        <div style={{ fontSize: 11, color: 'var(--faint)', marginTop: 8 }}>
           Tap a fighter to pick · winner {POINTS.winner} pts, bonuses after
         </div>
       )}
@@ -721,7 +721,7 @@ function FightPicksPanel({ fight: f, roster, meId, picks, liveScores }) {
 function Avatar({ member: mem, size = 22 }) {
   return mem?.avatar_url
     ? <img src={mem.avatar_url} alt="" width={size} height={size} style={{ borderRadius: '50%', flexShrink: 0 }} referrerPolicy="no-referrer" />
-    : <div style={{ width: size, height: size, borderRadius: '50%', background: '#0F0E0C', border: `1px solid ${BORDER}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: GOLD, flexShrink: 0 }}>
+    : <div style={{ width: size, height: size, borderRadius: '50%', background: 'var(--bg)', border: `1px solid ${BORDER}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: GOLD, flexShrink: 0 }}>
         {(mem?.display_name ?? '?')[0]?.toUpperCase()}
       </div>
 }
@@ -737,7 +737,7 @@ function BeltBanner({ belt, rosterById, onLineage }) {
         <>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1.5, color: GOLD, textTransform: 'uppercase' }}>Pool champion</div>
-            <div style={{ fontSize: 17, fontWeight: 800, color: '#fff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            <div style={{ fontSize: 17, fontWeight: 800, color: 'var(--ink)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {champ?.display_name ?? 'Player'}
             </div>
             <div style={{ fontSize: 11, color: MUTED }}>
@@ -800,7 +800,7 @@ function LineageModal({ belt, rosterById, onClose }) {
     <div onClick={onClose} role="dialog" aria-modal="true" aria-label="Belt lineage" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, animation: 'fadeIn 0.2s ease' }}>
       <div onClick={e => e.stopPropagation()} style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 14, padding: '20px 22px 18px', maxWidth: 380, width: '100%', maxHeight: '85vh', overflowY: 'auto', boxSizing: 'border-box', animation: 'slideUp 0.25s ease' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-          <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 22, fontWeight: 800, letterSpacing: 2, color: INK }}>BELT LINEAGE</div>
+          <div style={{ fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 800, letterSpacing: 2, color: INK }}>BELT LINEAGE</div>
           <button onClick={onClose} aria-label="Close" style={{ background: 'none', border: 'none', color: MUTED, cursor: 'pointer', fontSize: 18, padding: 4, lineHeight: 1 }}>✕</button>
         </div>
         {belt.lineage.length === 0
@@ -811,7 +811,7 @@ function LineageModal({ belt, rosterById, onClose }) {
                 {rosterById.get(l.user_id)?.display_name ?? 'Player'}
               </b>{' '}
               <span style={{ color: MUTED }}>{HOW[l.how]}</span>
-              <div style={{ fontSize: 11, color: '#5A5040', marginTop: 1 }}>{l.name}</div>
+              <div style={{ fontSize: 11, color: 'var(--faint)', marginTop: 1 }}>{l.name}</div>
             </div>
           ))}
       </div>
@@ -829,7 +829,7 @@ function RulesModal({ onClose }) {
   }, [onClose])
 
   const sectionTitle = { fontSize: 11, fontWeight: 700, letterSpacing: 1.5, color: GOLD, textTransform: 'uppercase', marginTop: 18, marginBottom: 6 }
-  const body = { fontSize: 13, color: '#ccc', lineHeight: 1.65, margin: 0 }
+  const body = { fontSize: 13, color: 'var(--ink-2)', lineHeight: 1.65, margin: 0 }
   const scoringRows = [
     ['Correct winner', `${POINTS.winner} pts`],
     [`Method (KO/TKO · Sub · Decision)`, `+${POINTS.method}`],
@@ -842,7 +842,7 @@ function RulesModal({ onClose }) {
     <div onClick={onClose} role="dialog" aria-modal="true" aria-label="Pool rules" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, animation: 'fadeIn 0.2s ease' }}>
       <div onClick={e => e.stopPropagation()} style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 14, padding: '20px 22px 18px', maxWidth: 380, width: '100%', maxHeight: '85vh', overflowY: 'auto', boxSizing: 'border-box', animation: 'slideUp 0.25s ease' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 2 }}>
-          <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 22, fontWeight: 800, letterSpacing: 2, color: INK }}>POOL RULES</div>
+          <div style={{ fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 800, letterSpacing: 2, color: INK }}>POOL RULES</div>
           <button onClick={onClose} aria-label="Close" style={{ background: 'none', border: 'none', color: MUTED, cursor: 'pointer', fontSize: 18, padding: 4, lineHeight: 1 }}>✕</button>
         </div>
 
@@ -856,8 +856,8 @@ function RulesModal({ onClose }) {
         <div style={sectionTitle}>Scoring</div>
         <div style={{ border: `1px solid ${BORDER}`, borderRadius: 8, overflow: 'hidden', marginTop: 2 }}>
           {scoringRows.map(([label, pts], i) => (
-            <div key={label} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 12px', fontSize: 13, background: i % 2 ? 'transparent' : '#0F0E0C' }}>
-              <span style={{ color: '#ccc' }}>{label}</span>
+            <div key={label} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 12px', fontSize: 13, background: i % 2 ? 'transparent' : 'var(--bg)' }}>
+              <span style={{ color: 'var(--ink-2)' }}>{label}</span>
               <span style={{ color: GOLD, fontWeight: 800 }}>{pts}</span>
             </div>
           ))}
@@ -910,13 +910,13 @@ function AdminPanel({ events, effEvent, fights, now, onSaveEvent, onDeleteEvent,
     <input
       value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder}
       {...extra}
-      style={{ width: '100%', boxSizing: 'border-box', background: '#0F0E0C', border: `1px solid ${BORDER}`, borderRadius: 8, color: '#fff', fontSize: 13, padding: '8px 12px', outline: 'none', marginBottom: 6, ...extra.style }}
+      style={{ width: '100%', boxSizing: 'border-box', background: 'var(--bg)', border: `1px solid ${BORDER}`, borderRadius: 8, color: 'var(--ink)', fontSize: 13, padding: '8px 12px', outline: 'none', marginBottom: 6, ...extra.style }}
     />
   )
 
   const smallBtn = (label, onClick, danger = false, active = false, key) => (
     <button key={key ?? label} onClick={onClick} style={{
-      background: active ? 'rgba(201,168,76,0.18)' : 'none',
+      background: active ? 'rgba(var(--gold-rgb),0.18)' : 'none',
       border: `1px solid ${danger ? '#7a2c2c' : active ? GOLD : BORDER}`, borderRadius: 8,
       color: danger ? RED : active ? GOLD : MUTED, cursor: 'pointer', fontSize: 12, fontWeight: 700, padding: '5px 10px',
     }}>
@@ -1057,7 +1057,7 @@ function AdminPanel({ events, effEvent, fights, now, onSaveEvent, onDeleteEvent,
                     value={pasteText} onChange={e => setPasteText(e.target.value)}
                     placeholder={'Copy the Results table off the Wikipedia event page and paste it here (one bout per line).'}
                     rows={5}
-                    style={{ width: '100%', boxSizing: 'border-box', background: '#0F0E0C', border: `1px solid ${BORDER}`, borderRadius: 8, color: '#fff', fontSize: 12, padding: '8px 12px', outline: 'none', resize: 'vertical', marginBottom: 6 }}
+                    style={{ width: '100%', boxSizing: 'border-box', background: 'var(--bg)', border: `1px solid ${BORDER}`, borderRadius: 8, color: 'var(--ink)', fontSize: 12, padding: '8px 12px', outline: 'none', resize: 'vertical', marginBottom: 6 }}
                   />
                   {smallBtn('Parse pasted table', proposeFromPaste, false, true)}
                 </div>
@@ -1103,7 +1103,7 @@ function AdminFightRow({ fight: f, onUpdate, onDelete, confirmKey, confirmTap, s
   }
 
   return (
-    <div style={{ background: CARD, border: `1px solid ${graded ? 'rgba(134,239,172,0.35)' : BORDER}`, borderRadius: 12, padding: '10px 14px', marginBottom: 8, opacity: f.scratched ? 0.6 : 1 }}>
+    <div style={{ background: CARD, border: `1px solid ${graded ? 'rgba(var(--success-text-rgb),0.35)' : BORDER}`, borderRadius: 12, padding: '10px 14px', marginBottom: 8, opacity: f.scratched ? 0.6 : 1 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
         <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1, color: GOLD, textTransform: 'uppercase', flexShrink: 0 }}>{boutLabel(f)}</span>
         <span style={{ flex: 1, minWidth: 0, fontSize: 13, fontWeight: 700, color: INK, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>

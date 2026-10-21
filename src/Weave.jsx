@@ -1,6 +1,6 @@
 import { useState, useEffect, useLayoutEffect, useMemo, useRef } from 'react'
 import Archive from './Archive'
-import UserMenu from './UserMenu'
+import GameShell from './GameShell'
 import { saveResult } from './saveResult'
 import { useStreak } from './useStreak'
 import { useSeo, PAGE_SEO } from './seo'
@@ -8,18 +8,18 @@ import {
   SIZE, MAX_SWAPS, PAR, ACTIVE, HOLE,
   generatePuzzle, colours, swap, isActive, shareGrid,
 } from './weave/engine'
+import { GOLD, CARD, BORDER, INK } from './theme'
 
-const GOLD = '#C9A84C', CARD = '#1C1A16', BORDER = '#2C2820', INK = '#F5F0E8', MUTED = '#7A6E5F'
-const WIN = '#4caf50', RED = '#e94560'
+const WIN = 'var(--success)', RED = 'var(--danger)'
 // Keyed by the engine's colour names (GREEN/YELLOW/GREY). Light tiles take
 // dark ink so every letter clears 3:1 against its tile.
-const DARK_INK = '#0F0E0C'
+const DARK_INK = 'var(--bg)'
 const PALETTE = {
-  bg: { green: '#538d4e', yellow: '#b59f3b', grey: '#3A3428' },
+  bg: { green: '#538d4e', yellow: '#b59f3b', grey: 'var(--border-strong)' },
   ink: { green: INK, yellow: DARK_INK, grey: INK },
 }
 const PALETTE_HC = {
-  bg: { green: '#f5793a', yellow: '#85c0f9', grey: '#3A3428' },
+  bg: { green: '#f5793a', yellow: '#85c0f9', grey: 'var(--border-strong)' },
   ink: { green: DARK_INK, yellow: DARK_INK, grey: INK },
 }
 const CHECKPOINT_KEY = 'streakle-weave'
@@ -34,17 +34,17 @@ const css = `
 @keyframes wvCopied{0%{opacity:0;transform:translateY(4px)}20%{opacity:1;transform:translateY(0)}80%{opacity:1}100%{opacity:0}}
 @keyframes wvStar{0%{transform:scale(0) rotate(-20deg);opacity:0}60%{transform:scale(1.3) rotate(5deg);opacity:1}100%{transform:scale(1);opacity:1}}
 .wv-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;width:min(340px,calc(100vw - 32px));touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
-.wv-tile{position:relative;aspect-ratio:1;min-width:0;padding:0;border:2px solid transparent;border-radius:8px;color:#F5F0E8;cursor:grab;container-type:inline-size;display:flex;align-items:center;justify-content:center;font-family:'Barlow Condensed',sans-serif;font-weight:800;-webkit-tap-highlight-color:transparent;transition:background-color .2s,color .2s,border-color .15s,box-shadow .15s,translate .15s}
+.wv-tile{position:relative;aspect-ratio:1;min-width:0;padding:0;border:2px solid transparent;border-radius:8px;color:var(--ink);cursor:grab;container-type:inline-size;display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-weight:800;-webkit-tap-highlight-color:transparent;transition:background-color .2s,color .2s,border-color .15s,box-shadow .15s,translate .15s}
 .wv-tile[aria-disabled="true"]{cursor:default}
-.wv-tile:focus-visible{outline:2px solid #F5F0E8;outline-offset:2px}
+.wv-tile:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
 .wv-letter{font-size:30px;font-size:58cqw;line-height:1;pointer-events:none}
 /* The lift uses \`translate\`, not \`transform\`: drags and the swap animation
    own \`transform\`, and a CSS transition on it would override the animation. */
-.wv-sel{border-color:#F5F0E8;translate:0 -3px;box-shadow:0 6px 16px rgba(0,0,0,.45)}
-.wv-over{border-color:#F5F0E8;box-shadow:0 0 0 3px rgba(245,240,232,.25)}
+.wv-sel{border-color:var(--ink);translate:0 -3px;box-shadow:0 6px 16px rgba(0,0,0,.45)}
+.wv-over{border-color:var(--ink);box-shadow:0 0 0 3px rgba(245,240,232,.25)}
 .wv-drag{z-index:3;pointer-events:none;box-shadow:0 10px 24px rgba(0,0,0,.55);transition:none}
-.wv-reveal{background:#2C2418 !important;color:#C9A84C !important}
-.wv-toast{position:fixed;top:80px;left:50%;transform:translateX(-50%);background:#1C1A16;border:1px solid #2C2820;border-radius:8px;padding:8px 20px;font-size:14px;font-weight:600;color:#F5F0E8;z-index:60;animation:wvSlideUp .2s ease;white-space:nowrap}
+.wv-reveal{background:var(--surface-gold) !important;color:var(--gold) !important}
+.wv-toast{position:fixed;top:80px;left:50%;transform:translateX(-50%);background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px 20px;font-size:14px;font-weight:600;color:var(--ink);z-index:60;animation:wvSlideUp .2s ease;white-space:nowrap}
 .wv-sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 `
 
@@ -111,7 +111,6 @@ export default function Weave() {
   useSeo(PAGE_SEO.weave)
   const [showArchive, setShowArchive] = useState(false)
   const [puzzleDate, setPuzzleDate] = useState(null)
-  const [showHow, setShowHow] = useState(false)
   const [hc, setHc] = useState(readHc)
 
   const seedDate = puzzleDate ?? todayStr()
@@ -120,44 +119,23 @@ export default function Weave() {
     try { localStorage.setItem(HC_KEY, n ? '1' : '0') } catch { /* storage unavailable */ }
     return n
   })
-
-  const howBtn = { background: 'none', border: `1px solid ${BORDER}`, borderRadius: 6, color: GOLD, cursor: 'pointer', fontSize: 13, padding: '3px 10px' }
   const palette = hc ? PALETTE_HC : PALETTE
 
-  return (
-    <main style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: 0, position: 'relative', color: INK, overflow: 'hidden' }}>
-      <style>{css}</style>
-      <UserMenu />
-      <div style={{ width: '100%', display: 'flex', alignItems: 'center', padding: '12px 16px 0', minHeight: 44 }}>
-        <a href="/" style={{ color: GOLD, textDecoration: 'none', fontSize: 13, fontWeight: 600 }}>← Back</a>
-      </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 2 }}>
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-          <h1 style={{ fontSize: 32, fontWeight: 900, letterSpacing: 2, color: '#fff', margin: 0 }}>WEAVE</h1>
-          <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: 3, color: GOLD, textTransform: 'uppercase', marginTop: -4 }}>by Streakle</div>
-        </div>
-        <button onClick={() => setShowHow(!showHow)} aria-expanded={showHow} style={{ ...howBtn, marginLeft: 8 }}>How to play</button>
-        <button onClick={() => setShowArchive(true)} style={howBtn}>📅 Archive</button>
-      </div>
-      <div style={{ fontSize: 13, color: MUTED, marginBottom: 8, marginTop: 6 }}>{formatDate(puzzleDate)}</div>
+  const howTo = (
+    <>
+      Swap tiles until all six words are right — three across, three down.<br/><br/>
+      <b>Tap</b> a tile, then another to swap them — or <b>drag</b> one onto another.<br/>
+      {hc ? '🟧' : '🟩'} Right spot — locked in<br/>
+      {hc ? '🟦' : '🟨'} Belongs somewhere else in its row or column (a corner or crossing tile may belong to either)<br/>
+      ⬜ Not needed in its row or column<br/><br/>
+      Every puzzle can be solved in <b>{PAR} swaps</b>. You get {MAX_SWAPS} — each one left over is a ⭐. Run out and the puzzle ends.
+    </>
+  )
 
-      {showHow && (
-        <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 10, padding: 16, maxWidth: 340, margin: '0 16px 12px', fontSize: 13, lineHeight: 1.65, color: '#ccc', animation: 'wvSlideUp 0.3s ease' }}>
-          <b style={{ color: GOLD }}>How to play</b><br/>
-          Swap tiles until all six words are right — three across, three down.<br/><br/>
-          <b>Tap</b> a tile, then another to swap them — or <b>drag</b> one onto another.<br/>
-          {hc ? '🟧' : '🟩'} Right spot — locked in<br/>
-          {hc ? '🟦' : '🟨'} Belongs somewhere else in its row or column (a corner or crossing tile may belong to either)<br/>
-          ⬜ Not needed in its row or column<br/><br/>
-          Every puzzle can be solved in <b>{PAR} swaps</b>. You get {MAX_SWAPS} — each one left over is a ⭐. Run out and the puzzle ends.
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 12, paddingTop: 10, borderTop: `1px solid ${BORDER}` }}>
-            <span>High contrast colours</span>
-            <button onClick={toggleHc} role="switch" aria-checked={hc} aria-label="High contrast colours" style={{ background: hc ? '#f5793a' : BORDER, border: 'none', borderRadius: 11, width: 44, height: 22, position: 'relative', cursor: 'pointer', padding: 0 }}>
-              <span style={{ position: 'absolute', top: 2, left: hc ? 24 : 2, width: 18, height: 18, borderRadius: '50%', background: INK, transition: 'left 0.2s' }} />
-            </button>
-          </div>
-        </div>
-      )}
+  return (
+    <GameShell game="weave" date={formatDate(puzzleDate)} howTo={howTo} onArchive={() => setShowArchive(true)} hc={hc} onToggleHc={toggleHc}>
+      <style>{css}</style>
+
 
       {streak > 0 && (
         <div style={{ fontSize: 13, color: GOLD, fontWeight: 600, marginBottom: 8 }}>🔥 {streak} day streak</div>
@@ -166,9 +144,6 @@ export default function Weave() {
       {/* Keyed by date: a new puzzle is a fresh board, never a stale one. */}
       <WeaveBoard key={seedDate} seedDate={seedDate} isToday={puzzleDate === null} palette={palette} hc={hc} />
 
-      <div style={{ marginTop: 32, fontSize: 12, color: '#5A5040', textAlign: 'center' }}>
-        <a href="/privacy" style={{ color: '#5A5040', textDecoration: 'none' }}>Privacy Policy / Politique de confidentialité</a>
-      </div>
 
       {showArchive && (
         <Archive
@@ -177,7 +152,7 @@ export default function Weave() {
           onClose={() => setShowArchive(false)}
         />
       )}
-    </main>
+    </GameShell>
   )
 }
 
@@ -241,7 +216,7 @@ function WeaveBoard({ seedDate, isToday, palette, hc }) {
   const spawnConfetti = () => {
     setConfetti(Array.from({ length: 30 }, (_, i) => ({
       id: i, x: 20 + Math.random() * 60, delay: Math.random() * 700,
-      color: ['#4caf50', '#C9A84C', '#C9A84C', '#e94560', '#ffd700', '#fff'][i % 6],
+      color: ['var(--success)', 'var(--gold)', 'var(--gold)', 'var(--danger)', '#ffd700', 'var(--ink)'][i % 6],
       size: 5 + Math.random() * 8,
     })))
     pushTimeout(() => setConfetti([]), 1600)
@@ -402,16 +377,16 @@ function WeaveBoard({ seedDate, isToday, palette, hc }) {
   const shareBtn = (primary) => (
     <div style={{ position: 'relative', display: 'inline-block', marginTop: 4 }}>
       <button onClick={handleShare} style={primary
-        ? { background: GOLD, color: '#0F0E0C', border: 'none', borderRadius: 8, padding: '10px 28px', fontSize: 15, fontWeight: 700, cursor: 'pointer' }
+        ? { background: GOLD, color: 'var(--bg)', border: 'none', borderRadius: 8, padding: '10px 28px', fontSize: 15, fontWeight: 700, cursor: 'pointer' }
         : { background: CARD, color: GOLD, border: `1px solid ${BORDER}`, borderRadius: 8, padding: '8px 20px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
         📋 Share result
       </button>
-      {copied && <div style={{ position: 'absolute', top: -32, left: '50%', transform: 'translateX(-50%)', background: '#2d6a30', color: '#fff', fontSize: 12, fontWeight: 600, padding: '4px 12px', borderRadius: 6, whiteSpace: 'nowrap', animation: 'wvCopied 2s ease forwards', pointerEvents: 'none' }}>Copied!</div>}
+      {copied && <div style={{ position: 'absolute', top: -32, left: '50%', transform: 'translateX(-50%)', background: '#2d6a30', color: 'var(--ink)', fontSize: 12, fontWeight: 600, padding: '4px 12px', borderRadius: 6, whiteSpace: 'nowrap', animation: 'wvCopied 2s ease forwards', pointerEvents: 'none' }}>Copied!</div>}
     </div>
   )
 
   const wordList = (
-    <div style={{ fontSize: 13, color: '#aaa', margin: '6px 0 14px', letterSpacing: 1 }}>
+    <div style={{ fontSize: 13, color: 'var(--text-2)', margin: '6px 0 14px', letterSpacing: 1 }}>
       {pz.words.join(' · ')}
     </div>
   )
@@ -441,7 +416,7 @@ function WeaveBoard({ seedDate, isToday, palette, hc }) {
       </div>
 
       {playing && (
-        <div style={{ fontSize: 13, color: '#aaa', marginTop: 12, minHeight: 18 }}>
+        <div style={{ fontSize: 13, color: 'var(--text-2)', marginTop: 12, minHeight: 18 }}>
           {sel !== null ? <>Selected <b style={{ color: INK }}>{board[sel]}</b> — tap another tile to swap</> : 'Tap two tiles to swap them'}
         </div>
       )}
@@ -451,7 +426,7 @@ function WeaveBoard({ seedDate, isToday, palette, hc }) {
           <div style={{ fontSize: 22, fontWeight: 700, color: WIN, marginBottom: 6 }}>🎉 Woven!</div>
           <div role="img" aria-label={`${plural(left, 'star')} out of ${MAX_STARS}`} style={{ display: 'flex', gap: 6, justifyContent: 'center', marginBottom: 4 }}>
             {Array.from({ length: MAX_STARS }, (_, k) => (
-              <span key={k} aria-hidden="true" style={{ fontSize: 24, color: k < left ? '#ffd700' : '#3A3428', animation: k < left ? `wvStar 0.4s ${k * 100}ms both ease` : 'none' }}>★</span>
+              <span key={k} aria-hidden="true" style={{ fontSize: 24, color: k < left ? '#ffd700' : 'var(--border-strong)', animation: k < left ? `wvStar 0.4s ${k * 100}ms both ease` : 'none' }}>★</span>
             ))}
           </div>
           {wordList}
@@ -462,7 +437,7 @@ function WeaveBoard({ seedDate, isToday, palette, hc }) {
       {phase === 'lost' && (
         <div style={{ textAlign: 'center', marginTop: 18, animation: 'wvSlideUp 0.4s ease' }}>
           <div style={{ fontSize: 20, fontWeight: 700, color: RED, marginBottom: 4 }}>So close!</div>
-          <div style={{ fontSize: 13, color: '#aaa' }}>Here's how it weaves together:</div>
+          <div style={{ fontSize: 13, color: 'var(--text-2)' }}>Here's how it weaves together:</div>
           {wordList}
           {shareBtn(false)}
         </div>

@@ -1,0 +1,189 @@
+/* GameShell — the frame around every daily game (see GameShell.jsx). */
+
+.gs {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+  overflow: hidden;
+  padding-bottom: 24px;
+  color: var(--ink);
+}
+
+/* ── Top bar: back link left, account right ─────────────────────────────── */
+.gs-top {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px 0;
+  min-height: 56px;
+}
+.gs-back {
+  color: var(--gold);
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 6px 0;
+  transition: color 0.15s;
+}
+.gs-back:hover { color: var(--gold-hover); }
+.gs-signin {
+  color: var(--gold);
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 700;
+  background: rgba(var(--gold-rgb), 0.06);
+  border: 1px solid rgba(var(--gold-rgb), 0.4);
+  border-radius: 8px;
+  padding: 7px 14px;
+  transition: background 0.15s, border-color 0.15s;
+}
+.gs-signin:hover {
+  background: rgba(var(--gold-rgb), 0.14);
+  border-color: var(--gold);
+}
+
+/* ── Title row ──────────────────────────────────────────────────────────── */
+.gs-head {
+  display: flex;
+  flex-wrap: wrap; /* only if the display font fails to load */
+  align-items: center;
+  justify-content: center;
+  gap: 8px 16px;
+  padding: 0 16px;
+}
+.gs-brand {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.gs-title {
+  font-family: var(--font-display);
+  font-size: 44px;
+  font-weight: 800;
+  letter-spacing: 3px;
+  line-height: 0.95;
+  color: var(--ink);
+  margin: 0;
+}
+.gs-by {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 3px;
+  color: var(--gold);
+  text-transform: uppercase;
+  margin-top: 4px;
+}
+.gs-actions {
+  display: flex;
+  gap: 8px;
+}
+.gs-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 34px;
+  background: none;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  color: var(--gold);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 0 12px;
+  white-space: nowrap;
+  transition: background 0.15s, border-color 0.15s;
+}
+.gs-btn:hover,
+.gs-btn[aria-expanded="true"] {
+  background: rgba(var(--gold-rgb), 0.08);
+  border-color: rgba(var(--gold-rgb), 0.45);
+}
+.gs-date {
+  font-size: 13px;
+  color: var(--muted);
+  margin: 10px 0;
+}
+
+/* ── How-to panel ───────────────────────────────────────────────────────── */
+.gs-how {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+  padding: 16px;
+  max-width: 340px;
+  margin: 0 16px 14px;
+  font-size: 13px;
+  line-height: 1.65;
+  color: var(--ink-2);
+  animation: gsSlideUp 0.3s ease;
+}
+.gs-how-title {
+  display: block;
+  color: var(--gold);
+}
+.gs-hc {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+.gs-switch {
+  position: relative;
+  flex-shrink: 0;
+  width: 44px;
+  height: 22px;
+  padding: 0;
+  border: none;
+  border-radius: 11px;
+  background: var(--border-strong);
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.gs-switch::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--ink);
+  transition: transform 0.2s;
+}
+.gs-switch[aria-checked="true"] { background: var(--hc-accent); }
+.gs-switch[aria-checked="true"]::after { transform: translateX(22px); }
+
+/* ── Footer ─────────────────────────────────────────────────────────────── */
+.gs-foot {
+  margin-top: auto;
+  padding-top: 40px;
+  font-size: 12px;
+  text-align: center;
+}
+.gs-foot a {
+  color: var(--muted);
+  text-decoration: none;
+  transition: color 0.15s;
+}
+.gs-foot a:hover { color: var(--gold); }
+
+@keyframes gsSlideUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Phones: icon-only actions keep the title row on one line. */
+@media (max-width: 480px) {
+  .gs-head { column-gap: 12px; }
+  .gs-title { font-size: 38px; letter-spacing: 2px; }
+  .gs-btn { padding: 0; width: 38px; min-height: 38px; justify-content: center; }
+  .gs-btn-label { display: none; }
+}

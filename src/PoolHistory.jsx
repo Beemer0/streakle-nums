@@ -6,15 +6,16 @@ import UserMenu from './UserMenu'
 import { useSeo, PAGE_SEO } from './seo'
 import { usePoolMemberships } from './usePoolMemberships'
 import { groupPools, finishLines } from './pools'
+import { GOLD, CARD, BORDER, INK, MUTED } from './theme'
 
-const GOLD = '#C9A84C', CARD = '#1C1A16', BORDER = '#2C2820', INK = '#F5F0E8', MUTED = '#7A6E5F', LIVE = '#86EFAC'
+const LIVE = 'var(--success-text)'
 
 const css = `
 @keyframes fadeIn { from { opacity:0; transform:translateY(10px) } to { opacity:1; transform:translateY(0) } }
 .ph-row { display:flex; align-items:center; gap:16px; padding:18px 20px; background:${CARD}; text-decoration:none; transition:background 0.15s; }
-.ph-row:hover { background:#211F1A; }
+.ph-row:hover { background:var(--surface-raised); }
 .ph-row:focus-visible { outline-offset:-3px; }
-.ph-row:hover .ph-cta-live { background:#D4B45A; }
+.ph-row:hover .ph-cta-live { background:var(--gold-hover); }
 .ph-row:hover .ph-cta-past { border-color:${GOLD}; }
 @media (max-width:520px) {
   .ph-row { padding:14px 16px; gap:12px; }
@@ -38,12 +39,12 @@ function PoolRow({ pool, lines }) {
       <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 4 }}>
         <span style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
           <span style={{
-            fontFamily: "'Barlow Condensed', sans-serif", fontSize: 24, fontWeight: 800,
+            fontFamily: 'var(--font-display)', fontSize: 24, fontWeight: 800,
             letterSpacing: 1, color: INK, lineHeight: 1,
           }}>{pool.name}</span>
           {isLive && (
             <span style={{
-              background: 'rgba(134,239,172,0.08)', border: '1px solid rgba(134,239,172,0.22)',
+              background: 'rgba(var(--success-text-rgb),0.08)', border: '1px solid rgba(var(--success-text-rgb),0.22)',
               borderRadius: 4, padding: '2px 7px', fontSize: 9, fontWeight: 700,
               letterSpacing: 1.5, textTransform: 'uppercase', color: LIVE,
             }}>Live</span>
@@ -53,7 +54,7 @@ function PoolRow({ pool, lines }) {
           {pool.kind}
         </span>
         {lines.map(line => (
-          <span key={line} style={{ fontSize: 13, color: '#A89880', lineHeight: 1.45 }}>{line}</span>
+          <span key={line} style={{ fontSize: 13, color: 'var(--text-2)', lineHeight: 1.45 }}>{line}</span>
         ))}
       </span>
       <span className={isLive ? 'ph-cta-live' : 'ph-cta-past'} style={{
@@ -61,8 +62,8 @@ function PoolRow({ pool, lines }) {
         fontSize: 12, fontWeight: 700, letterSpacing: 0.4, whiteSpace: 'nowrap',
         transition: 'background 0.15s, border-color 0.15s',
         ...(isLive
-          ? { background: GOLD, color: '#0F0E0C' }
-          : { border: '1px solid rgba(201,168,76,0.35)', color: GOLD }),
+          ? { background: GOLD, color: 'var(--bg)' }
+          : { border: '1px solid rgba(var(--gold-rgb),0.35)', color: GOLD }),
       }}>
         <span className="ph-cta-label">{isLive ? 'Open pool ' : 'Final results '}</span><span aria-hidden="true">→</span>
       </span>
@@ -110,11 +111,11 @@ function Loading() {
 function LoadError() {
   return (
     <Shell>
-      <div role="alert" style={{ marginTop: 40, fontSize: 14, color: '#A89880' }}>
+      <div role="alert" style={{ marginTop: 40, fontSize: 14, color: 'var(--text-2)' }}>
         Couldn't load this page.
         <button onClick={() => window.location.reload()} style={{
           display: 'block', marginTop: 12, background: 'none', cursor: 'pointer',
-          border: '1px solid rgba(201,168,76,0.35)', borderRadius: 6,
+          border: '1px solid rgba(var(--gold-rgb),0.35)', borderRadius: 6,
           color: GOLD, fontSize: 13, fontWeight: 600, padding: '7px 14px',
         }}>Try again</button>
       </div>
@@ -157,7 +158,7 @@ export default function PoolHistory() {
   return (
     <Shell>
       <h1 style={{
-        fontFamily: "'Barlow Condensed', sans-serif", fontSize: 36, fontWeight: 800,
+        fontFamily: 'var(--font-display)', fontSize: 36, fontWeight: 800,
         letterSpacing: 3, color: INK, margin: '28px 0 0', lineHeight: 1.1,
       }}>
         POOL HISTORY

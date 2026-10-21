@@ -163,7 +163,7 @@ export default function Archive({ game, onSelectDate, onClose }) {
           from { opacity: 0; transform: translateY(6px) }
           to   { opacity: 1; transform: translateY(0)   }
         }
-        .arch-close:hover  { background: rgba(255,255,255,0.14) !important; color: #fff !important; }
+        .arch-close:hover  { background: rgba(255,255,255,0.14) !important; color: var(--ink) !important; }
         .arch-nav:hover:not(:disabled) { background: rgba(255,255,255,0.14) !important; }
         .arch-day { transition: transform 0.13s ease, background 0.13s, border-color 0.13s; }
         .arch-day:hover:not(.arch-disabled) {
@@ -201,7 +201,7 @@ export default function Archive({ game, onSelectDate, onClose }) {
           {/* ── Header ── */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div>
-              <div style={{ fontSize: 21, fontWeight: 700, color: '#fff', letterSpacing: '-0.4px' }}>
+              <div style={{ fontSize: 21, fontWeight: 700, color: 'var(--ink)', letterSpacing: '-0.4px' }}>
                 {meta.emoji} {meta.label} Archive
               </div>
               <div style={{ fontSize: 12, color: '#857F73', marginTop: 3 }}>
@@ -215,7 +215,7 @@ export default function Archive({ game, onSelectDate, onClose }) {
               style={{
                 background: 'rgba(255,255,255,0.07)',
                 border: '1px solid rgba(255,255,255,0.1)',
-                color: '#888', fontSize: 15, cursor: 'pointer',
+                color: 'var(--muted)', fontSize: 15, cursor: 'pointer',
                 padding: '6px 11px', borderRadius: 10,
                 transition: 'background 0.15s, color 0.15s',
               }}
@@ -234,12 +234,12 @@ export default function Archive({ game, onSelectDate, onClose }) {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
                   <span style={{ fontSize: 22 }}>🔥</span>
-                  <span style={{ fontSize: 24, fontWeight: 800, color: '#C9A84C', lineHeight: 1 }}>
+                  <span style={{ fontSize: 24, fontWeight: 800, color: 'var(--gold)', lineHeight: 1 }}>
                     {streak}
                   </span>
-                  <span style={{ fontSize: 13, color: '#777' }}>day streak</span>
+                  <span style={{ fontSize: 13, color: 'var(--muted)' }}>day streak</span>
                 </div>
-                <div style={{ fontSize: 13, color: '#666' }}>
+                <div style={{ fontSize: 13, color: 'var(--muted)' }}>
                   <span style={{ color: '#4ade80', fontWeight: 600 }}>{completed.length}</span>
                   <span> / {available.length} this month</span>
                 </div>
@@ -265,10 +265,10 @@ export default function Archive({ game, onSelectDate, onClose }) {
           {/* ── Sign-in nudge (guest) ── */}
           {!user && (
             <div style={{
-              background: 'rgba(201,168,76,0.08)',
-              border: '1px solid rgba(201,168,76,0.18)',
+              background: 'rgba(var(--gold-rgb),0.08)',
+              border: '1px solid rgba(var(--gold-rgb),0.18)',
               borderRadius: 12, padding: '11px 14px',
-              fontSize: 13, color: '#C9A84C', lineHeight: 1.5,
+              fontSize: 13, color: 'var(--gold)', lineHeight: 1.5,
             }}>
               🔒 You're only seeing the last 7 days. Sign in to play every puzzle since launch.
             </div>
@@ -290,13 +290,13 @@ export default function Archive({ game, onSelectDate, onClose }) {
                 style={{
                   background: 'rgba(255,255,255,0.07)',
                   border: '1px solid rgba(255,255,255,0.1)',
-                  color: canGoBack ? '#ccc' : '#2a2a2a',
+                  color: canGoBack ? 'var(--ink-2)' : 'var(--border-strong)',
                   cursor: canGoBack ? 'pointer' : 'default',
                   padding: '5px 13px', borderRadius: 9, fontSize: 18,
                   transition: 'background 0.15s',
                 }}
               >‹</button>
-              <span style={{ color: '#fff', fontWeight: 600, fontSize: 15 }}>{monthName}</span>
+              <span style={{ color: 'var(--ink)', fontWeight: 600, fontSize: 15 }}>{monthName}</span>
               <button
                 className="arch-nav"
                 aria-label="Next month"
@@ -305,7 +305,7 @@ export default function Archive({ game, onSelectDate, onClose }) {
                 style={{
                   background: 'rgba(255,255,255,0.07)',
                   border: '1px solid rgba(255,255,255,0.1)',
-                  color: canGoForward ? '#ccc' : '#2a2a2a',
+                  color: canGoForward ? 'var(--ink-2)' : 'var(--border-strong)',
                   cursor: canGoForward ? 'pointer' : 'default',
                   padding: '5px 13px', borderRadius: 9, fontSize: 18,
                   transition: 'background 0.15s',
@@ -350,7 +350,7 @@ export default function Archive({ game, onSelectDate, onClose }) {
                   if (!avail) {
                     bg = 'transparent'; borderColor = 'transparent'; borderLeft = 'none'
                   } else if (isSel) {
-                    bg = 'rgba(201,168,76,0.2)'; borderColor = 'rgba(201,168,76,0.55)'
+                    bg = 'rgba(var(--gold-rgb),0.2)'; borderColor = 'rgba(var(--gold-rgb),0.55)'
                   } else if (isToday) {
                     bg = 'rgba(255,255,255,0.09)'; borderColor = 'rgba(255,255,255,0.22)'
                   }
@@ -379,7 +379,7 @@ export default function Archive({ game, onSelectDate, onClose }) {
                         alignItems: 'center', justifyContent: 'center', gap: 3,
                         cursor: avail && !locked ? 'pointer' : 'default',
                         opacity: !avail ? 0 : locked ? 0.28 : 1,
-                        padding: 0, color: '#fff', outline: 'none',
+                        padding: 0, color: 'var(--ink)', outline: 'none',
                         animation: avail
                           ? `fadeUp 0.28s ease ${col * 0.025}s both`
                           : 'none',
@@ -388,7 +388,7 @@ export default function Archive({ game, onSelectDate, onClose }) {
                       <span style={{
                         fontSize: 13, lineHeight: 1,
                         fontWeight: isToday ? 700 : 400,
-                        color: isToday ? '#fff' : '#aaa',
+                        color: isToday ? 'var(--ink)' : 'var(--text-2)',
                       }}>{dayNum}</span>
 
                       <div style={{
@@ -399,7 +399,7 @@ export default function Archive({ game, onSelectDate, onClose }) {
 
                       {locked && (
                         <span style={{
-                          fontSize: 8, position: 'absolute', bottom: 3, color: '#333',
+                          fontSize: 8, position: 'absolute', bottom: 3, color: 'var(--border-strong)',
                         }}>🔒</span>
                       )}
                     </button>

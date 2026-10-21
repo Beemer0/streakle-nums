@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useRef, useCallback, memo } from 'react'
 import Archive from './Archive'
-import UserMenu from './UserMenu'
+import GameShell from './GameShell'
 import { saveResult } from './saveResult'
 import { useStreak } from './useStreak'
 import { useSeo, PAGE_SEO } from './seo'
@@ -8,10 +8,10 @@ import {
   RUNGS, MAX_ATTEMPTS, REVEALED, FLAGGED,
   generateBoard, openingState, dig, chord, toggleFlag, isWon, flagCount, formatTime, shareLines,
 } from './mines/engine'
+import { GOLD, CARD, BORDER, INK, MUTED } from './theme'
 
-const GOLD = '#C9A84C', CARD = '#1C1A16', BORDER = '#2C2820', INK = '#F5F0E8', MUTED = '#7A6E5F'
-const GREEN = '#4caf50', RED = '#e94560'
-const DIGIT_COLORS = ['#93C5FD', '#86EFAC', '#FCA5A5', '#C4B5FD', '#FDBA74', '#5EEAD4', '#F5F0E8', '#C9A84C']
+const GREEN = 'var(--success)', RED = 'var(--danger)'
+const DIGIT_COLORS = ['#93C5FD', 'var(--success-text)', 'var(--danger-text)', '#C4B5FD', '#FDBA74', '#5EEAD4', 'var(--ink)', 'var(--gold)']
 const CHECKPOINT_KEY = 'streakle-mines'
 const BOOM_MS = 1100
 
@@ -33,35 +33,35 @@ const css = `
    with a px fallback for browsers without container-query units. */
 .mn-cell{aspect-ratio:1;min-width:0;min-height:0;overflow:hidden;white-space:nowrap;container-type:inline-size;border-radius:4px;display:flex;align-items:center;justify-content:center;cursor:pointer;box-sizing:border-box}
 .mn-grid[aria-disabled="true"] .mn-cell{cursor:default}
-.mn-cell:focus-visible{outline:2px solid #C9A84C;outline-offset:-2px;z-index:1}
-.mn-hidden{background:#2C2418;border:1px solid #3A3226}
+.mn-cell:focus-visible{outline:2px solid var(--gold);outline-offset:-2px;z-index:1}
+.mn-hidden{background:var(--surface-gold);border:1px solid #3A3226}
 @media(hover:hover){.mn-grid:not([aria-disabled="true"]) .mn-hidden:hover{background:#3A3020}}
-.mn-flag{background:#2C2418;border:1px solid #3A3226}
+.mn-flag{background:var(--surface-gold);border:1px solid #3A3226}
 .mn-flag .mn-glyph{animation:mnPop 0.18s ease}
-.mn-zero{background:#14120F;border:1px solid #1C1A16;cursor:default}
-.mn-number{background:#14120F;border:1px solid #1C1A16}
-.mn-boom{background:#e94560;border:1px solid #e94560}
+.mn-zero{background:#14120F;border:1px solid var(--surface);cursor:default}
+.mn-number{background:#14120F;border:1px solid var(--surface)}
+.mn-boom{background:var(--danger);border:1px solid var(--danger)}
 .mn-boom .mn-glyph{animation:mnBoom 0.45s ease}
-.mn-mine{background:#1C1A16;border:1px solid #2C2820}
-.mn-wrongflag{background:#4a1a20;border:1px solid #e94560;color:#e94560;font-weight:800}
+.mn-mine{background:var(--surface);border:1px solid var(--border)}
+.mn-wrongflag{background:#4a1a20;border:1px solid var(--danger);color:var(--danger);font-weight:800}
 .mn-autoflag{background:#1a3a2a;border:1px solid #2d6a30}
-.mn-digit{font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:17px;font-size:52cqw;line-height:1}
+.mn-digit{font-family:var(--font-display);font-weight:800;font-size:17px;font-size:52cqw;line-height:1}
 .mn-glyph{font-size:15px;font-size:46cqw;line-height:1}
 .mn-bar{display:flex;align-items:center;justify-content:center;gap:14px;margin:0 0 12px;font-variant-numeric:tabular-nums}
-.mn-seg{display:flex;border:1px solid #2C2820;border-radius:8px;overflow:hidden}
-.mn-seg button{background:none;border:none;color:#C9A84C;cursor:pointer;font-size:14px;font-weight:700;padding:0 16px;height:44px;touch-action:manipulation;font-family:inherit}
-.mn-seg button[aria-pressed="true"]{background:#C9A84C;color:#0F0E0C}
+.mn-seg{display:flex;border:1px solid var(--border);border-radius:8px;overflow:hidden}
+.mn-seg button{background:none;border:none;color:var(--gold);cursor:pointer;font-size:14px;font-weight:700;padding:0 16px;height:44px;touch-action:manipulation;font-family:inherit}
+.mn-seg button[aria-pressed="true"]{background:var(--gold);color:var(--bg)}
 .mn-ladder{display:flex;gap:6px;width:100%;margin-bottom:12px}
-.mn-pill{flex:1 1 0;min-width:0;border:1px solid #2C2820;border-radius:8px;padding:6px 4px;text-align:center;background:#1C1A16}
-.mn-pill-name{font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:14px;letter-spacing:1px;color:#F5F0E8}
-.mn-pill-sub{font-size:11px;color:#7A6E5F;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mn-pill{flex:1 1 0;min-width:0;border:1px solid var(--border);border-radius:8px;padding:6px 4px;text-align:center;background:var(--surface)}
+.mn-pill-name{font-family:var(--font-display);font-weight:800;font-size:14px;letter-spacing:1px;color:var(--ink)}
+.mn-pill-sub{font-size:11px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .mn-pips{display:inline-flex;gap:4px;vertical-align:middle}
-.mn-pip{width:7px;height:7px;border-radius:50%;background:#3A3428}
-.mn-pip.on{background:#C9A84C}
-.mn-toast{position:fixed;top:80px;left:50%;transform:translateX(-50%);background:#1C1A16;border:1px solid #2C2820;border-radius:8px;padding:8px 20px;font-size:14px;font-weight:600;color:#F5F0E8;z-index:60;animation:mnSlideUp 0.2s ease;white-space:nowrap}
+.mn-pip{width:7px;height:7px;border-radius:50%;background:var(--border-strong)}
+.mn-pip.on{background:var(--gold)}
+.mn-toast{position:fixed;top:80px;left:50%;transform:translateX(-50%);background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px 20px;font-size:14px;font-weight:600;color:var(--ink);z-index:60;animation:mnSlideUp 0.2s ease;white-space:nowrap}
 .mn-sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 @media(max-width:520px){
-  .mn-bar{position:fixed;bottom:0;left:0;right:0;z-index:50;margin:0;padding:10px 16px calc(10px + env(safe-area-inset-bottom));background:rgba(15,14,12,0.96);border-top:1px solid #2C2820}
+  .mn-bar{position:fixed;bottom:0;left:0;right:0;z-index:50;margin:0;padding:10px 16px calc(10px + env(safe-area-inset-bottom));background:rgba(15,14,12,0.96);border-top:1px solid var(--border)}
   .mn-main{padding-bottom:96px !important}
 }
 `
@@ -164,8 +164,6 @@ export default function Mines() {
   useSeo(PAGE_SEO.mines)
   const [showArchive, setShowArchive] = useState(false)
   const [puzzleDate, setPuzzleDate] = useState(null)
-  const [showHow, setShowHow] = useState(false)
-
   const seedDate = useMemo(() => puzzleDate ?? new Date().toLocaleDateString('en-CA'), [puzzleDate])
   const isToday = puzzleDate === null
 
@@ -239,7 +237,7 @@ export default function Mines() {
   const spawnConfetti = () => {
     const items = Array.from({length:30},(_,i)=>({
       id:i, x:20+Math.random()*60, delay:Math.random()*700,
-      color:['#4caf50','#C9A84C','#C9A84C','#e94560','#ffd700','#fff'][i%6],
+      color:['var(--success)','var(--gold)','var(--gold)','var(--danger)','#ffd700','var(--ink)'][i%6],
       size:5+Math.random()*8
     }));
     setConfetti(items);
@@ -466,50 +464,33 @@ export default function Mines() {
   const shareBtn = (gold) => (
     <div style={{ position: 'relative', display: 'inline-block', marginTop: gold ? 0 : 12 }}>
       <button onClick={handleShare} style={gold
-        ? { background: GOLD, color: '#0F0E0C', border: 'none', borderRadius: 8, padding: '10px 28px', fontSize: 15, fontWeight: 700, cursor: 'pointer', transition: 'background 0.2s' }
+        ? { background: GOLD, color: 'var(--bg)', border: 'none', borderRadius: 8, padding: '10px 28px', fontSize: 15, fontWeight: 700, cursor: 'pointer', transition: 'background 0.2s' }
         : { background: CARD, color: GOLD, border: `1px solid ${BORDER}`, borderRadius: 8, padding: '8px 20px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
-        onMouseOver={gold ? e => e.currentTarget.style.background = '#D4B45A' : undefined}
+        onMouseOver={gold ? e => e.currentTarget.style.background = 'var(--gold-hover)' : undefined}
         onMouseOut={gold ? e => e.currentTarget.style.background = GOLD : undefined}>
         📋 Share result
       </button>
-      {copied && <div style={{ position: 'absolute', top: -32, left: '50%', transform: 'translateX(-50%)', background: '#2d6a30', color: '#fff', fontSize: 12, fontWeight: 600, padding: '4px 12px', borderRadius: 6, whiteSpace: 'nowrap', animation: 'mnCopied 2s ease forwards', pointerEvents: 'none' }}>Copied!</div>}
+      {copied && <div style={{ position: 'absolute', top: -32, left: '50%', transform: 'translateX(-50%)', background: '#2d6a30', color: 'var(--ink)', fontSize: 12, fontWeight: 600, padding: '4px 12px', borderRadius: 6, whiteSpace: 'nowrap', animation: 'mnCopied 2s ease forwards', pointerEvents: 'none' }}>Copied!</div>}
     </div>
   )
 
+  const howTo = (
+    <>
+      Three minefields a day — <b>Easy</b>, <b>Medium</b> and <b>Hard</b>. Clear one to unlock the next; clear Hard to keep your streak.<br/><br/>
+      A number shows how many of its 8 neighbours hide a mine. <b>Tap</b> to dig, <b>hold</b> (or right-click) to flag — or switch with the Dig / Flag toggle. Tap a number whose flags are all placed to dig everything else around it.<br/><br/>
+      Every board is solvable by logic alone from the open area — <b>no guessing, ever</b>. Hit a mine and the board resets to its opening; three mines on one board ends your day.<br/><br/>
+      The clock only runs while you dig.<br/>
+      <span style={{ color: MUTED }}>Keyboard: arrow keys move, Enter digs, F flags.</span>
+    </>
+  )
+
   return (
-    <main className="mn-main" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: 0, position: 'relative', color: INK, overflow: 'hidden' }}>
+    <GameShell game="mines" date={formatDate(puzzleDate)} howTo={howTo} onArchive={() => setShowArchive(true)} className="mn-main">
       <style>{css}</style>
       {confetti.map(c => (
         <div key={c.id} style={{ position: 'fixed', left: `${c.x}%`, top: '28%', width: c.size, height: c.size, background: c.color, borderRadius: c.size > 10 ? '50%' : 2, animation: `mnConfetti 1.3s ${c.delay}ms ease forwards`, pointerEvents: 'none', zIndex: 100 }} />
       ))}
-      <UserMenu />
-      <div style={{ width: '100%', display: 'flex', alignItems: 'center', padding: '12px 16px 0', minHeight: 44 }}>
-        <a href="/" style={{ color: GOLD, textDecoration: 'none', fontSize: 13, fontWeight: 600 }}>← Back</a>
-      </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 2 }}>
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-          <h1 style={{ fontSize: 32, fontWeight: 900, letterSpacing: 2, color: '#fff', margin: 0 }}>MINES</h1>
-          <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: 3, color: GOLD, textTransform: 'uppercase', marginTop: -4 }}>by Streakle</div>
-        </div>
-        <button onClick={() => setShowHow(!showHow)} style={{ background: 'none', border: `1px solid ${BORDER}`, borderRadius: 6, color: GOLD, cursor: 'pointer', fontSize: 13, padding: '3px 10px', marginLeft: 8 }}>
-          How to play
-        </button>
-        <button onClick={() => setShowArchive(true)} style={{ background: 'none', border: `1px solid ${BORDER}`, borderRadius: 6, color: GOLD, cursor: 'pointer', fontSize: 13, padding: '3px 10px' }}>
-          📅 Archive
-        </button>
-      </div>
-      <div style={{ fontSize: 13, color: MUTED, marginBottom: 8, marginTop: 6 }}>{formatDate(puzzleDate)}</div>
 
-      {showHow && (
-        <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 10, padding: 16, maxWidth: 340, marginBottom: 12, fontSize: 13, lineHeight: 1.65, color: '#ccc', animation: 'mnSlideUp 0.3s ease' }}>
-          <b style={{ color: GOLD }}>How to play</b><br/>
-          Three minefields a day — <b>Easy</b>, <b>Medium</b> and <b>Hard</b>. Clear one to unlock the next; clear Hard to keep your streak.<br/><br/>
-          A number shows how many of its 8 neighbours hide a mine. <b>Tap</b> to dig, <b>hold</b> (or right-click) to flag — or switch with the Dig / Flag toggle. Tap a number whose flags are all placed to dig everything else around it.<br/><br/>
-          Every board is solvable by logic alone from the open area — <b>no guessing, ever</b>. Hit a mine and the board resets to its opening; three mines on one board ends your day.<br/><br/>
-          The clock only runs while you dig.<br/>
-          <span style={{ color: MUTED }}>Keyboard: arrow keys move, Enter digs, F flags.</span>
-        </div>
-      )}
 
       <div style={{ fontSize: 15, fontWeight: 600, color: statusColor, marginBottom: 8, textAlign: 'center', minHeight: 20 }}>{status}</div>
 
@@ -525,11 +506,11 @@ export default function Mines() {
             const st = rungState(i)
             const border = st === 'cleared' ? GREEN : st === 'current' ? GOLD : st === 'failed' ? RED : BORDER
             return (
-              <div key={s.key} className="mn-pill" aria-current={st === 'current' ? 'step' : undefined} style={{ borderColor: border, background: st === 'current' ? '#2C2418' : CARD, opacity: st === 'locked' ? 0.45 : 1 }}>
+              <div key={s.key} className="mn-pill" aria-current={st === 'current' ? 'step' : undefined} style={{ borderColor: border, background: st === 'current' ? 'var(--surface-gold)' : CARD, opacity: st === 'locked' ? 0.45 : 1 }}>
                 <div className="mn-pill-name">{s.label}</div>
                 <div className="mn-pill-sub">
-                  {st === 'cleared' && <span style={{ color: '#86EFAC' }}>✓ {formatTime(acc[i])}</span>}
-                  {st === 'failed' && <span style={{ color: '#FCA5A5' }}>✗ {formatTime(acc[i])}</span>}
+                  {st === 'cleared' && <span style={{ color: 'var(--success-text)' }}>✓ {formatTime(acc[i])}</span>}
+                  {st === 'failed' && <span style={{ color: 'var(--danger-text)' }}>✗ {formatTime(acc[i])}</span>}
                   {st === 'locked' && <>🔒 {s.cols}×{s.rows} · {s.mines}</>}
                   {st === 'current' && (
                     <span className="mn-pips" role="img" aria-label={`${plural(attemptsLeft, 'attempt')} left`}>
@@ -544,7 +525,7 @@ export default function Mines() {
 
         <div className="mn-bar">
           <span style={{ fontSize: 14, fontWeight: 700, color: INK, minWidth: 52 }}>💣 {minesLeft}</span>
-          <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 18, fontWeight: 700, color: INK, minWidth: 64 }} aria-label={`Time ${formatTime(rungMs)}`}>⏱ {formatTime(rungMs)}</span>
+          <span style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 700, color: INK, minWidth: 64 }} aria-label={`Time ${formatTime(rungMs)}`}>⏱ {formatTime(rungMs)}</span>
           <div className="mn-seg" role="group" aria-label="Tap action">
             <button aria-pressed={mode === 'dig'} onClick={() => { setMode('dig'); announce('Dig mode.') }}>⛏ Dig</button>
             <button aria-pressed={mode === 'flag'} onClick={() => { setMode('flag'); announce('Flag mode.') }}>🚩 Flag</button>
@@ -579,8 +560,8 @@ export default function Mines() {
 
         {phase === 'cleared' && (
           <div style={{ textAlign: 'center', margin: '16px 0 4px', animation: 'mnSlideUp 0.4s ease' }}>
-            <button onClick={nextRung} style={{ background: GOLD, color: '#0F0E0C', border: 'none', borderRadius: 8, padding: '10px 28px', fontSize: 15, fontWeight: 700, cursor: 'pointer' }}
-              onMouseOver={e => e.currentTarget.style.background = '#D4B45A'}
+            <button onClick={nextRung} style={{ background: GOLD, color: 'var(--bg)', border: 'none', borderRadius: 8, padding: '10px 28px', fontSize: 15, fontWeight: 700, cursor: 'pointer' }}
+              onMouseOver={e => e.currentTarget.style.background = 'var(--gold-hover)'}
               onMouseOut={e => e.currentTarget.style.background = GOLD}>
               Next: {RUNGS[rung + 1].label} →
             </button>
@@ -591,7 +572,7 @@ export default function Mines() {
           <div style={{ textAlign: 'center', marginTop: 18, animation: 'mnSlideUp 0.5s ease' }}>
             <div style={{ fontSize: 22, fontWeight: 700, color: GREEN, marginBottom: 6 }}>🎉 All clear!</div>
             <div style={{ fontSize: 15, fontWeight: 700, color: GOLD, marginBottom: 4 }}>{formatTime(totalMs)} · {plural(mistakes, 'mistake')}</div>
-            <div style={{ fontSize: 13, color: '#aaa', marginBottom: 16 }}>
+            <div style={{ fontSize: 13, color: 'var(--text-2)', marginBottom: 16 }}>
               {RUNGS.map((s, i) => `${s.label} ${formatTime(acc[i])}`).join(' · ')}
             </div>
             {shareBtn(true)}
@@ -601,7 +582,7 @@ export default function Mines() {
         {phase === 'lost' && (
           <div style={{ textAlign: 'center', marginTop: 18, animation: 'mnSlideUp 0.4s ease' }}>
             <div style={{ fontSize: 20, fontWeight: 700, color: RED, marginBottom: 6 }}>Game over!</div>
-            <div style={{ fontSize: 13, color: '#aaa' }}>Out of attempts on {spec.label} · {formatTime(totalMs)} · {plural(mistakes, 'mistake')}</div>
+            <div style={{ fontSize: 13, color: 'var(--text-2)' }}>Out of attempts on {spec.label} · {formatTime(totalMs)} · {plural(mistakes, 'mistake')}</div>
             {shareBtn(false)}
           </div>
         )}
@@ -610,9 +591,6 @@ export default function Mines() {
       {toast && <div className="mn-toast" role="presentation">{toast}</div>}
       <div className="mn-sr-only" aria-live="polite" aria-atomic="true">{live.text}{live.n % 2 ? '​' : ''}</div>
 
-      <div style={{ marginTop: 32, fontSize: 12, color: '#5A5040', textAlign: 'center' }}>
-        <a href="/privacy" style={{ color: '#5A5040', textDecoration: 'none' }}>Privacy Policy / Politique de confidentialité</a>
-      </div>
 
       {showArchive && (
         <Archive
@@ -621,6 +599,6 @@ export default function Mines() {
           onClose={() => setShowArchive(false)}
         />
       )}
-    </main>
+    </GameShell>
   )
 }

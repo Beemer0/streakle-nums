@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useMemo } from "react";
 import Archive from './Archive'
-import UserMenu from "./UserMenu";
+import GameShell from "./GameShell";
 import { saveResult } from './saveResult';
 import { useStreak } from './useStreak';
 import { clickableProps } from './a11y';
@@ -98,49 +98,24 @@ export default function App() {
   useSeo(PAGE_SEO.nums)
   const [showArchive, setShowArchive] = useState(false)
   const [puzzleDate, setPuzzleDate] = useState(null)
-  const [showHow, setShowHow] = useState(false);
+  const howTo = (
+    <>
+      Rearrange numbers so every <b>row</b> and <b>column</b> contains <b>1–7</b> once each.<br/><br/>
+      <b>Tap</b> a cell to select then tap another to swap — or <b>drag</b> a tile directly onto another. 🟢 Green = correct position.<br/><br/>
+      Circles show the <b>sum</b> of the 4 surrounding numbers — use them as clues!<br/><br/>
+      You start with 20 swaps. Going over counts against you — but you can always finish!
+    </>
+  )
 
   return (
-    <main style={{minHeight:'100vh', display:'flex', flexDirection:'column', alignItems:'center', paddingTop:0, position:'relative', color:'#F5F0E8', overflow:'hidden'}}>
+    <GameShell game="nums" date={formatDate(puzzleDate)} howTo={howTo} onArchive={() => setShowArchive(true)}>
       <style>{css}</style>
 
-      <UserMenu />
-      <div style={{width:'100%',display:'flex',alignItems:'center',padding:'12px 16px 0',minHeight:44}}>
-        <a href="/" style={{color:'#C9A84C',textDecoration:'none',fontSize:13,fontWeight:600}}>← Back</a>
-      </div>
 
-      {/* Header */}
-      <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:2}}>
-        <div style={{display:'flex',flexDirection:'column',alignItems:'center'}}>
-          <h1 style={{fontSize:32,fontWeight:900,letterSpacing:2,color:'#fff',margin:0}}>NUMS</h1>
-          <div style={{fontSize:11,fontWeight:600,letterSpacing:3,color:'#C9A84C',textTransform:'uppercase',marginTop:-4}}>by Streakle</div>
-        </div>
-        <button onClick={()=>setShowHow(!showHow)} style={{background:'none',border:'1px solid #2C2820',borderRadius:6,color:'#C9A84C',cursor:'pointer',fontSize:13,padding:'3px 10px',marginLeft:8}}>
-          How to play
-        </button>
-        <button onClick={() => setShowArchive(true)} style={{background:'none',border:'1px solid #2C2820',borderRadius:6,color:'#C9A84C',cursor:'pointer',fontSize:13,padding:'3px 10px'}}>
-          📅 Archive
-        </button>
-      </div>
-
-      <div style={{fontSize:13,color:'#7A6E5F',marginBottom:10,marginTop:6}}>{formatDate(puzzleDate)}</div>
-
-      {showHow&&(
-        <div style={{background:'#1C1A16',border:'1px solid #2C2820',borderRadius:10,padding:16,maxWidth:340,marginBottom:12,fontSize:13,lineHeight:1.65,color:'#ccc',animation:'slideUp 0.3s ease'}}>
-          <b style={{color:'#C9A84C'}}>How to play</b><br/>
-          Rearrange numbers so every <b>row</b> and <b>column</b> contains <b>1–7</b> once each.<br/><br/>
-          <b>Tap</b> a cell to select then tap another to swap — or <b>drag</b> a tile directly onto another. 🟢 Green = correct position.<br/><br/>
-          Circles show the <b>sum</b> of the 4 surrounding numbers — use them as clues!<br/><br/>
-          You start with 20 swaps. Going over counts against you — but you can always finish!
-        </div>
-      )}
 
       {/* Keyed by date: picking a puzzle in the Archive starts a fresh board. */}
       <NumsBoard key={puzzleDate ?? 'today'} puzzleDate={puzzleDate} streak={streak} />
 
-      <div style={{marginTop:32,fontSize:12,color:'#5A5040',textAlign:'center'}}>
-        <a href="/privacy" style={{color:'#5A5040',textDecoration:'none'}}>Privacy Policy / Politique de confidentialité</a>
-      </div>
 
       {showArchive && (
         <Archive
@@ -149,7 +124,7 @@ export default function App() {
           onClose={() => setShowArchive(false)}
         />
       )}
-    </main>
+    </GameShell>
   );
 }
 
@@ -189,7 +164,7 @@ function NumsBoard({ puzzleDate, streak }) {
   const spawnConfetti = () => {
     const items = Array.from({length:30},(_,i)=>({
       id:i, x:20+Math.random()*60, delay:Math.random()*700,
-      color:['#4caf50','#C9A84C','#C9A84C','#e94560','#ffd700','#fff'][i%6],
+      color:['var(--success)','var(--gold)','var(--gold)','var(--danger)','#ffd700','var(--ink)'][i%6],
       size:5+Math.random()*8
     }));
     setConfetti(items);
@@ -258,11 +233,11 @@ function NumsBoard({ puzzleDate, streak }) {
     ghost.textContent = board[r][c];
     Object.assign(ghost.style, {
       width:`${CS}px`, height:`${CS}px`,
-      background:'#2C1F00', border:'2px solid #C9A84C',
+      background:'#2C1F00', border:'2px solid var(--gold)',
       borderRadius:'8px', display:'flex', alignItems:'center',
       justifyContent:'center', fontSize:'20px', fontWeight:'700',
-      color:'#fff', position:'fixed', top:'-200px', left:'-200px',
-      boxShadow:'0 4px 20px #C9A84C66',
+      color:'var(--ink)', position:'fixed', top:'-200px', left:'-200px',
+      boxShadow:'0 4px 20px rgba(var(--gold-rgb),0.4)',
     });
     document.body.appendChild(ghost);
     e.dataTransfer.setDragImage(ghost, CS/2, CS/2);
@@ -312,11 +287,11 @@ function NumsBoard({ puzzleDate, streak }) {
     const an = cellAnim[key];
 
     if (isActive(r,c)) {
-      let bg='#1C1A16', border='#2C2820', color='#e0e0e0';
-      if (isCorr)     { bg='#2d6a30'; border='#4caf50'; color='#fff'; }
-      if (isSel)      { bg='#2C1F00'; border='#C9A84C'; color='#fff'; }
-      if (isDragging) { bg='#1a1200'; border='#C9A84C'; color='#fff'; }
-      if (isDragOver) { bg='#1a3a6a'; border='#4a9eff'; color='#fff'; }
+      let bg='var(--surface)', border='var(--border)', color='#e0e0e0';
+      if (isCorr)     { bg='#2d6a30'; border='var(--success)'; color='var(--ink)'; }
+      if (isSel)      { bg='#2C1F00'; border='var(--gold)'; color='var(--ink)'; }
+      if (isDragging) { bg='#1a1200'; border='var(--gold)'; color='var(--ink)'; }
+      if (isDragOver) { bg='#1a3a6a'; border='#4a9eff'; color='var(--ink)'; }
 
       cells.push(
         <div key={key}
@@ -338,10 +313,10 @@ function NumsBoard({ puzzleDate, streak }) {
             opacity: isFlying ? 0 : isDragging ? 0.5 : 1,
             transform: isDragOver ? 'scale(1.08)' : 'scale(1)',
             overflow:'hidden',
-            boxShadow: isDragOver ? '0 0 0 3px #4a9eff44' : isSel ? '0 0 0 3px #C9A84C44' : 'none',
+            boxShadow: isDragOver ? '0 0 0 3px #4a9eff44' : isSel ? '0 0 0 3px rgba(var(--gold-rgb),0.27)' : 'none',
           }}>
           {board[r][c]}
-          {isSel&&<div style={{position:'absolute',inset:0,borderRadius:6,border:'2px solid #C9A84C',animation:'ripple 0.5s ease forwards',pointerEvents:'none'}}/>}
+          {isSel&&<div style={{position:'absolute',inset:0,borderRadius:6,border:'2px solid var(--gold)',animation:'ripple 0.5s ease forwards',pointerEvents:'none'}}/>}
           {isDragOver&&<div style={{position:'absolute',inset:0,borderRadius:6,border:'2px solid #4a9eff',animation:'ripple 0.5s ease forwards',pointerEvents:'none'}}/>}
         </div>
       );
@@ -352,9 +327,9 @@ function NumsBoard({ puzzleDate, streak }) {
           onDragOver={e=>e.preventDefault()}
           style={{
             position:'absolute', left:x+2, top:y+2, width:CS-4, height:CS-4,
-            background:'#1C1A16', border:'1.5px solid #2C2820', borderRadius:'50%',
+            background:'var(--surface)', border:'1.5px solid var(--border)', borderRadius:'50%',
             display:'flex', alignItems:'center', justifyContent:'center',
-            fontSize:12, fontWeight:600, color:'#C9A84C', userSelect:'none',
+            fontSize:12, fontWeight:600, color:'var(--gold)', userSelect:'none',
           }}>{cl?.sum}</div>
       );
     }
@@ -367,7 +342,7 @@ function NumsBoard({ puzzleDate, streak }) {
       ))}
 
       <div style={{marginBottom:14,fontSize:15,fontWeight:600,transition:'color 0.4s',
-        color: solved?'#4caf50': swaps<0?'#e94560': swaps<=5?'#C9A84C':'#C9A84C'}}>
+        color: solved?'var(--success)': swaps<0?'var(--danger)': swaps<=5?'var(--gold)':'var(--gold)'}}>
         {solved
           ? swaps>=0 ? `Solved with ${swaps} swap${swaps!==1?'s':''} to spare!` : `Solved — ${Math.abs(swaps)} over budget`
           : swaps>=0 ? `${swaps} swap${swaps!==1?'s':''} remaining`
@@ -376,7 +351,7 @@ function NumsBoard({ puzzleDate, streak }) {
       </div>
 
       {streak > 0 && (
-        <div style={{fontSize:13, color:'#C9A84C', fontWeight:600, marginBottom:8}}>
+        <div style={{fontSize:13, color:'var(--gold)', fontWeight:600, marginBottom:8}}>
           🔥 {streak} day streak
         </div>
       )}
@@ -388,7 +363,7 @@ function NumsBoard({ puzzleDate, streak }) {
 
       {solved&&(
         <div style={{textAlign:'center',animation:'slideUp 0.5s ease'}}>
-          <div style={{fontSize:22,fontWeight:700,color:'#4caf50',marginBottom:6}}>🎉 Solved!</div>
+          <div style={{fontSize:22,fontWeight:700,color:'var(--success)',marginBottom:6}}>🎉 Solved!</div>
           {starCount>0&&(
             <div style={{display:'flex',gap:6,justifyContent:'center',marginBottom:8}}>
               {Array.from({length:starCount},(_,i)=>(
@@ -396,32 +371,32 @@ function NumsBoard({ puzzleDate, streak }) {
               ))}
             </div>
           )}
-          <div style={{fontSize:13,color:'#aaa',marginBottom:16}}>
+          <div style={{fontSize:13,color:'var(--text-2)',marginBottom:16}}>
             {20-swaps} swap{20-swaps!==1?'s':''} used{swaps<0?` (${Math.abs(swaps)} over budget)`:''}
           </div>
           <div style={{position:'relative',display:'inline-block'}}>
-            <button onClick={handleShare} style={{background:'#C9A84C',color:'#0F0E0C',border:'none',borderRadius:8,padding:'10px 28px',fontSize:15,fontWeight:700,cursor:'pointer',transition:'background 0.2s'}}
-              onMouseOver={e=>e.currentTarget.style.background='#D4B45A'}
-              onMouseOut={e=>e.currentTarget.style.background='#C9A84C'}>
+            <button onClick={handleShare} style={{background:'var(--gold)',color:'var(--bg)',border:'none',borderRadius:8,padding:'10px 28px',fontSize:15,fontWeight:700,cursor:'pointer',transition:'background 0.2s'}}
+              onMouseOver={e=>e.currentTarget.style.background='var(--gold-hover)'}
+              onMouseOut={e=>e.currentTarget.style.background='var(--gold)'}>
               📋 Share result
             </button>
-            {copied&&<div style={{position:'absolute',top:-32,left:'50%',transform:'translateX(-50%)',background:'#2d6a30',color:'#fff',fontSize:12,fontWeight:600,padding:'4px 12px',borderRadius:6,whiteSpace:'nowrap',animation:'copied 2s ease forwards',pointerEvents:'none'}}>Copied!</div>}
+            {copied&&<div style={{position:'absolute',top:-32,left:'50%',transform:'translateX(-50%)',background:'#2d6a30',color:'var(--ink)',fontSize:12,fontWeight:600,padding:'4px 12px',borderRadius:6,whiteSpace:'nowrap',animation:'copied 2s ease forwards',pointerEvents:'none'}}>Copied!</div>}
           </div>
         </div>
       )}
 
       {!solved&&swaps<0&&(
         <div style={{position:'relative',display:'inline-block',marginTop:4}}>
-          <button onClick={handleShare} style={{background:'#1C1A16',color:'#C9A84C',border:'1px solid #2C2820',borderRadius:8,padding:'8px 20px',fontSize:13,fontWeight:600,cursor:'pointer'}}>
+          <button onClick={handleShare} style={{background:'var(--surface)',color:'var(--gold)',border:'1px solid var(--border)',borderRadius:8,padding:'8px 20px',fontSize:13,fontWeight:600,cursor:'pointer'}}>
             📋 Share progress
           </button>
-          {copied&&<div style={{position:'absolute',top:-32,left:'50%',transform:'translateX(-50%)',background:'#2d6a30',color:'#fff',fontSize:12,fontWeight:600,padding:'4px 12px',borderRadius:6,whiteSpace:'nowrap',animation:'copied 2s ease forwards',pointerEvents:'none'}}>Copied!</div>}
+          {copied&&<div style={{position:'absolute',top:-32,left:'50%',transform:'translateX(-50%)',background:'#2d6a30',color:'var(--ink)',fontSize:12,fontWeight:600,padding:'4px 12px',borderRadius:6,whiteSpace:'nowrap',animation:'copied 2s ease forwards',pointerEvents:'none'}}>Copied!</div>}
         </div>
       )}
 
       {!solved&&sel&&!dragging&&(
-        <div style={{fontSize:13,color:'#aaa',marginTop:8,animation:'fadeIn 0.3s ease'}}>
-          Selected <b style={{color:'#C9A84C'}}>{board[sel[0]][sel[1]]}</b> — tap another or drag to swap
+        <div style={{fontSize:13,color:'var(--text-2)',marginTop:8,animation:'fadeIn 0.3s ease'}}>
+          Selected <b style={{color:'var(--gold)'}}>{board[sel[0]][sel[1]]}</b> — tap another or drag to swap
         </div>
       )}
     </>
@@ -447,11 +422,11 @@ function FlyingTile({num, fr, fc, tr, tc, cs, total}) {
   return (
     <div ref={ref} style={{
       position:'absolute', left:0, top:0, width:cs, height:cs,
-      background:'#2C1F00', border:'2px solid #C9A84C', borderRadius:8,
+      background:'#2C1F00', border:'2px solid var(--gold)', borderRadius:8,
       display:'flex', alignItems:'center', justifyContent:'center',
-      fontSize:20, fontWeight:700, color:'#fff',
+      fontSize:20, fontWeight:700, color:'var(--ink)',
       pointerEvents:'none', zIndex:10,
-      boxShadow:'0 4px 20px #C9A84C66', willChange:'transform',
+      boxShadow:'0 4px 20px rgba(var(--gold-rgb),0.4)', willChange:'transform',
     }}>{num}</div>
   );
 }

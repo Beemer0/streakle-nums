@@ -6,8 +6,8 @@ import { useSeo, PAGE_SEO } from './seo'
 import { score, STAGE_LABELS, STAGE_POINTS } from './bracket/scoring'
 import { flagUrl } from './bracket/flags'
 import { clickableProps } from './a11y'
+import { GOLD, CARD, BORDER, INK, MUTED } from './theme'
 
-const GOLD = '#C9A84C', CARD = '#1C1A16', BORDER = '#2C2820', INK = '#F5F0E8', MUTED = '#7A6E5F'
 
 // The viewer's local timezone abbreviation (e.g. "EDT"), shown so everyone knows
 // kickoff times are in their own local time. Computed once; won't flip mid-session.
@@ -270,7 +270,7 @@ export default function Bracket() {
         <a href="/" style={{ color: GOLD, textDecoration: 'none', fontSize: 13, fontWeight: 600 }}>← Back</a>
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: 2 }}>
-        <h1 style={{ fontSize: 32, fontWeight: 900, letterSpacing: 2, color: '#fff', margin: 0 }}>BRACKET</h1>
+        <h1 style={{ fontSize: 32, fontWeight: 900, letterSpacing: 2, color: 'var(--ink)', margin: 0 }}>BRACKET</h1>
         <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: 3, color: GOLD, textTransform: 'uppercase', marginTop: 2 }}>
           World Cup 2026 · Final results
         </div>
@@ -282,8 +282,8 @@ export default function Bracket() {
   )
 
   const footer = (
-    <div style={{ marginTop: 40, marginBottom: 24, fontSize: 12, color: '#5A5040', textAlign: 'center' }}>
-      <a href="/privacy" style={{ color: '#5A5040', textDecoration: 'none' }}>Privacy Policy / Politique de confidentialité</a>
+    <div style={{ marginTop: 40, marginBottom: 24, fontSize: 12, color: 'var(--faint)', textAlign: 'center' }}>
+      <a href="/privacy" style={{ color: 'var(--faint)', textDecoration: 'none' }}>Privacy Policy / Politique de confidentialité</a>
     </div>
   )
 
@@ -302,11 +302,11 @@ export default function Bracket() {
     return page(
       <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 16, padding: '36px 32px', maxWidth: 340, width: '90%', textAlign: 'center', marginTop: 48, animation: 'slideUp 0.4s ease' }}>
         <div style={{ fontSize: 32, marginBottom: 10 }}>⚽</div>
-        <div style={{ fontSize: 18, fontWeight: 700, color: '#fff', marginBottom: 8 }}>Private prediction pool</div>
+        <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--ink)', marginBottom: 8 }}>Private prediction pool</div>
         <div style={{ fontSize: 13, color: MUTED, marginBottom: 24, lineHeight: 1.6 }}>
           The World Cup 2026 pool has ended. Members can sign in to see the final standings and everyone's picks.
         </div>
-        <a href="/login" style={{ display: 'block', background: GOLD, color: '#0F0E0C', borderRadius: 8, padding: '11px 24px', fontSize: 14, fontWeight: 700, textDecoration: 'none' }}>
+        <a href="/login" style={{ display: 'block', background: GOLD, color: 'var(--bg)', borderRadius: 8, padding: '11px 24px', fontSize: 14, fontWeight: 700, textDecoration: 'none' }}>
           Sign in
         </a>
       </div>
@@ -323,7 +323,7 @@ export default function Bracket() {
     return page(
       <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 16, padding: '36px 32px', maxWidth: 340, width: '90%', textAlign: 'center', marginTop: 48, animation: 'slideUp 0.4s ease' }}>
         <div style={{ fontSize: 32, marginBottom: 10 }}>🏁</div>
-        <div style={{ fontSize: 18, fontWeight: 700, color: '#fff', marginBottom: 8 }}>This pool has ended</div>
+        <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--ink)', marginBottom: 8 }}>This pool has ended</div>
         <div style={{ fontSize: 13, color: MUTED, lineHeight: 1.6 }}>
           The World Cup 2026 pool closed after the final. Its results are visible to members only.
         </div>
@@ -345,14 +345,14 @@ export default function Bracket() {
   return page(
     <>
       {champions.length > 0 && (
-        <div style={{ background: 'rgba(201,168,76,0.08)', border: '1px solid rgba(201,168,76,0.3)', borderRadius: 12, padding: '14px 20px', marginTop: 14, maxWidth: 420, width: '90%', boxSizing: 'border-box', textAlign: 'center', animation: 'slideUp 0.4s ease' }}>
+        <div style={{ background: 'rgba(var(--gold-rgb),0.08)', border: '1px solid rgba(var(--gold-rgb),0.3)', borderRadius: 12, padding: '14px 20px', marginTop: 14, maxWidth: 420, width: '90%', boxSizing: 'border-box', textAlign: 'center', animation: 'slideUp 0.4s ease' }}>
           <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 2, color: GOLD, textTransform: 'uppercase' }}>🏆 Pool champion</div>
           <div style={{ fontSize: 20, fontWeight: 800, color: INK, marginTop: 4 }}>
             {champions.map(s => s.display_name ?? 'Player').join(' & ')}
           </div>
           <div style={{ fontSize: 13, color: MUTED, marginTop: 2 }}>{champions[0].total} points · {champions[0].correct} correct picks</div>
           {cup?.champion && (
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, flexWrap: 'wrap', fontSize: 12, color: '#A89880', marginTop: 10, paddingTop: 10, borderTop: `1px solid ${BORDER}` }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, flexWrap: 'wrap', fontSize: 12, color: 'var(--text-2)', marginTop: 10, paddingTop: 10, borderTop: `1px solid ${BORDER}` }}>
               World Cup won by <Flag code={cup.champion} size={14} /> <b style={{ color: INK }}>{cup.champion}</b>
               {cup.runner_up && <>· {cup.final_score} vs <Flag code={cup.runner_up} size={14} /> {cup.runner_up}</>}
             </div>
@@ -365,7 +365,7 @@ export default function Bracket() {
           <button key={key} onClick={() => setView(key)} style={{
             background: view === key ? GOLD : 'none',
             border: `1px solid ${view === key ? GOLD : BORDER}`,
-            borderRadius: 20, color: view === key ? '#0F0E0C' : GOLD,
+            borderRadius: 20, color: view === key ? 'var(--bg)' : GOLD,
             cursor: 'pointer', fontSize: 13, fontWeight: 700, padding: '6px 18px',
             transition: 'background 0.15s',
           }}>
@@ -384,7 +384,7 @@ export default function Bracket() {
         <div style={{ width: '100%', maxWidth: 560, padding: '0 12px', boxSizing: 'border-box' }}>
           <div style={{ textAlign: 'center', fontSize: 12, color: MUTED, marginBottom: 14 }}>
             You got <b style={{ color: GOLD }}>{myCorrect}</b> of <b style={{ color: GOLD }}>{myScored}</b> scored picks right · tap a day, then a match to see everyone's picks
-            {TZ_ABBR && <div style={{ fontSize: 11, color: '#5A5040', marginTop: 3 }}>Kickoff times shown in {TZ_ABBR} (your local time)</div>}
+            {TZ_ABBR && <div style={{ fontSize: 11, color: 'var(--faint)', marginTop: 3 }}>Kickoff times shown in {TZ_ABBR} (your local time)</div>}
           </div>
           {pickDays.map(({ day, dayMatches, isPast, scored, correct }) => {
             const collapsed = isPast && !openPastDays.has(day)
@@ -398,7 +398,7 @@ export default function Bracket() {
                   display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer',
                   marginBottom: 8, paddingBottom: 4, borderBottom: `1px solid ${BORDER}`,
                 }}>
-                  <span style={{ flex: 1, minWidth: 0, fontFamily: "'Barlow Condensed', sans-serif", fontSize: 15, fontWeight: 800, letterSpacing: 1, color: MUTED, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{day}</span>
+                  <span style={{ flex: 1, minWidth: 0, fontFamily: 'var(--font-display)', fontSize: 15, fontWeight: 800, letterSpacing: 1, color: MUTED, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{day}</span>
                   <span style={{ fontSize: 11, color: MUTED, flexShrink: 0 }}>{stats}</span>
                   <span style={{ fontSize: 13, color: MUTED, flexShrink: 0 }}>▾</span>
                 </div>
@@ -408,13 +408,13 @@ export default function Bracket() {
             return (
               <div key={day} ref={isCurrent ? currentDayRef : null} style={{ marginBottom: 22, ...(isCurrent ? { borderLeft: `2px solid ${GOLD}`, paddingLeft: 8 } : null) }}>
                 {isPast ? (
-                  <div {...clickableProps(() => togglePastDay(day))} aria-expanded={true} style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontFamily: "'Barlow Condensed', sans-serif", fontSize: 17, fontWeight: 800, letterSpacing: 1, color: INK, marginBottom: 8, borderBottom: `1px solid ${BORDER}`, paddingBottom: 4 }}>
+                  <div {...clickableProps(() => togglePastDay(day))} aria-expanded={true} style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontFamily: 'var(--font-display)', fontSize: 17, fontWeight: 800, letterSpacing: 1, color: INK, marginBottom: 8, borderBottom: `1px solid ${BORDER}`, paddingBottom: 4 }}>
                     <span style={{ flex: 1, minWidth: 0 }}>{day}</span>
                     <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, fontWeight: 400, color: MUTED, flexShrink: 0 }}>{stats}</span>
                     <span style={{ fontSize: 13, color: MUTED, flexShrink: 0 }}>▴</span>
                   </div>
                 ) : (
-                  <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 17, fontWeight: 800, letterSpacing: 1, color: INK, marginBottom: 8, borderBottom: `1px solid ${BORDER}`, paddingBottom: 4 }}>
+                  <div style={{ fontFamily: 'var(--font-display)', fontSize: 17, fontWeight: 800, letterSpacing: 1, color: INK, marginBottom: 8, borderBottom: `1px solid ${BORDER}`, paddingBottom: 4 }}>
                     {day}
                   </div>
                 )}
@@ -456,7 +456,7 @@ export default function Bracket() {
                   </div>
                   {s.avatar_url
                     ? <img src={s.avatar_url} alt="" width={28} height={28} style={{ borderRadius: '50%', flexShrink: 0 }} referrerPolicy="no-referrer" />
-                    : <div style={{ width: 28, height: 28, borderRadius: '50%', background: '#0F0E0C', border: `1px solid ${BORDER}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, color: GOLD, flexShrink: 0 }}>
+                    : <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'var(--bg)', border: `1px solid ${BORDER}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, color: GOLD, flexShrink: 0 }}>
                         {(s.display_name ?? '?')[0]?.toUpperCase()}
                       </div>}
                   <div style={{ flex: 1, minWidth: 0 }}>
@@ -474,7 +474,7 @@ export default function Bracket() {
               </div>
             )
           })}
-          <div style={{ textAlign: 'center', fontSize: 11, color: '#5A5040', marginTop: 14, lineHeight: 1.7 }}>
+          <div style={{ textAlign: 'center', fontSize: 11, color: 'var(--faint)', marginTop: 14, lineHeight: 1.7 }}>
             Group 1 · R32 2 · R16 3 · QF 5 · SF 8 · 3rd place 5 · Final 12 points per correct pick.
             {archive?.archived_at && <><br />Final standings, frozen {new Date(archive.archived_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}.</>}
           </div>
@@ -486,8 +486,8 @@ export default function Bracket() {
           <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginBottom: 16 }}>
             {[['groups', 'Groups'], ['bracket', 'Bracket']].map(([k, l]) => (
               <button key={k} onClick={() => setTourTab(k)} style={{
-                background: tourTab === k ? 'rgba(201,168,76,0.14)' : 'none',
-                border: `1px solid ${tourTab === k ? 'rgba(201,168,76,0.35)' : BORDER}`,
+                background: tourTab === k ? 'rgba(var(--gold-rgb),0.14)' : 'none',
+                border: `1px solid ${tourTab === k ? 'rgba(var(--gold-rgb),0.35)' : BORDER}`,
                 borderRadius: 20, color: tourTab === k ? GOLD : MUTED,
                 cursor: 'pointer', fontSize: 12, fontWeight: 700, padding: '5px 16px',
               }}>{l}</button>
@@ -501,7 +501,7 @@ export default function Bracket() {
                   {groupTables.map(([code, teams]) => (
                     <GroupTable key={code} code={code} teams={teams} qualifyingThirds={qualifyingThirds} onTeam={onTeam} />
                   ))}
-                  <div style={{ textAlign: 'center', fontSize: 11, color: '#5A5040', marginTop: 6, lineHeight: 1.8 }}>
+                  <div style={{ textAlign: 'center', fontSize: 11, color: 'var(--faint)', marginTop: 6, lineHeight: 1.8 }}>
                     <span style={{ color: GOLD }}>■</span> top 2 advance · <span style={{ color: '#8a7a3a' }}>■</span> in the 8 best 3rd-place spots
                   </div>
                 </>
@@ -518,7 +518,7 @@ function GroupTable({ code, teams, qualifyingThirds, onTeam }) {
   const cols = '1fr 16px 16px 16px 26px 26px'
   return (
     <div style={{ marginBottom: 18 }}>
-      <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 15, fontWeight: 800, letterSpacing: 1, color: INK, marginBottom: 6 }}>GROUP {code}</div>
+      <div style={{ fontFamily: 'var(--font-display)', fontSize: 15, fontWeight: 800, letterSpacing: 1, color: INK, marginBottom: 6 }}>GROUP {code}</div>
       <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 10, overflow: 'hidden' }}>
         <div style={{ display: 'grid', gridTemplateColumns: cols, gap: 6, padding: '6px 12px', fontSize: 10, color: MUTED, textTransform: 'uppercase', letterSpacing: 0.5, borderBottom: `1px solid ${BORDER}` }}>
           <span>Team</span><span style={{ textAlign: 'center' }}>W</span><span style={{ textAlign: 'center' }}>D</span><span style={{ textAlign: 'center' }}>L</span><span style={{ textAlign: 'center' }}>GD</span><span style={{ textAlign: 'right' }}>Pts</span>
@@ -529,15 +529,15 @@ function GroupTable({ code, teams, qualifyingThirds, onTeam }) {
           const accent = advance ? GOLD : thirdQ ? '#8a7a3a' : 'transparent'
           const gd = t.gf - t.ga
           return (
-            <div key={t.team} style={{ display: 'grid', gridTemplateColumns: cols, gap: 6, padding: '7px 12px', fontSize: 13, alignItems: 'center', borderLeft: `2px solid ${accent}`, background: advance || thirdQ ? 'rgba(201,168,76,0.05)' : 'transparent' }}>
+            <div key={t.team} style={{ display: 'grid', gridTemplateColumns: cols, gap: 6, padding: '7px 12px', fontSize: 13, alignItems: 'center', borderLeft: `2px solid ${accent}`, background: advance || thirdQ ? 'rgba(var(--gold-rgb),0.05)' : 'transparent' }}>
               <span {...clickableProps(() => onTeam(t.team))} style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0, cursor: 'pointer' }}>
                 <Flag code={t.team} size={14} />
-                <span style={{ color: advance || thirdQ ? INK : '#A89880', fontWeight: advance || thirdQ ? 500 : 400, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.team}</span>
+                <span style={{ color: advance || thirdQ ? INK : 'var(--text-2)', fontWeight: advance || thirdQ ? 500 : 400, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.team}</span>
               </span>
               <span style={{ textAlign: 'center', color: MUTED }}>{t.w}</span>
               <span style={{ textAlign: 'center', color: MUTED }}>{t.d}</span>
               <span style={{ textAlign: 'center', color: MUTED }}>{t.l}</span>
-              <span style={{ textAlign: 'center', color: '#A89880' }}>{gd > 0 ? '+' : ''}{gd}</span>
+              <span style={{ textAlign: 'center', color: 'var(--text-2)' }}>{gd > 0 ? '+' : ''}{gd}</span>
               <span style={{ textAlign: 'right', color: advance ? GOLD : INK, fontWeight: 700 }}>{t.pts}</span>
             </div>
           )
@@ -562,10 +562,10 @@ function BracketView({ matches, onTeam }) {
   return (
     <>
       {!anyTeams && <div style={{ textAlign: 'center', fontSize: 11, color: MUTED, marginBottom: 6 }}>Teams fill in as the group stage finishes.</div>}
-      {TZ_ABBR && <div style={{ textAlign: 'center', fontSize: 11, color: '#5A5040', marginBottom: 14 }}>Times shown in {TZ_ABBR} (your local time)</div>}
+      {TZ_ABBR && <div style={{ textAlign: 'center', fontSize: 11, color: 'var(--faint)', marginBottom: 14 }}>Times shown in {TZ_ABBR} (your local time)</div>}
       {stages.map(([key, label]) => (
         <div key={key} style={{ marginBottom: 18 }}>
-          <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 13, fontWeight: 700, letterSpacing: 1.5, color: GOLD, textTransform: 'uppercase', marginBottom: 8 }}>{label}</div>
+          <div style={{ fontFamily: 'var(--font-display)', fontSize: 13, fontWeight: 700, letterSpacing: 1.5, color: GOLD, textTransform: 'uppercase', marginBottom: 8 }}>{label}</div>
           {byStage[key].map(m => <KoRow key={m.id} m={m} onTeam={onTeam} />)}
         </div>
       ))}
@@ -580,15 +580,15 @@ function KoRow({ m, onTeam }) {
   return (
     <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 10, padding: '8px 14px', marginBottom: 6 }}>
       <div style={{ fontSize: 10, color: MUTED, textAlign: 'center', marginBottom: 5, letterSpacing: 0.3 }}>
-        {when}{m.venue && <span style={{ color: '#5A5040' }}> · {m.venue}, {m.city}</span>}
+        {when}{m.venue && <span style={{ color: 'var(--faint)' }}> · {m.venue}, {m.city}</span>}
       </div>
       <div style={{ display: 'flex', alignItems: 'center' }}>
-        <span {...(m.team_a ? clickableProps(() => onTeam(m.team_a)) : {})} style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 6, minWidth: 0, fontSize: 13, color: aWin ? '#86EFAC' : '#A89880', fontWeight: aWin ? 700 : 400, cursor: m.team_a ? 'pointer' : 'default' }}>
+        <span {...(m.team_a ? clickableProps(() => onTeam(m.team_a)) : {})} style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 6, minWidth: 0, fontSize: 13, color: aWin ? 'var(--success-text)' : 'var(--text-2)', fontWeight: aWin ? 700 : 400, cursor: m.team_a ? 'pointer' : 'default' }}>
           {m.team_a && <Flag code={m.team_a} size={14} />}
           <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.team_a ?? 'TBD'}</span>
         </span>
         <span style={{ flexShrink: 0, padding: '0 10px', fontSize: scoreStr ? 13 : 11, fontWeight: scoreStr ? 700 : 400, color: scoreStr ? INK : MUTED }}>{scoreStr ?? 'vs'}</span>
-        <span {...(m.team_b ? clickableProps(() => onTeam(m.team_b)) : {})} style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 6, minWidth: 0, justifyContent: 'flex-end', fontSize: 13, color: bWin ? '#86EFAC' : '#A89880', fontWeight: bWin ? 700 : 400, cursor: m.team_b ? 'pointer' : 'default' }}>
+        <span {...(m.team_b ? clickableProps(() => onTeam(m.team_b)) : {})} style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 6, minWidth: 0, justifyContent: 'flex-end', fontSize: 13, color: bWin ? 'var(--success-text)' : 'var(--text-2)', fontWeight: bWin ? 700 : 400, cursor: m.team_b ? 'pointer' : 'default' }}>
           <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.team_b ?? 'TBD'}</span>
           {m.team_b && <Flag code={m.team_b} size={14} />}
         </span>
@@ -613,8 +613,8 @@ function MatchRow({ m, myPick, lockedIn, now, onPick, expanded, onToggle, roster
     status = <span style={{ color: MUTED }}>Not scored</span>
   } else if (m.result && myPick) {
     status = myPick === m.result
-      ? <span style={{ color: '#86EFAC', fontWeight: 700 }}>✓ +{pts}</span>
-      : <span style={{ color: '#FCA5A5', fontWeight: 700 }}>✗</span>
+      ? <span style={{ color: 'var(--success-text)', fontWeight: 700 }}>✓ +{pts}</span>
+      : <span style={{ color: 'var(--danger-text)', fontWeight: 700 }}>✗</span>
   } else if (m.result) {
     status = <span style={{ color: MUTED }}>—</span>
   } else if (kicked) {
@@ -647,10 +647,10 @@ function MatchRow({ m, myPick, lockedIn, now, onPick, expanded, onToggle, roster
                 disabled={locked}
                 style={{
                   padding: '8px 4px',
-                  background: active ? (m.result ? (won ? 'rgba(134,239,172,0.12)' : 'rgba(252,165,165,0.10)') : GOLD) : '#0F0E0C',
-                  border: `2px solid ${won ? '#4caf50' : active ? GOLD : BORDER}`,
+                  background: active ? (m.result ? (won ? 'rgba(var(--success-text-rgb),0.12)' : 'rgba(var(--danger-text-rgb),0.10)') : GOLD) : 'var(--bg)',
+                  border: `2px solid ${won ? 'var(--success)' : active ? GOLD : BORDER}`,
                   borderRadius: 8,
-                  color: active && !m.result ? '#0F0E0C' : won ? '#86EFAC' : active ? INK : locked ? '#5A5040' : INK,
+                  color: active && !m.result ? 'var(--bg)' : won ? 'var(--success-text)' : active ? INK : locked ? 'var(--faint)' : INK,
                   fontSize: 13, fontWeight: 800, letterSpacing: 0.5,
                   cursor: locked ? 'default' : 'pointer',
                   opacity: locked && !active && !won ? 0.55 : 1,
@@ -677,14 +677,14 @@ function MatchRow({ m, myPick, lockedIn, now, onPick, expanded, onToggle, roster
       </div>
       {m.score_a != null && m.score_b != null && (
         <div style={{ textAlign: 'center', fontSize: 11, color: MUTED, marginTop: 5, letterSpacing: 0.3 }}>
-          {isLive && <span style={{ color: '#e94560', fontWeight: 700, marginRight: 6 }}><span style={{ animation: 'blink 1.2s infinite' }}>●</span> LIVE</span>}
-          <span {...clickableProps((e) => { e.stopPropagation(); onTeam(m.team_a) })} style={{ color: m.result === 'a' ? '#86EFAC' : '#A89880', fontWeight: m.result === 'a' ? 700 : 400, cursor: 'pointer' }}>{m.team_a}</span>
+          {isLive && <span style={{ color: 'var(--danger)', fontWeight: 700, marginRight: 6 }}><span style={{ animation: 'blink 1.2s infinite' }}>●</span> LIVE</span>}
+          <span {...clickableProps((e) => { e.stopPropagation(); onTeam(m.team_a) })} style={{ color: m.result === 'a' ? 'var(--success-text)' : 'var(--text-2)', fontWeight: m.result === 'a' ? 700 : 400, cursor: 'pointer' }}>{m.team_a}</span>
           {' '}<span style={{ color: INK, fontWeight: 700 }}>{m.score_a}–{m.score_b}</span>{' '}
-          <span {...clickableProps((e) => { e.stopPropagation(); onTeam(m.team_b) })} style={{ color: m.result === 'b' ? '#86EFAC' : '#A89880', fontWeight: m.result === 'b' ? 700 : 400, cursor: 'pointer' }}>{m.team_b}</span>
+          <span {...clickableProps((e) => { e.stopPropagation(); onTeam(m.team_b) })} style={{ color: m.result === 'b' ? 'var(--success-text)' : 'var(--text-2)', fontWeight: m.result === 'b' ? 700 : 400, cursor: 'pointer' }}>{m.team_b}</span>
         </div>
       )}
       {m.venue && (
-        <div style={{ textAlign: 'center', fontSize: 10, color: '#5A5040', marginTop: 3, letterSpacing: 0.3 }}>
+        <div style={{ textAlign: 'center', fontSize: 10, color: 'var(--faint)', marginTop: 3, letterSpacing: 0.3 }}>
           {m.venue}, {m.city}
         </div>
       )}
@@ -702,7 +702,7 @@ function PicksPanel({ m, roster, matchPreds, meId }) {
 
   const pickCell = (pick) => {
     if (!pick) return <span style={{ color: MUTED, fontSize: 12 }}>No pick</span>
-    const color = m.result ? (pick === m.result ? '#86EFAC' : '#FCA5A5') : INK
+    const color = m.result ? (pick === m.result ? 'var(--success-text)' : 'var(--danger-text)') : INK
     const label = pick === 'draw' ? 'Draw' : pick === 'a' ? m.team_a : m.team_b
     return (
       <span style={{ display: 'flex', alignItems: 'center', gap: 5, color, fontWeight: 700, fontSize: 13, flexShrink: 0 }}>
@@ -718,7 +718,7 @@ function PicksPanel({ m, roster, matchPreds, meId }) {
         <div key={mem.user_id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0' }}>
           {mem.avatar_url
             ? <img src={mem.avatar_url} alt="" width={22} height={22} style={{ borderRadius: '50%', flexShrink: 0 }} referrerPolicy="no-referrer" />
-            : <div style={{ width: 22, height: 22, borderRadius: '50%', background: '#0F0E0C', border: `1px solid ${BORDER}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: GOLD, flexShrink: 0 }}>
+            : <div style={{ width: 22, height: 22, borderRadius: '50%', background: 'var(--bg)', border: `1px solid ${BORDER}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: GOLD, flexShrink: 0 }}>
                 {(mem.display_name ?? '?')[0]?.toUpperCase()}
               </div>}
           <div style={{ flex: 1, minWidth: 0, fontSize: 13, color: INK, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
@@ -740,7 +740,7 @@ function HistoryPanel({ history }) {
         {history.map((h, i) => (
           <span key={i} title={`${h.m.team_a} v ${h.m.team_b}`} style={{
             width: 16, height: 16, borderRadius: 3,
-            background: h.correct ? 'rgba(134,239,172,0.85)' : 'rgba(252,165,165,0.85)',
+            background: h.correct ? 'rgba(var(--success-text-rgb),0.85)' : 'rgba(var(--danger-text-rgb),0.85)',
           }} />
         ))}
       </div>
@@ -756,7 +756,7 @@ function HistoryPanel({ history }) {
               {h.pick !== 'draw' && <Flag code={h.pick === 'a' ? h.m.team_a : h.m.team_b} size={13} />}
               {pickLabel}
             </span>
-            <span style={{ fontSize: 12, fontWeight: 700, color: h.correct ? '#86EFAC' : '#FCA5A5', flexShrink: 0, minWidth: 30, textAlign: 'right' }}>
+            <span style={{ fontSize: 12, fontWeight: 700, color: h.correct ? 'var(--success-text)' : 'var(--danger-text)', flexShrink: 0, minWidth: 30, textAlign: 'right' }}>
               {h.correct ? `+${h.pts}` : '✗'}
             </span>
           </div>
@@ -792,7 +792,7 @@ function TeamHistoryModal({ team, matches, onClose }) {
       <div onClick={e => e.stopPropagation()} style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 14, padding: '20px 22px 18px', maxWidth: 380, width: '100%', maxHeight: '85vh', overflowY: 'auto', boxSizing: 'border-box', animation: 'slideUp 0.25s ease' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
           <Flag code={team} size={22} />
-          <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 22, fontWeight: 800, letterSpacing: 1.5, color: INK, flex: 1 }}>{team}</div>
+          <div style={{ fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 800, letterSpacing: 1.5, color: INK, flex: 1 }}>{team}</div>
           <button onClick={onClose} aria-label="Close" style={{ background: 'none', border: 'none', color: MUTED, cursor: 'pointer', fontSize: 18, padding: 4, lineHeight: 1 }}>✕</button>
         </div>
         <div style={{ fontSize: 11, color: MUTED, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 12 }}>
@@ -813,8 +813,8 @@ function TeamHistoryRow({ m, team }) {
   const hasScore = m.score_a != null && m.score_b != null
   let pill = null
   if (m.result === 'draw') pill = { t: 'D', c: MUTED }
-  else if (m.result === 'a') pill = isA ? { t: 'W', c: '#86EFAC' } : { t: 'L', c: '#FCA5A5' }
-  else if (m.result === 'b') pill = isA ? { t: 'L', c: '#FCA5A5' } : { t: 'W', c: '#86EFAC' }
+  else if (m.result === 'a') pill = isA ? { t: 'W', c: 'var(--success-text)' } : { t: 'L', c: 'var(--danger-text)' }
+  else if (m.result === 'b') pill = isA ? { t: 'L', c: 'var(--danger-text)' } : { t: 'W', c: 'var(--success-text)' }
   const myScore = isA ? m.score_a : m.score_b
   const oppScore = isA ? m.score_b : m.score_a
   return (
@@ -828,7 +828,7 @@ function TeamHistoryRow({ m, team }) {
         </div>
         {hasScore ? (
           <span style={{ flexShrink: 0, fontSize: 13, fontWeight: 700, color: INK }}>
-            {isLive && <span style={{ color: '#e94560', marginRight: 5 }}><span style={{ animation: 'blink 1.2s infinite' }}>●</span></span>}
+            {isLive && <span style={{ color: 'var(--danger)', marginRight: 5 }}><span style={{ animation: 'blink 1.2s infinite' }}>●</span></span>}
             {myScore}–{oppScore}
           </span>
         ) : (
@@ -837,7 +837,7 @@ function TeamHistoryRow({ m, team }) {
         {pill && <span style={{ flexShrink: 0, width: 16, textAlign: 'center', fontSize: 11, fontWeight: 800, color: pill.c }}>{pill.t}</span>}
       </div>
       {m.venue && (
-        <div style={{ fontSize: 10, color: '#5A5040', marginTop: 2, paddingLeft: 66 }}>{m.venue}, {m.city}</div>
+        <div style={{ fontSize: 10, color: 'var(--faint)', marginTop: 2, paddingLeft: 66 }}>{m.venue}, {m.city}</div>
       )}
     </div>
   )
@@ -851,14 +851,14 @@ function RulesModal({ onClose }) {
   }, [onClose])
 
   const sectionTitle = { fontSize: 11, fontWeight: 700, letterSpacing: 1.5, color: GOLD, textTransform: 'uppercase', marginTop: 18, marginBottom: 6 }
-  const body = { fontSize: 13, color: '#ccc', lineHeight: 1.65, margin: 0 }
+  const body = { fontSize: 13, color: 'var(--ink-2)', lineHeight: 1.65, margin: 0 }
   const stages = ['group', 'r32', 'r16', 'qf', 'sf', '3p', 'final']
 
   return (
     <div onClick={onClose} role="dialog" aria-modal="true" aria-label="Pool rules" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, animation: 'fadeIn 0.2s ease' }}>
       <div onClick={e => e.stopPropagation()} style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 14, padding: '20px 22px 18px', maxWidth: 380, width: '100%', maxHeight: '85vh', overflowY: 'auto', boxSizing: 'border-box', animation: 'slideUp 0.25s ease' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 2 }}>
-          <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 22, fontWeight: 800, letterSpacing: 2, color: INK }}>POOL RULES</div>
+          <div style={{ fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 800, letterSpacing: 2, color: INK }}>POOL RULES</div>
           <button onClick={onClose} aria-label="Close" style={{ background: 'none', border: 'none', color: MUTED, cursor: 'pointer', fontSize: 18, padding: 4, lineHeight: 1 }}>✕</button>
         </div>
 
@@ -882,8 +882,8 @@ function RulesModal({ onClose }) {
         <div style={sectionTitle}>Points per correct pick</div>
         <div style={{ border: `1px solid ${BORDER}`, borderRadius: 8, overflow: 'hidden', marginTop: 2 }}>
           {stages.map((s, i) => (
-            <div key={s} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 12px', fontSize: 13, background: i % 2 ? 'transparent' : '#0F0E0C' }}>
-              <span style={{ color: '#ccc' }}>{STAGE_LABELS[s]}</span>
+            <div key={s} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 12px', fontSize: 13, background: i % 2 ? 'transparent' : 'var(--bg)' }}>
+              <span style={{ color: 'var(--ink-2)' }}>{STAGE_LABELS[s]}</span>
               <span style={{ color: GOLD, fontWeight: 800 }}>{STAGE_POINTS[s]} pt{STAGE_POINTS[s] !== 1 ? 's' : ''}</span>
             </div>
           ))}

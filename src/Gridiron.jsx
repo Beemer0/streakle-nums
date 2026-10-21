@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useMemo } from "react";
 import Archive from './Archive'
-import UserMenu from "./UserMenu";
+import GameShell from "./GameShell";
 import { saveResult } from './saveResult';
 import { useStreak } from './useStreak';
 import AwardIcon from './AwardIcon';
@@ -545,48 +545,24 @@ export default function GridironGame() {
   useSeo(PAGE_SEO.gridiron)
   const [showArchive, setShowArchive] = useState(false)
   const [puzzleDate, setPuzzleDate] = useState(null)
-  const [showHow, setShowHow] = useState(false);
+  const howTo = (
+    <>
+      Fill the 3×3 grid with NFL players. Each player must satisfy <b>both</b> the row and column criteria.<br/><br/>
+      Rows and columns can be <b>NFL teams</b> (player played for that team) or <b>awards</b> (player won that award).<br/><br/>
+      Each player can only be used <b>once</b>. You have <b>9 guesses</b> — one per cell.<br/><br/>
+      🏆 Rarer answers = higher score. Max score: ~855.
+    </>
+  )
 
   return (
-    <main style={{minHeight:'100vh',display:'flex',flexDirection:'column',alignItems:'center',paddingTop:0,paddingBottom:40,color:'#F5F0E8',position:'relative',overflow:'hidden'}}>
+    <GameShell game="gridiron" date={formatDate(puzzleDate)} howTo={howTo} onArchive={() => setShowArchive(true)}>
       <style>{css}</style>
 
-      <UserMenu />
-      <div style={{width:'100%',display:'flex',alignItems:'center',padding:'12px 16px 0',minHeight:44}}>
-        <a href="/" style={{color:'#C9A84C',textDecoration:'none',fontSize:13,fontWeight:600}}>← Back</a>
-      </div>
 
-      <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:2}}>
-        <div style={{display:'flex',flexDirection:'column',alignItems:'center'}}>
-          <h1 style={{fontSize:30,fontWeight:900,letterSpacing:2,color:'#fff',margin:0}}>GRIDIRON</h1>
-          <div style={{fontSize:11,fontWeight:600,letterSpacing:3,color:'#C9A84C',textTransform:'uppercase',marginTop:-4}}>by Streakle</div>
-        </div>
-        <button onClick={()=>setShowHow(!showHow)} style={{background:'none',border:'1px solid #2C2820',borderRadius:6,color:'#C9A84C',cursor:'pointer',fontSize:13,padding:'3px 10px',marginLeft:8}}>
-          How to play
-        </button>
-        <button onClick={() => setShowArchive(true)} style={{background:'none',border:'1px solid #2C2820',borderRadius:6,color:'#C9A84C',cursor:'pointer',fontSize:13,padding:'3px 10px'}}>
-          📅 Archive
-        </button>
-      </div>
-
-      <div style={{fontSize:13,color:'#7A6E5F',marginBottom:8,marginTop:6}}>{formatDate(puzzleDate)}</div>
-
-      {showHow&&(
-        <div style={{background:'#1C1A16',border:'1px solid #2C2820',borderRadius:10,padding:16,maxWidth:340,marginBottom:12,fontSize:13,lineHeight:1.65,color:'#ccc',animation:'slideUp 0.3s ease'}}>
-          <b style={{color:'#C9A84C'}}>How to play</b><br/>
-          Fill the 3×3 grid with NFL players. Each player must satisfy <b>both</b> the row and column criteria.<br/><br/>
-          Rows and columns can be <b>NFL teams</b> (player played for that team) or <b>awards</b> (player won that award).<br/><br/>
-          Each player can only be used <b>once</b>. You have <b>9 guesses</b> — one per cell.<br/><br/>
-          🏆 Rarer answers = higher score. Max score: ~855.
-        </div>
-      )}
 
       {/* Keyed by date: picking a puzzle in the Archive starts a fresh board. */}
       <GridironBoard key={puzzleDate ?? 'today'} puzzleDate={puzzleDate} streak={streak} />
 
-      <div style={{marginTop:32,fontSize:12,color:'#5A5040',textAlign:'center'}}>
-        <a href="/privacy" style={{color:'#5A5040',textDecoration:'none'}}>Privacy Policy / Politique de confidentialité</a>
-      </div>
 
       {showArchive && (
         <Archive
@@ -595,7 +571,7 @@ export default function GridironGame() {
           onClose={() => setShowArchive(false)}
         />
       )}
-    </main>
+    </GameShell>
   );
 }
 
@@ -625,15 +601,15 @@ function GridironBoard({ puzzleDate, streak }) {
   const totalPossible = 9 * 95;
 
   const spawnConfetti = () => {
-    const items = Array.from({length:30},(_,i)=>({id:i,x:20+Math.random()*60,delay:Math.random()*600,color:['#4caf50','#C9A84C','#C9A84C','#e94560','#ffd700'][i%5],size:5+Math.random()*8}));
+    const items = Array.from({length:30},(_,i)=>({id:i,x:20+Math.random()*60,delay:Math.random()*600,color:['var(--success)','var(--gold)','var(--gold)','var(--danger)','#ffd700'][i%5],size:5+Math.random()*8}));
     setConfetti(items);
     setTimeout(()=>setConfetti([]),1600);
   };
 
   const getHeaderContent = (key) => {
-    if (AWARDS[key]) return { award: key, label: AWARDS[key], color: '#C9A84C', logoUrl: null };
+    if (AWARDS[key]) return { award: key, label: AWARDS[key], color: 'var(--gold)', logoUrl: null };
     const abbr = NFL_LOGO[key];
-    return { award: null, label: TEAMS[key] || key, color: '#C9A84C', logoUrl: abbr ? `https://a.espncdn.com/i/teamlogos/nfl/500/${abbr}.png` : null };
+    return { award: null, label: TEAMS[key] || key, color: 'var(--gold)', logoUrl: abbr ? `https://a.espncdn.com/i/teamlogos/nfl/500/${abbr}.png` : null };
   };
 
   const handleCellClick = (r, c) => {
@@ -721,14 +697,14 @@ function GridironBoard({ puzzleDate, streak }) {
       ))}
 
       <div style={{display:'flex',gap:24,marginBottom:12,fontSize:14}}>
-        <div style={{color:'#C9A84C',fontWeight:700}}>Score: {totalScore}</div>
-        <div style={{color:guessesLeft<=3?'#e94560':'#C9A84C',fontWeight:700}}>
+        <div style={{color:'var(--gold)',fontWeight:700}}>Score: {totalScore}</div>
+        <div style={{color:guessesLeft<=3?'var(--danger)':'var(--gold)',fontWeight:700}}>
           {won?'Complete!':gameOver?'Game over':`${guessesLeft} guess${guessesLeft!==1?'es':''} left`}
         </div>
       </div>
 
       {streak > 0 && (
-        <div style={{fontSize:13, color:'#C9A84C', fontWeight:600, marginBottom:8}}>
+        <div style={{fontSize:13, color:'var(--gold)', fontWeight:600, marginBottom:8}}>
           🔥 {streak} day streak
         </div>
       )}
@@ -742,7 +718,7 @@ function GridironBoard({ puzzleDate, streak }) {
           {colHeaders.map((col,ci)=>{
             const {award,label,color,logoUrl}=getHeaderContent(col);
             return (
-              <div key={ci} style={{background:'#1C1A16',border:'1px solid #2C2820',borderRadius:8,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:'4px 6px',textAlign:'center'}}>
+              <div key={ci} style={{background:'var(--surface)',border:'1px solid var(--border)',borderRadius:8,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:'4px 6px',textAlign:'center'}}>
                 {logoUrl ? <img src={logoUrl} alt={label} width={38} height={38} style={{objectFit:'contain'}} onError={e=>{e.target.style.display='none'}}/> : <AwardIcon name={award} size={38}/>}
                 <div style={{fontSize:9,fontWeight:700,color,lineHeight:1.2,marginTop:3}}>{label}</div>
               </div>
@@ -751,7 +727,7 @@ function GridironBoard({ puzzleDate, streak }) {
 
           {rowHeaders.map((row,ri)=>(
             <React.Fragment key={`row-${ri}`}>
-              <div style={{background:'#1C1A16',border:'1px solid #2C2820',borderRadius:8,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:'4px 6px',textAlign:'center'}}>
+              <div style={{background:'var(--surface)',border:'1px solid var(--border)',borderRadius:8,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:'4px 6px',textAlign:'center'}}>
                 {(()=>{const{award,label,color,logoUrl}=getHeaderContent(row);return(<>{logoUrl?<img src={logoUrl} alt={label} width={38} height={38} style={{objectFit:'contain'}} onError={e=>{e.target.style.display='none'}}/>:<AwardIcon name={award} size={38}/>}<div style={{fontSize:9,fontWeight:700,color,lineHeight:1.2,marginTop:3}}>{label}</div></>);})()}
               </div>
               {colHeaders.map((col,ci)=>{
@@ -761,8 +737,8 @@ function GridironBoard({ puzzleDate, streak }) {
                 const isShaking=shakeCell===key;
                 return (
                   <div key={key} {...clickableProps(()=>handleCellClick(ri,ci), filled||gameOver||won)} style={{
-                    background:filled?'#1a3a2a':isActive?'#2C2418':'#1C1A16',
-                    border:`2px solid ${filled?'#4caf50':isActive?'#C9A84C':'#2C2820'}`,
+                    background:filled?'#1a3a2a':isActive?'var(--surface-gold)':'var(--surface)',
+                    border:`2px solid ${filled?'var(--success)':isActive?'var(--gold)':'var(--border)'}`,
                     borderRadius:8,cursor:filled||gameOver||won?'default':'pointer',
                     display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',
                     padding:6,textAlign:'center',userSelect:'none',
@@ -771,11 +747,11 @@ function GridironBoard({ puzzleDate, streak }) {
                   }}>
                     {filled?(
                       <>
-                        <div style={{fontSize:10,fontWeight:700,color:'#4caf50',marginBottom:2}}>+{filled.score}</div>
-                        <div style={{fontSize:11,fontWeight:700,color:'#fff',lineHeight:1.3}}>{filled.player.n}</div>
+                        <div style={{fontSize:10,fontWeight:700,color:'var(--success)',marginBottom:2}}>+{filled.score}</div>
+                        <div style={{fontSize:11,fontWeight:700,color:'var(--ink)',lineHeight:1.3}}>{filled.player.n}</div>
                       </>
                     ):isActive?(
-                      <div style={{fontSize:11,color:'#C9A84C'}}>Type below ↓</div>
+                      <div style={{fontSize:11,color:'var(--gold)'}}>Type below ↓</div>
                     ):(
                       <div style={{fontSize:20,opacity:0.2}}>?</div>
                     )}
@@ -790,35 +766,35 @@ function GridironBoard({ puzzleDate, streak }) {
       {/* Search */}
       {activeCell&&!won&&!gameOver&&(
         <div style={{marginTop:16,width:'100%',maxWidth:340,padding:'0 12px',boxSizing:'border-box',animation:'slideUp 0.3s ease'}}>
-          <div style={{fontSize:12,color:'#7A6E5F',marginBottom:6,textAlign:'center'}}>
+          <div style={{fontSize:12,color:'var(--muted)',marginBottom:6,textAlign:'center'}}>
             {getHeaderContent(rowHeaders[activeCell[0]]).label} × {getHeaderContent(colHeaders[activeCell[1]]).label}
           </div>
           <input ref={inputRef} value={query} onChange={e=>handleQuery(e.target.value)} placeholder="Search NFL player..."
-            style={{width:'100%',boxSizing:'border-box',background:'#1C1A16',border:`2px solid ${pendingPlayer?'#4caf50':'#C9A84C'}`,borderRadius:8,color:'#fff',fontSize:15,padding:'10px 14px',outline:'none'}}
+            style={{width:'100%',boxSizing:'border-box',background:'var(--surface)',border:`2px solid ${pendingPlayer?'var(--success)':'var(--gold)'}`,borderRadius:8,color:'var(--ink)',fontSize:15,padding:'10px 14px',outline:'none'}}
           />
           {suggestions.length>0&&(
-            <div style={{background:'#1C1A16',border:'1px solid #2C2820',borderRadius:8,marginTop:4,overflow:'hidden'}}>
+            <div style={{background:'var(--surface)',border:'1px solid var(--border)',borderRadius:8,marginTop:4,overflow:'hidden'}}>
               {suggestions.map((p,i)=>(
                 <div key={i} {...clickableProps(()=>handleSelect(p))} style={{
                   padding:'10px 14px',cursor:'pointer',fontSize:13,
-                  borderBottom:i<suggestions.length-1?'1px solid #2C2820':'none',
+                  borderBottom:i<suggestions.length-1?'1px solid var(--border)':'none',
                   background:pendingPlayer?.n===p.n?'#1a3a2a':'transparent',
                   transition:'background 0.15s',
                 }}
-                  onMouseOver={e=>e.currentTarget.style.background='#2C2418'}
+                  onMouseOver={e=>e.currentTarget.style.background='var(--surface-gold)'}
                   onMouseOut={e=>e.currentTarget.style.background=pendingPlayer?.n===p.n?'#1a3a2a':'transparent'}
                 >
-                  <span style={{color:'#F5F0E8',fontWeight:600}}>{p.n}</span>
+                  <span style={{color:'var(--ink)',fontWeight:600}}>{p.n}</span>
                 </div>
               ))}
             </div>
           )}
           {query.length>=2&&suggestions.length===0&&!pendingPlayer&&(
-            <div style={{color:'#aaa',fontSize:12,textAlign:'center',marginTop:8}}>No player found</div>
+            <div style={{color:'var(--text-2)',fontSize:12,textAlign:'center',marginTop:8}}>No player found</div>
           )}
           <div style={{display:'flex',gap:8,marginTop:8}}>
-            <button onClick={()=>{setActiveCell(null);setQuery('');setSuggestions([]);setPendingPlayer(null);}} style={{flex:1,background:'none',border:'1px solid #2C2820',borderRadius:6,color:'#C9A84C',cursor:'pointer',fontSize:12,padding:'8px'}}>Cancel</button>
-            <button onClick={handleSubmit} disabled={!pendingPlayer} style={{flex:2,background:pendingPlayer?'#4caf50':'#1C1A16',border:'none',borderRadius:6,color:pendingPlayer?'#fff':'#555',cursor:pendingPlayer?'pointer':'default',fontSize:13,fontWeight:700,padding:'8px',transition:'background 0.2s'}}>
+            <button onClick={()=>{setActiveCell(null);setQuery('');setSuggestions([]);setPendingPlayer(null);}} style={{flex:1,background:'none',border:'1px solid var(--border)',borderRadius:6,color:'var(--gold)',cursor:'pointer',fontSize:12,padding:'8px'}}>Cancel</button>
+            <button onClick={handleSubmit} disabled={!pendingPlayer} style={{flex:2,background:pendingPlayer?'var(--success)':'var(--surface)',border:'none',borderRadius:6,color:pendingPlayer?'var(--ink)':'var(--faint)',cursor:pendingPlayer?'pointer':'default',fontSize:13,fontWeight:700,padding:'8px',transition:'background 0.2s'}}>
               {pendingPlayer?`Submit "${pendingPlayer.n}"`:'Select a player first'}
             </button>
           </div>
@@ -827,17 +803,17 @@ function GridironBoard({ puzzleDate, streak }) {
 
       {(won||gameOver)&&(
         <div style={{textAlign:'center',marginTop:20,animation:'slideUp 0.5s ease'}}>
-          {won&&<div style={{fontSize:22,fontWeight:700,color:'#4caf50',marginBottom:6}}>🎉 Board Complete!</div>}
-          {gameOver&&!won&&<div style={{fontSize:20,fontWeight:700,color:'#e94560',marginBottom:6}}>Game Over!</div>}
-          <div style={{fontSize:16,color:'#C9A84C',fontWeight:700,marginBottom:4}}>Final Score: {totalScore} / {totalPossible}</div>
-          <div style={{fontSize:13,color:'#aaa',marginBottom:16}}>{Object.keys(cells).length}/9 cells filled</div>
+          {won&&<div style={{fontSize:22,fontWeight:700,color:'var(--success)',marginBottom:6}}>🎉 Board Complete!</div>}
+          {gameOver&&!won&&<div style={{fontSize:20,fontWeight:700,color:'var(--danger)',marginBottom:6}}>Game Over!</div>}
+          <div style={{fontSize:16,color:'var(--gold)',fontWeight:700,marginBottom:4}}>Final Score: {totalScore} / {totalPossible}</div>
+          <div style={{fontSize:13,color:'var(--text-2)',marginBottom:16}}>{Object.keys(cells).length}/9 cells filled</div>
           <div style={{position:'relative',display:'inline-block'}}>
-            <button onClick={handleShare} style={{background:'#C9A84C',color:'#0F0E0C',border:'none',borderRadius:8,padding:'10px 28px',fontSize:15,fontWeight:700,cursor:'pointer'}}
-              onMouseOver={e=>e.currentTarget.style.background='#D4B45A'}
-              onMouseOut={e=>e.currentTarget.style.background='#C9A84C'}>
+            <button onClick={handleShare} style={{background:'var(--gold)',color:'var(--bg)',border:'none',borderRadius:8,padding:'10px 28px',fontSize:15,fontWeight:700,cursor:'pointer'}}
+              onMouseOver={e=>e.currentTarget.style.background='var(--gold-hover)'}
+              onMouseOut={e=>e.currentTarget.style.background='var(--gold)'}>
               📋 Share result
             </button>
-            {copied&&<div style={{position:'absolute',top:-32,left:'50%',transform:'translateX(-50%)',background:'#2d6a30',color:'#fff',fontSize:12,fontWeight:600,padding:'4px 12px',borderRadius:6,whiteSpace:'nowrap',animation:'copied 2s ease forwards',pointerEvents:'none'}}>Copied!</div>}
+            {copied&&<div style={{position:'absolute',top:-32,left:'50%',transform:'translateX(-50%)',background:'#2d6a30',color:'var(--ink)',fontSize:12,fontWeight:600,padding:'4px 12px',borderRadius:6,whiteSpace:'nowrap',animation:'copied 2s ease forwards',pointerEvents:'none'}}>Copied!</div>}
           </div>
         </div>
       )}

@@ -4,99 +4,7 @@ import { supabase } from './supabase'
 import UserMenu from './UserMenu'
 import { calcStreak } from './streak'
 import { useSeo, PAGE_SEO } from './seo'
-
-const games = [
-  {
-    key: 'scramble',
-    path: '/scramble',
-    title: 'SCRAMBLE',
-    emoji: '🔀',
-    description: 'Find six crossing words hidden in seven letters — in any order you like.',
-    color: '#9D174D',
-    accent: '#F9A8D4',
-    badge: 'Unscramble It',
-  },
-  {
-    key: 'weave',
-    path: '/weave',
-    title: 'WEAVE',
-    emoji: '🧶',
-    description: 'Swap scrambled letters until three words read across and three down.',
-    color: '#115E59',
-    accent: '#5EEAD4',
-    badge: 'Untangle It',
-  },
-  {
-    key: 'mines',
-    path: '/mines',
-    title: 'MINES',
-    emoji: '💣',
-    description: 'Sweep three no-guess minefields — Easy, Medium, Hard. Logic only, never luck.',
-    color: '#9A3412',
-    accent: '#FDBA74',
-    badge: 'Sweep It',
-  },
-  {
-    key: 'faceoff',
-    path: '/faceoff',
-    title: 'FACEOFF',
-    emoji: '🏒',
-    description: 'Test your NHL knowledge. Match players to teams and awards in the grid.',
-    color: '#0C4A6E',
-    accent: '#7DD3FC',
-    badge: 'Know It',
-  },
-  {
-    key: 'gridiron',
-    path: '/gridiron',
-    title: 'GRIDIRON',
-    emoji: '🏈',
-    description: 'Test your NFL knowledge. Match players to teams and awards in the grid.',
-    color: '#991B1B',
-    accent: '#FCA5A5',
-    badge: 'Know It',
-  },
-  {
-    key: 'knockout',
-    path: '/knockout',
-    title: 'KNOCKOUT',
-    emoji: '🥊',
-    description: 'Name MMA fighters by promotion, weight class, and achievement.',
-    color: '#7F1D1D',
-    accent: '#FCA5A5',
-    badge: 'Know It',
-  },
-  {
-    key: 'words',
-    path: '/words',
-    title: 'WORDS',
-    emoji: '🔤',
-    description: 'Guess the 5-letter word in 6 tries. Learn something new every day.',
-    color: '#5B21B6',
-    accent: '#C4B5FD',
-    badge: 'Guess It',
-  },
-  {
-    key: 'link',
-    path: '/link',
-    title: 'LINK',
-    emoji: '🔗',
-    description: 'Find 4 groups of 4 words that share something in common.',
-    color: '#166534',
-    accent: '#86EFAC',
-    badge: 'Group It',
-  },
-  {
-    key: 'nums',
-    path: '/nums',
-    title: 'NUMS',
-    emoji: '🔢',
-    description: 'Swap numbers so every row and column contains 1–7.',
-    color: '#1E40AF',
-    accent: '#93C5FD',
-    badge: 'Swap It',
-  },
-]
+import { GAMES } from './games'
 
 function calcStreaks(allResults) {
   const byGame = {}
@@ -146,8 +54,8 @@ export default function Home() {
         @keyframes fadeIn { from { opacity:0; transform:translateY(10px) } to { opacity:1; transform:translateY(0) } }
         @keyframes pulse  { 0%,100%{opacity:1} 50%{opacity:0.4} }
         .game-row { text-decoration: none; display: flex; align-items: center; transition: background 0.15s; }
-        .game-row:hover { background: #211F1A !important; }
-        .game-row:hover .game-row-cta { background: #D4B45A !important; }
+        .game-row:hover { background: var(--surface-raised) !important; }
+        .game-row:hover .game-row-cta { background: var(--gold-hover) !important; }
         @media (max-width: 520px) {
           .game-row { padding: 14px 16px !important; gap: 10px !important; }
           .game-desc { display: none; }
@@ -169,15 +77,15 @@ export default function Home() {
       {/* ── Logo ── */}
       <div className="home-section" style={{ textAlign: 'center', marginBottom: 12, animation: 'fadeIn 0.5s ease' }}>
         <h1 className="home-logo" style={{
-          fontFamily: "'Barlow Condensed', sans-serif",
+          fontFamily: 'var(--font-display)',
           fontSize: 72, fontWeight: 800, letterSpacing: 10,
-          color: '#F5F0E8', lineHeight: 1, margin: 0,
+          color: 'var(--ink)', lineHeight: 1, margin: 0,
         }}>
           STREAKLE
         </h1>
         <div style={{
           fontSize: 11, fontWeight: 600, letterSpacing: 4,
-          color: '#C9A84C', textTransform: 'uppercase', marginTop: 12,
+          color: 'var(--gold)', textTransform: 'uppercase', marginTop: 12,
         }}>
           Start your day with a puzzle
         </div>
@@ -185,16 +93,16 @@ export default function Home() {
 
       {/* ── Live badge ── */}
       <div className="home-badge" style={{
-        background: 'rgba(201,168,76,0.07)',
-        border: '1px solid rgba(201,168,76,0.22)',
+        background: 'rgba(var(--gold-rgb),0.07)',
+        border: '1px solid rgba(var(--gold-rgb),0.22)',
         borderRadius: 20, padding: '6px 16px',
-        fontSize: 12, color: '#C9A84C', fontWeight: 600,
+        fontSize: 12, color: 'var(--gold)', fontWeight: 600,
         marginBottom: 52, animation: 'fadeIn 0.65s ease',
         display: 'flex', alignItems: 'center', gap: 7,
       }}>
         <span style={{
           display: 'inline-block', width: 7, height: 7,
-          borderRadius: '50%', background: '#C9A84C',
+          borderRadius: '50%', background: 'var(--gold)',
           animation: 'pulse 2s infinite',
         }} />
         New puzzles every day
@@ -203,12 +111,12 @@ export default function Home() {
       {/* ── Game list ── */}
       <nav aria-label="Games" style={{
         width: '100%', maxWidth: 820,
-        border: '1px solid #2C2820',
+        border: '1px solid var(--border)',
         borderRadius: 12, overflow: 'hidden',
         marginBottom: 60,
         boxShadow: '0 4px 24px rgba(0,0,0,0.35)',
       }}>
-        {games.map((g, i) => {
+        {GAMES.map((g, i) => {
           const played    = g.key in todayResults
           const completed = todayResults[g.key] === true
           const failed    = played && !completed
@@ -219,9 +127,9 @@ export default function Home() {
               href={g.path}
               className="game-row"
               style={{
-                background: '#1C1A16',
+                background: 'var(--surface)',
                 borderLeft: `4px solid ${g.color}`,
-                borderBottom: i < games.length - 1 ? '1px solid #2C2820' : 'none',
+                borderBottom: i < GAMES.length - 1 ? '1px solid var(--border)' : 'none',
                 padding: '18px 24px',
                 gap: 20,
                 animation: `fadeIn 0.4s ${i * 70}ms both ease`,
@@ -233,9 +141,9 @@ export default function Home() {
               {/* Name + badge */}
               <div className="game-name" style={{ width: 148, flexShrink: 0 }}>
                 <div className="game-name-title" style={{
-                  fontFamily: "'Barlow Condensed', sans-serif",
+                  fontFamily: 'var(--font-display)',
                   fontSize: 28, fontWeight: 800, letterSpacing: 1.5,
-                  color: '#F5F0E8', lineHeight: 1,
+                  color: 'var(--ink)', lineHeight: 1,
                 }}>{g.title}</div>
                 <div style={{
                   marginTop: 6,
@@ -251,20 +159,20 @@ export default function Home() {
               {/* Description */}
               <div className="game-desc" style={{
                 flex: 1,
-                fontSize: 13, color: '#7A6E5F', lineHeight: 1.55,
+                fontSize: 13, color: 'var(--muted)', lineHeight: 1.55,
               }}>{g.description}</div>
 
               {/* Status + streak — only rendered when there's something to show */}
               {user && (completed || failed || streaks[g.key] > 0) && (
                 <div className="game-status" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4, flexShrink: 0, minWidth: 52 }}>
                   {completed && (
-                    <div style={{ fontSize: 11, fontWeight: 700, color: '#86EFAC', letterSpacing: 0.3 }}>✓ Done</div>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--success-text)', letterSpacing: 0.3 }}>✓ Done</div>
                   )}
                   {failed && (
-                    <div style={{ fontSize: 11, fontWeight: 700, color: '#FCA5A5', letterSpacing: 0.3 }}>✗ Tried</div>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--danger-text)', letterSpacing: 0.3 }}>✗ Tried</div>
                   )}
                   {streaks[g.key] > 0 && (
-                    <div style={{ fontSize: 11, fontWeight: 700, color: '#C9A84C' }}>🔥 {streaks[g.key]}</div>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--gold)' }}>🔥 {streaks[g.key]}</div>
                   )}
                 </div>
               )}
@@ -274,11 +182,11 @@ export default function Home() {
                 className={completed ? 'game-cta' : 'game-cta game-row-cta'}
                 style={{
                   flexShrink: 0,
-                  background: completed ? 'rgba(134,239,172,0.08)' : failed ? 'transparent' : '#C9A84C',
-                  border: completed ? '1px solid rgba(134,239,172,0.22)' : failed ? '1px solid rgba(252,165,165,0.3)' : 'none',
+                  background: completed ? 'rgba(var(--success-text-rgb),0.08)' : failed ? 'transparent' : 'var(--gold)',
+                  border: completed ? '1px solid rgba(var(--success-text-rgb),0.22)' : failed ? '1px solid rgba(var(--danger-text-rgb),0.3)' : 'none',
                   borderRadius: 20, padding: '7px 16px',
                   fontSize: 12, fontWeight: 700, letterSpacing: 0.4,
-                  color: completed ? '#86EFAC' : failed ? '#FCA5A5' : '#0F0E0C',
+                  color: completed ? 'var(--success-text)' : failed ? 'var(--danger-text)' : 'var(--bg)',
                   whiteSpace: 'nowrap',
                   transition: 'background 0.15s',
                 }}
@@ -295,7 +203,7 @@ export default function Home() {
       {/* ── Footer ── */}
       <footer style={{ textAlign: 'center', fontSize: 12 }}>
         <a href="/privacy" style={{ color: '#9A8C73', textDecoration: 'none', transition: 'color 0.15s' }}
-          onMouseOver={e => e.currentTarget.style.color = '#C9A84C'}
+          onMouseOver={e => e.currentTarget.style.color = 'var(--gold)'}
           onMouseOut={e => e.currentTarget.style.color = '#9A8C73'}
         >
           Privacy Policy / Politique de confidentialité

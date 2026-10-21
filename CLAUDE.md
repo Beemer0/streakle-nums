@@ -19,6 +19,12 @@ puzzles every day; signed-in players build streaks.
 - `Home.jsx` (landing), `main.jsx` (entry: providers + render only), `App.jsx`
   (router + lazy-loaded routes + ErrorBoundary), `LoginPage.jsx`, `Archive.jsx`
   (past-puzzle modal), `UserMenu.jsx`, `PoolHistory.jsx` (`/pools`, below).
+- `GameShell.jsx` (+ `.css`) frames every game page: top bar (← All games,
+  Sign in / account menu), title, How to play / Archive, date, how-to panel
+  (optional high-contrast switch), footer. A game passes `game` (its key in
+  `games.js`), `date`, `howTo`, `onArchive` and renders only its board.
+  `games.js` is the registry (key, path, title, emoji, colours, badge) that
+  Home, GameShell and App's sign-in banner read.
 - Shared: `AuthContext.js` (`useAuth`), `AuthProvider.jsx`, `supabase.js`, `saveResult.js`, `useStreak.js`,
   `streak.js`, `evaluate.js` (Wordle logic, tested), `a11y.js` (`clickableProps`),
   `AwardIcon.jsx`, `ErrorBoundary.jsx`, `validWords.txt` (~14.8k words).
@@ -32,8 +38,14 @@ puzzles every day; signed-in players build streaks.
   `node scripts/check-scramble.mjs`.
 
 ## Conventions
-- Warm "Ink & Gold" palette: `#0F0E0C` bg, `#1C1A16` cards, `#2C2820` borders,
-  `#C9A84C` amber, `#F5F0E8` warm white. Barlow Condensed (headings), DM Sans (body).
+- Warm "Ink & Gold" palette, defined once as CSS custom properties in the
+  `:root` block of `src/index.css` (`--bg`, `--surface`, `--border`, `--gold`,
+  `--ink`, `--muted`, …, plus `*-rgb` channels for translucency). Use
+  `var(--gold)` / `rgba(var(--gold-rgb),0.2)` — never a palette hex literal, never a
+  hex alpha suffix on a token (`tokens.test.js` enforces both directions).
+  `src/theme.js` exports `GOLD`, `CARD`, … as `var()` strings for JS.
+  Two fonts only: `var(--font-display)` Barlow Condensed (titles),
+  `var(--font-body)` DM Sans.
 - Push directly to `master` — no PRs unless asked.
 - Verify every change with `npm run build` (and `npm test` for logic).
 - Daily puzzles are date-seeded and must be identical for every user/browser.

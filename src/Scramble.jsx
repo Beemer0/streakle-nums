@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import Archive from './Archive'
-import UserMenu from './UserMenu'
+import GameShell from './GameShell'
 import { saveResult } from './saveResult'
 import { useStreak } from './useStreak'
 import { useSeo, PAGE_SEO } from './seo'
@@ -9,9 +9,9 @@ import {
   generatePuzzle, boardCells, cellKey, cellsOf, revealedCells, completeFound, nextHint,
   scoreSeconds, formatTime, shareLine,
 } from './scramble/engine'
+import { GOLD, INK } from './theme'
 
-const GOLD = '#C9A84C', CARD = '#1C1A16', BORDER = '#2C2820', INK = '#F5F0E8', MUTED = '#7A6E5F'
-const WIN = '#4caf50', DARK_INK = '#0F0E0C'
+const WIN = 'var(--success)', DARK_INK = 'var(--bg)'
 // Found letters and hinted letters; light tiles take dark ink for contrast.
 const PALETTE = { done: '#41733c', doneInk: INK, hint: '#b59f3b', hintInk: DARK_INK }
 const PALETTE_HC = { done: '#f5793a', doneInk: DARK_INK, hint: '#85c0f9', hintInk: DARK_INK }
@@ -28,22 +28,22 @@ const css = `
 @keyframes scSlideUp{from{transform:translateY(12px);opacity:0}to{transform:translateY(0);opacity:1}}
 @keyframes scCopied{0%{opacity:0;transform:translateY(4px)}20%{opacity:1;transform:translateY(0)}80%{opacity:1}100%{opacity:0}}
 .sc-board{display:grid;gap:4px;justify-content:center;margin:0 auto}
-.sc-cell{width:var(--sc-cell);height:var(--sc-cell);box-sizing:border-box;border-radius:6px;display:flex;align-items:center;justify-content:center;font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:calc(var(--sc-cell) * 0.58);line-height:1;color:#F5F0E8;border:2px solid transparent;user-select:none;-webkit-user-select:none}
-.sc-empty{background:#1C1A16;border-color:#3A3428}
+.sc-cell{width:var(--sc-cell);height:var(--sc-cell);box-sizing:border-box;border-radius:6px;display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-weight:800;font-size:calc(var(--sc-cell) * 0.58);line-height:1;color:var(--ink);border:2px solid transparent;user-select:none;-webkit-user-select:none}
+.sc-empty{background:var(--surface);border-color:var(--border-strong)}
 .sc-pop{animation:scPop .5s ease}
 .sc-shake{animation:scShake .45s ease}
 .sc-guess{display:flex;gap:4px;justify-content:center;align-items:center;min-height:44px;margin:16px 0 4px}
-.sc-guess-tile{width:34px;height:40px;border-radius:6px;background:#2C2418;border:2px solid #C9A84C;display:flex;align-items:center;justify-content:center;font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:22px;color:#F5F0E8}
+.sc-guess-tile{width:34px;height:40px;border-radius:6px;background:var(--surface-gold);border:2px solid var(--gold);display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-weight:800;font-size:22px;color:var(--ink)}
 .sc-rack{display:flex;gap:6px;justify-content:center;flex-wrap:nowrap;margin:10px 0 12px}
-.sc-tile{width:min(46px,calc((100vw - 68px) / 7));height:min(52px,calc((100vw - 68px) / 7 * 1.12));border-radius:8px;border:2px solid #C9A84C;background:#2C2418;color:#F5F0E8;font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:min(28px,calc((100vw - 68px) / 7 * 0.6));cursor:pointer;padding:0;touch-action:manipulation;-webkit-tap-highlight-color:transparent;transition:transform .12s}
+.sc-tile{width:min(46px,calc((100vw - 68px) / 7));height:min(52px,calc((100vw - 68px) / 7 * 1.12));border-radius:8px;border:2px solid var(--gold);background:var(--surface-gold);color:var(--ink);font-family:var(--font-display);font-weight:800;font-size:min(28px,calc((100vw - 68px) / 7 * 0.6));cursor:pointer;padding:0;touch-action:manipulation;-webkit-tap-highlight-color:transparent;transition:transform .12s}
 .sc-tile:active{transform:scale(.94)}
 .sc-tile-used{opacity:.18;cursor:default}
-.sc-tile:focus-visible,.sc-ctl:focus-visible{outline:2px solid #F5F0E8;outline-offset:2px}
-.sc-ctl{background:none;border:1px solid #2C2820;border-radius:8px;color:#C9A84C;cursor:pointer;font-size:13px;font-weight:600;padding:8px 12px;touch-action:manipulation;white-space:nowrap}
-.sc-ctl-primary{background:#C9A84C;color:#0F0E0C;border-color:#C9A84C}
+.sc-tile:focus-visible,.sc-ctl:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+.sc-ctl{background:none;border:1px solid var(--border);border-radius:8px;color:var(--gold);cursor:pointer;font-size:13px;font-weight:600;padding:8px 12px;touch-action:manipulation;white-space:nowrap}
+.sc-ctl-primary{background:var(--gold);color:var(--bg);border-color:var(--gold)}
 .sc-ctl[aria-disabled="true"]{opacity:.4;cursor:default}
-.sc-chip{min-width:26px;padding:3px 6px;border-radius:6px;border:1px solid #2C2820;font-size:12px;font-weight:700;color:#A09482;text-align:center;font-variant-numeric:tabular-nums}
-.sc-toast{position:fixed;top:80px;left:50%;transform:translateX(-50%);background:#1C1A16;border:1px solid #2C2820;border-radius:8px;padding:8px 20px;font-size:14px;font-weight:600;color:#F5F0E8;z-index:60;animation:scSlideUp .2s ease;white-space:nowrap}
+.sc-chip{min-width:26px;padding:3px 6px;border-radius:6px;border:1px solid var(--border);font-size:12px;font-weight:700;color:#A09482;text-align:center;font-variant-numeric:tabular-nums}
+.sc-toast{position:fixed;top:80px;left:50%;transform:translateX(-50%);background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px 20px;font-size:14px;font-weight:600;color:var(--ink);z-index:60;animation:scSlideUp .2s ease;white-space:nowrap}
 .sc-sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 `
 
@@ -116,7 +116,6 @@ export default function Scramble() {
   useSeo(PAGE_SEO.scramble)
   const [showArchive, setShowArchive] = useState(false)
   const [puzzleDate, setPuzzleDate] = useState(null)
-  const [showHow, setShowHow] = useState(false)
   const [hc, setHc] = useState(readHc)
 
   const seedDate = puzzleDate ?? todayStr()
@@ -125,40 +124,19 @@ export default function Scramble() {
     try { localStorage.setItem(HC_KEY, n ? '1' : '0') } catch { /* storage unavailable */ }
     return n
   })
-  const howBtn = { background: 'none', border: `1px solid ${BORDER}`, borderRadius: 6, color: GOLD, cursor: 'pointer', fontSize: 13, padding: '3px 10px', whiteSpace: 'nowrap' }
+
+  const howTo = (
+    <>
+      Six words are hidden in today's {POOL_SIZE} letters — from {MIN_LEN}-letter words up to one that uses all {POOL_SIZE}.<br/><br/>
+      <b>Tap</b> letters (or type) to spell a word, then <b>Enter</b>. Find them in any order: each word you find fills in letters of the words that cross it.<br/><br/>
+      Guesses that aren't on the board cost nothing. Stuck? A <b>hint</b> reveals a letter (+{HINT_SECONDS}s). The clock only runs while you play.
+    </>
+  )
 
   return (
-    <main style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: 0, position: 'relative', color: INK, overflow: 'hidden' }}>
+    <GameShell game="scramble" date={formatDate(puzzleDate)} howTo={howTo} onArchive={() => setShowArchive(true)} hc={hc} onToggleHc={toggleHc}>
       <style>{css}</style>
-      <UserMenu />
-      <div style={{ width: '100%', display: 'flex', alignItems: 'center', padding: '12px 16px 0', minHeight: 44 }}>
-        <a href="/" style={{ color: GOLD, textDecoration: 'none', fontSize: 13, fontWeight: 600 }}>← Back</a>
-      </div>
-      {/* Wraps on narrow phones: the 8-letter title takes its own line. */}
-      <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', alignItems: 'center', gap: 12, rowGap: 8, marginBottom: 2, padding: '0 16px' }}>
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-          <h1 style={{ fontSize: 32, fontWeight: 900, letterSpacing: 2, color: '#fff', margin: 0 }}>SCRAMBLE</h1>
-          <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: 3, color: GOLD, textTransform: 'uppercase', marginTop: -4 }}>by Streakle</div>
-        </div>
-        <button onClick={() => setShowHow(!showHow)} aria-expanded={showHow} style={{ ...howBtn, marginLeft: 8 }}>How to play</button>
-        <button onClick={() => setShowArchive(true)} style={howBtn}>📅 Archive</button>
-      </div>
-      <div style={{ fontSize: 13, color: MUTED, marginBottom: 8, marginTop: 6 }}>{formatDate(puzzleDate)}</div>
 
-      {showHow && (
-        <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 10, padding: 16, maxWidth: 340, margin: '0 16px 12px', fontSize: 13, lineHeight: 1.65, color: '#ccc', animation: 'scSlideUp 0.3s ease' }}>
-          <b style={{ color: GOLD }}>How to play</b><br/>
-          Six words are hidden in today's {POOL_SIZE} letters — from {MIN_LEN}-letter words up to one that uses all {POOL_SIZE}.<br/><br/>
-          <b>Tap</b> letters (or type) to spell a word, then <b>Enter</b>. Find them in any order: each word you find fills in letters of the words that cross it.<br/><br/>
-          Guesses that aren't on the board cost nothing. Stuck? A <b>hint</b> reveals a letter (+{HINT_SECONDS}s). The clock only runs while you play.
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 12, paddingTop: 10, borderTop: `1px solid ${BORDER}` }}>
-            <span>High contrast colours</span>
-            <button onClick={toggleHc} role="switch" aria-checked={hc} aria-label="High contrast colours" style={{ background: hc ? '#f5793a' : BORDER, border: 'none', borderRadius: 11, width: 44, height: 22, position: 'relative', cursor: 'pointer', padding: 0 }}>
-              <span style={{ position: 'absolute', top: 2, left: hc ? 24 : 2, width: 18, height: 18, borderRadius: '50%', background: INK, transition: 'left 0.2s' }} />
-            </button>
-          </div>
-        </div>
-      )}
 
       {streak > 0 && (
         <div style={{ fontSize: 13, color: GOLD, fontWeight: 600, marginBottom: 8 }}>🔥 {streak} day streak</div>
@@ -167,9 +145,6 @@ export default function Scramble() {
       {/* Keyed by date: a new puzzle is a fresh board, never a stale one. */}
       <ScrambleBoard key={seedDate} seedDate={seedDate} isToday={puzzleDate === null} palette={hc ? PALETTE_HC : PALETTE} keysBlocked={showArchive} />
 
-      <div style={{ marginTop: 32, fontSize: 12, color: '#5A5040', textAlign: 'center' }}>
-        <a href="/privacy" style={{ color: '#5A5040', textDecoration: 'none' }}>Privacy Policy / Politique de confidentialité</a>
-      </div>
 
       {showArchive && (
         <Archive
@@ -178,7 +153,7 @@ export default function Scramble() {
           onClose={() => setShowArchive(false)}
         />
       )}
-    </main>
+    </GameShell>
   )
 }
 
@@ -244,7 +219,7 @@ function ScrambleBoard({ seedDate, isToday, palette, keysBlocked }) {
   const spawnConfetti = () => {
     setConfetti(Array.from({ length: 30 }, (_, i) => ({
       id: i, x: 20 + Math.random() * 60, delay: Math.random() * 700,
-      color: ['#4caf50', '#C9A84C', '#C9A84C', '#e94560', '#ffd700', '#fff'][i % 6],
+      color: ['var(--success)', 'var(--gold)', 'var(--gold)', 'var(--danger)', '#ffd700', 'var(--ink)'][i % 6],
       size: 5 + Math.random() * 8,
     })))
     pushTimeout(() => setConfetti([]), 1600)
@@ -438,10 +413,10 @@ function ScrambleBoard({ seedDate, isToday, palette, keysBlocked }) {
 
   const shareBtn = (
     <div style={{ position: 'relative', display: 'inline-block', marginTop: 4 }}>
-      <button onClick={handleShare} style={{ background: GOLD, color: '#0F0E0C', border: 'none', borderRadius: 8, padding: '10px 28px', fontSize: 15, fontWeight: 700, cursor: 'pointer' }}>
+      <button onClick={handleShare} style={{ background: GOLD, color: 'var(--bg)', border: 'none', borderRadius: 8, padding: '10px 28px', fontSize: 15, fontWeight: 700, cursor: 'pointer' }}>
         📋 Share result
       </button>
-      {copied && <div style={{ position: 'absolute', top: -32, left: '50%', transform: 'translateX(-50%)', background: '#2d6a30', color: '#fff', fontSize: 12, fontWeight: 600, padding: '4px 12px', borderRadius: 6, whiteSpace: 'nowrap', animation: 'scCopied 2s ease forwards', pointerEvents: 'none' }}>Copied!</div>}
+      {copied && <div style={{ position: 'absolute', top: -32, left: '50%', transform: 'translateX(-50%)', background: '#2d6a30', color: 'var(--ink)', fontSize: 12, fontWeight: 600, padding: '4px 12px', borderRadius: 6, whiteSpace: 'nowrap', animation: 'scCopied 2s ease forwards', pointerEvents: 'none' }}>Copied!</div>}
     </div>
   )
 
@@ -456,14 +431,14 @@ function ScrambleBoard({ seedDate, isToday, palette, keysBlocked }) {
         {chips.map(ch => {
           const got = found.includes(ch.i)
           return (
-            <span key={ch.i} className="sc-chip" aria-hidden="true" style={got ? { color: '#86EFAC', borderColor: '#2d6a30' } : null}>
+            <span key={ch.i} className="sc-chip" aria-hidden="true" style={got ? { color: 'var(--success-text)', borderColor: '#2d6a30' } : null}>
               {got ? '✓' : ch.len}
             </span>
           )
         })}
       </div>
 
-      <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 18, fontWeight: 600, color: INK, marginBottom: 12, fontVariantNumeric: 'tabular-nums' }}
+      <div style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 600, color: INK, marginBottom: 12, fontVariantNumeric: 'tabular-nums' }}
         role="timer" aria-label={`Time ${formatTime(seconds)}`}>
         ⏱ {formatTime(seconds)}
       </div>
@@ -502,7 +477,7 @@ function ScrambleBoard({ seedDate, isToday, palette, keysBlocked }) {
         <div ref={resultRef} tabIndex={-1} style={{ textAlign: 'center', marginTop: 18, animation: 'scSlideUp 0.5s ease', outline: 'none' }}>
           <div style={{ fontSize: 22, fontWeight: 700, color: WIN, marginBottom: 6 }}>🎉 Unscrambled!</div>
           <div style={{ fontSize: 15, fontWeight: 700, color: GOLD, marginBottom: 4 }}>{formatTime(seconds)} · {plural(hints, 'hint')}</div>
-          <div style={{ fontSize: 13, color: '#aaa', margin: '6px 0 14px', letterSpacing: 1 }}>
+          <div style={{ fontSize: 13, color: 'var(--text-2)', margin: '6px 0 14px', letterSpacing: 1 }}>
             {chips.map(ch => pz.words[ch.i]).join(' · ')}
           </div>
           {shareBtn}

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import Archive from './Archive'
-import UserMenu from "./UserMenu";
+import GameShell from "./GameShell";
 import { saveResult } from './saveResult';
 import { useStreak } from './useStreak';
 import { evaluate } from './evaluate';
@@ -178,7 +178,7 @@ const KEYBOARD = [
 ];
 
 const ST = { empty:'empty', correct:'correct', present:'present', absent:'absent' };
-const CLR = { empty:'#1C1A16', active:'#2C2418', correct:'#538d4e', present:'#b59f3b', absent:'#161412' };
+const CLR = { empty:'var(--surface)', active:'var(--surface-gold)', correct:'#538d4e', present:'#b59f3b', absent:'#161412' };
 
 const css = `
 @keyframes shake{0%,100%{transform:translateX(0)}15%{transform:translateX(-6px)}30%{transform:translateX(6px)}45%{transform:translateX(-4px)}60%{transform:translateX(4px)}75%{transform:translateX(-2px)}90%{transform:translateX(2px)}}
@@ -195,7 +195,6 @@ export default function WordsGame() {
   useSeo(PAGE_SEO.words)
   const [showArchive, setShowArchive] = useState(false)
   const [puzzleDate, setPuzzleDate] = useState(null)
-  const [showHow, setShowHow] = useState(false);
   const [hc, setHc] = useState(() => {
     try { return localStorage.getItem('streakle-hc') === '1' } catch { return false }
   });
@@ -206,64 +205,30 @@ export default function WordsGame() {
     return n;
   });
 
+  const howTo = (
+    <>
+      Guess the 5-letter word in 6 tries.<br/><br/>
+      {hc?'🟧':'🟩'} Right letter, right spot<br/>
+      {hc?'🟦':'🟨'} Right letter, wrong spot<br/>
+      ⬛ Letter not in the word<br/><br/>
+      After the game, discover something fascinating about the word!
+    </>
+  )
+
   return (
-    <main style={{minHeight:'100vh',display:'flex',flexDirection:'column',alignItems:'center',paddingTop:0,paddingBottom:32,color:'#F5F0E8',position:'relative',overflow:'hidden'}}>
+    <GameShell game="words" date={formatDate(puzzleDate)} howTo={howTo} onArchive={() => setShowArchive(true)} hc={hc} onToggleHc={toggleHc}>
       <style>{css}</style>
-      <UserMenu />
-      <div style={{width:'100%',display:'flex',alignItems:'center',padding:'12px 16px 0',minHeight:44}}>
-        <a href="/" style={{color:'#C9A84C',textDecoration:'none',fontSize:13,fontWeight:600}}>← Back</a>
-      </div>
-
-      <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:2}}>
-        <div style={{display:'flex',flexDirection:'column',alignItems:'center'}}>
-          <h1 style={{fontSize:32,fontWeight:900,letterSpacing:2,color:'#fff',margin:0}}>WORDS</h1>
-          <div style={{fontSize:11,fontWeight:600,letterSpacing:3,color:'#C9A84C',textTransform:'uppercase',marginTop:-4}}>by Streakle</div>
-        </div>
-        <button onClick={()=>setShowHow(!showHow)} style={{background:'none',border:'1px solid #2C2820',borderRadius:6,color:'#C9A84C',cursor:'pointer',fontSize:13,padding:'3px 10px',marginLeft:8}}>
-          How to play
-        </button>
-        <button onClick={() => setShowArchive(true)} style={{background:'none',border:'1px solid #2C2820',borderRadius:6,color:'#C9A84C',cursor:'pointer',fontSize:13,padding:'3px 10px'}}>
-          📅 Archive
-        </button>
-      </div>
-
-      <div style={{fontSize:13,color:'#7A6E5F',marginBottom:10,marginTop:6}}>{formatDate(puzzleDate)}</div>
 
       {streak > 0 && (
-        <div style={{fontSize:13, color:'#C9A84C', fontWeight:600, marginBottom:8}}>
+        <div style={{fontSize:13, color:'var(--gold)', fontWeight:600, marginBottom:8}}>
           🔥 {streak} day streak
         </div>
       )}
 
-      {showHow&&(
-        <div style={{background:'#1C1A16',border:'1px solid #2C2820',borderRadius:10,padding:16,maxWidth:320,marginBottom:12,fontSize:13,lineHeight:1.65,color:'#ccc',animation:'slideUp 0.3s ease'}}>
-          <b style={{color:'#C9A84C'}}>How to play</b><br/>
-          Guess the 5-letter word in 6 tries.<br/><br/>
-          {hc?'🟧':'🟩'} Right letter, right spot<br/>
-          {hc?'🟦':'🟨'} Right letter, wrong spot<br/>
-          ⬛ Letter not in the word<br/><br/>
-          After the game, discover something fascinating about the word!
-          <div style={{marginTop:14,paddingTop:12,borderTop:'1px solid #2C2820',display:'flex',alignItems:'center',justifyContent:'space-between',gap:12}}>
-            <span>High contrast colours</span>
-            <button onClick={toggleHc} role="switch" aria-checked={hc} aria-label="High contrast colours" style={{
-              background:hc?'#f5793a':'#2C2820',border:'none',borderRadius:11,width:44,height:22,
-              cursor:'pointer',position:'relative',transition:'background 0.2s',flexShrink:0,
-            }}>
-              <span style={{
-                position:'absolute',top:2,left:hc?24:2,width:18,height:18,borderRadius:'50%',
-                background:'#fff',transition:'left 0.2s',
-              }}/>
-            </button>
-          </div>
-        </div>
-      )}
 
       {/* Keyed by date: picking a puzzle in the Archive starts a fresh board. */}
       <WordsBoard key={puzzleDate ?? 'today'} puzzleDate={puzzleDate} hc={hc} palette={palette} />
 
-      <div style={{marginTop:32,fontSize:12,color:'#5A5040',textAlign:'center'}}>
-        <a href="/privacy" style={{color:'#5A5040',textDecoration:'none'}}>Privacy Policy / Politique de confidentialité</a>
-      </div>
 
       {showArchive && (
         <Archive
@@ -272,7 +237,7 @@ export default function WordsGame() {
           onClose={() => setShowArchive(false)}
         />
       )}
-    </main>
+    </GameShell>
   );
 }
 
@@ -299,7 +264,7 @@ function WordsBoard({ puzzleDate, hc, palette }) {
   const spawnConfetti = () => {
     const items = Array.from({length:30},(_,i)=>({
       id:i, x:20+Math.random()*60, delay:Math.random()*600,
-      color:['#538d4e','#b59f3b','#C9A84C','#C9A84C','#fff'][i%5], size:5+Math.random()*8
+      color:['#538d4e','#b59f3b','var(--gold)','var(--gold)','var(--ink)'][i%5], size:5+Math.random()*8
     }));
     setConfetti(items);
     setTimeout(()=>setConfetti([]),1600);
@@ -406,7 +371,7 @@ function WordsBoard({ puzzleDate, hc, palette }) {
       ))}
 
       {message&&(
-        <div style={{position:'fixed',top:80,left:'50%',transform:'translateX(-50%)',background:'#F5F0E8',borderRadius:8,padding:'8px 20px',fontSize:14,fontWeight:700,color:'#0F0E0C',zIndex:50,animation:'slideUp 0.2s ease',whiteSpace:'nowrap'}}>
+        <div style={{position:'fixed',top:80,left:'50%',transform:'translateX(-50%)',background:'var(--ink)',borderRadius:8,padding:'8px 20px',fontSize:14,fontWeight:700,color:'var(--bg)',zIndex:50,animation:'slideUp 0.2s ease',whiteSpace:'nowrap'}}>
           {message}
         </div>
       )}
@@ -434,9 +399,9 @@ function WordsBoard({ puzzleDate, hc, palette }) {
                         position:'absolute',inset:0,
                         backfaceVisibility:'hidden',WebkitBackfaceVisibility:'hidden',
                         background:letter?CLR.active:CLR.empty,
-                        border:`2px solid ${letter?'#C9A84C':'#2C2820'}`,
+                        border:`2px solid ${letter?'var(--gold)':'var(--border)'}`,
                         borderRadius:6,display:'flex',alignItems:'center',justifyContent:'center',
-                        fontSize:22,fontWeight:800,color:'#fff',
+                        fontSize:22,fontWeight:800,color:'var(--ink)',
                         animation:letter&&!colored?'letterPop 0.1s ease':'none',
                       }}>{letter}</div>
                       <div style={{
@@ -445,7 +410,7 @@ function WordsBoard({ puzzleDate, hc, palette }) {
                         transform:'rotateY(180deg)',
                         background:tileColor,border:'2px solid transparent',
                         borderRadius:6,display:'flex',alignItems:'center',justifyContent:'center',
-                        fontSize:22,fontWeight:800,color:'#fff',
+                        fontSize:22,fontWeight:800,color:'var(--ink)',
                       }}>{letter}</div>
                     </div>
                   </div>
@@ -457,24 +422,24 @@ function WordsBoard({ puzzleDate, hc, palette }) {
       </div>
 
       {showFact&&(
-        <div style={{background:'#1C1A16',border:`1px solid ${won?'#538d4e':'#2C2820'}`,borderRadius:12,padding:'16px 20px',maxWidth:340,width:'90%',marginBottom:16,animation:'slideUp 0.5s ease'}}>
-          <div style={{fontSize:11,fontWeight:700,letterSpacing:2,color:won?'#4caf50':'#C9A84C',textTransform:'uppercase',marginBottom:6}}>
+        <div style={{background:'var(--surface)',border:`1px solid ${won?'#538d4e':'var(--border)'}`,borderRadius:12,padding:'16px 20px',maxWidth:340,width:'90%',marginBottom:16,animation:'slideUp 0.5s ease'}}>
+          <div style={{fontSize:11,fontWeight:700,letterSpacing:2,color:won?'var(--success)':'var(--gold)',textTransform:'uppercase',marginBottom:6}}>
             {won?"✅ Today's word":"❌ Today's word was"}
           </div>
-          <div style={{fontSize:28,fontWeight:900,letterSpacing:3,color:'#fff',marginBottom:4}}>{daily.word}</div>
-          <div style={{fontSize:13,color:'#C9A84C',fontStyle:'italic',marginBottom:10}}>{daily.def}</div>
-          <div style={{fontSize:13,color:'#aaa',lineHeight:1.65}}>{daily.fact}</div>
+          <div style={{fontSize:28,fontWeight:900,letterSpacing:3,color:'var(--ink)',marginBottom:4}}>{daily.word}</div>
+          <div style={{fontSize:13,color:'var(--gold)',fontStyle:'italic',marginBottom:10}}>{daily.def}</div>
+          <div style={{fontSize:13,color:'var(--text-2)',lineHeight:1.65}}>{daily.fact}</div>
         </div>
       )}
 
       {gameOver&&(
         <div style={{position:'relative',display:'inline-block',marginBottom:20}}>
-          <button onClick={handleShare} style={{background:'#C9A84C',color:'#0F0E0C',border:'none',borderRadius:8,padding:'10px 28px',fontSize:15,fontWeight:700,cursor:'pointer',transition:'background 0.2s'}}
-            onMouseOver={e=>e.currentTarget.style.background='#D4B45A'}
-            onMouseOut={e=>e.currentTarget.style.background='#C9A84C'}>
+          <button onClick={handleShare} style={{background:'var(--gold)',color:'var(--bg)',border:'none',borderRadius:8,padding:'10px 28px',fontSize:15,fontWeight:700,cursor:'pointer',transition:'background 0.2s'}}
+            onMouseOver={e=>e.currentTarget.style.background='var(--gold-hover)'}
+            onMouseOut={e=>e.currentTarget.style.background='var(--gold)'}>
             📋 Share result
           </button>
-          {copied&&<div style={{position:'absolute',top:-32,left:'50%',transform:'translateX(-50%)',background:'#2d6a30',color:'#fff',fontSize:12,fontWeight:600,padding:'4px 12px',borderRadius:6,whiteSpace:'nowrap',animation:'copied 2s ease forwards',pointerEvents:'none'}}>Copied!</div>}
+          {copied&&<div style={{position:'absolute',top:-32,left:'50%',transform:'translateX(-50%)',background:'#2d6a30',color:'var(--ink)',fontSize:12,fontWeight:600,padding:'4px 12px',borderRadius:6,whiteSpace:'nowrap',animation:'copied 2s ease forwards',pointerEvents:'none'}}>Copied!</div>}
         </div>
       )}
 
@@ -490,7 +455,7 @@ function WordsBoard({ puzzleDate, hc, palette }) {
                     minWidth:wide?56:34,height:46,
                     background:st===ST.correct?palette.correct:st===ST.present?palette.present:st===ST.absent?palette.absent:'#4A433A',
                     border:'none',borderRadius:6,
-                    color:st===ST.absent?'#5A5248':'#fff',
+                    color:st===ST.absent?'#5A5248':'var(--ink)',
                     fontSize:wide?11:14,fontWeight:700,
                     cursor:'pointer',userSelect:'none',
                     transition:'background 0.3s, color 0.3s',padding:'0 4px',

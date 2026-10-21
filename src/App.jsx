@@ -1,6 +1,7 @@
 import { lazy, Suspense } from 'react'
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom'
 import { useAuth } from './AuthContext.js'
+import { isGamePath } from './games.js'
 import Home from './Home.jsx'
 import ErrorBoundary from './ErrorBoundary.jsx'
 import LoginPage from './LoginPage.jsx'
@@ -20,9 +21,11 @@ const Mines    = lazy(() => import('./Mines.jsx'))
 const Weave    = lazy(() => import('./Weave.jsx'))
 const Scramble = lazy(() => import('./Scramble.jsx'))
 
+// Game pages carry their own Sign in link in GameShell's top bar.
 function SignInBanner() {
   const { user } = useAuth()
-  if (user) return null
+  const { pathname } = useLocation()
+  if (user || isGamePath(pathname)) return null
 
   return (
     <a href="/login" className="sign-in-banner">
@@ -33,15 +36,8 @@ function SignInBanner() {
 
 function LoadingScreen() {
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <div style={{
-        fontFamily: "'Syne', sans-serif",
-        fontSize: 32, fontWeight: 800, letterSpacing: 6,
-        color: '#fff', opacity: 0.4,
-        animation: 'pulse 1.5s infinite',
-      }}>
-        STREAKLE
-      </div>
+    <div className="loading-screen" role="status" aria-label="Loading">
+      <div className="loading-wordmark">STREAKLE</div>
     </div>
   )
 }

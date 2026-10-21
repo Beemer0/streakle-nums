@@ -1,3 +1,42 @@
+/* ── Design tokens ───────────────────────────────────────────────────────── */
+/* The one place the "Ink & Gold" palette and type live. Components use
+   var(--…) in inline styles and <style> blocks; *-rgb channels exist for
+   translucent fills: rgba(var(--gold-rgb), 0.2). */
+:root {
+  /* Surfaces, darkest to lightest */
+  --bg: #0F0E0C;
+  --surface: #1C1A16;          /* cards, tiles, panels */
+  --surface-raised: #211F1A;   /* hovered rows */
+  --surface-gold: #2C2418;     /* active / selected cells */
+  --border: #2C2820;
+  --border-strong: #3A3428;
+
+  /* Text, strongest to weakest (all but --faint pass 4.5:1 on --surface) */
+  --ink: #F5F0E8;              /* headings, tile letters */
+  --ink-2: #CFC7BA;            /* body copy */
+  --text-2: #A89880;           /* secondary copy */
+  --muted: #948670;            /* captions, dates */
+  --faint: #5A5040;            /* disabled, decoration */
+
+  /* Brand */
+  --gold: #C9A84C;
+  --gold-hover: #D4B45A;
+  --gold-rgb: 201, 168, 76;
+
+  /* Feedback */
+  --success: #4caf50;
+  --success-text: #86EFAC;
+  --success-text-rgb: 134, 239, 172;
+  --danger: #e94560;
+  --danger-text: #FCA5A5;
+  --danger-text-rgb: 252, 165, 165;
+  --hc-accent: #f5793a;        /* high-contrast mode's "on" colour */
+
+  /* Type: one display face, one text face */
+  --font-display: 'Barlow Condensed', 'Arial Narrow', sans-serif;
+  --font-body: 'DM Sans', 'Segoe UI', system-ui, sans-serif;
+}
+
 /* ── Reset ───────────────────────────────────────────────────────────────── */
 *, *::before, *::after {
   box-sizing: border-box;
@@ -9,13 +48,13 @@ html, body { height: 100%; }
 
 /* ── Global background ───────────────────────────────────────────────────── */
 body {
-  font-family: 'DM Sans', 'Segoe UI', system-ui, sans-serif;
-  background-color: #0F0E0C;
+  font-family: var(--font-body);
+  background-color: var(--bg);
   background-image:
-    radial-gradient(ellipse 70% 40% at 50% -5%, rgba(201,168,76,0.07) 0%, transparent 60%),
-    radial-gradient(ellipse 40% 30% at 90% 90%, rgba(201,168,76,0.03) 0%, transparent 50%);
+    radial-gradient(ellipse 70% 40% at 50% -5%, rgba(var(--gold-rgb),0.07) 0%, transparent 60%),
+    radial-gradient(ellipse 40% 30% at 90% 90%, rgba(var(--gold-rgb),0.03) 0%, transparent 50%);
   background-attachment: fixed;
-  color: #F5F0E8;
+  color: var(--ink);
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -54,32 +93,43 @@ a:focus:not(:focus-visible),
 [role="button"]:focus:not(:focus-visible) { outline: none; }
 button:focus-visible,
 a:focus-visible,
-[role="button"]:focus-visible             { outline: 2px solid #C9A84C; outline-offset: 2px; }
+[role="button"]:focus-visible             { outline: 2px solid var(--gold); outline-offset: 2px; }
 
 /* ── Global animations ───────────────────────────────────────────────────── */
 @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.45} }
 
-/* ── Sign-in banner ──────────────────────────────────────────────────────── */
+/* ── Sign-in banner (pages without GameShell's top bar) ──────────────────── */
 .sign-in-banner {
-  position: fixed; top: 16px; right: 16px;
-  background: #C9A84C;
-  border: 1px solid rgba(201,168,76,0.4);
-  color: #0F0E0C; border-radius: 6px; padding: 8px 16px;
-  font-size: 12px; font-weight: 700; letter-spacing: 0.5px;
-  text-decoration: none; z-index: 200;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.4);
-  transition: background 0.2s, box-shadow 0.2s;
-  font-family: 'DM Sans', sans-serif;
+  position: fixed; top: 16px; right: 16px; z-index: 200;
+  background: rgba(var(--gold-rgb), 0.08);
+  border: 1px solid rgba(var(--gold-rgb), 0.4);
+  border-radius: 8px; padding: 7px 14px;
+  color: var(--gold); font-size: 13px; font-weight: 700;
+  text-decoration: none;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  transition: background 0.15s, border-color 0.15s;
 }
 .sign-in-banner:hover {
-  background: #D4B45A;
-  box-shadow: 0 6px 20px rgba(201,168,76,0.25);
+  background: rgba(var(--gold-rgb), 0.16);
+  border-color: var(--gold);
 }
 
-/* ── Mobile ──────────────────────────────────────────────────────────────── */
-@media (max-width: 520px) {
-  .sign-in-banner { font-size: 11px; padding: 6px 12px; }
+/* ── Loading screen (auth check, route chunks) ───────────────────────────── */
+/* Fades in after a beat, so a fast load never flashes the wordmark. */
+.loading-screen {
+  min-height: 100vh;
+  display: flex; align-items: center; justify-content: center;
 }
+.loading-wordmark {
+  font-family: var(--font-display);
+  font-size: 40px; font-weight: 800; letter-spacing: 8px;
+  color: var(--ink);
+  opacity: 0;
+  animation: loadingIn 0.3s 0.3s ease forwards, loadingPulse 1.5s 0.6s ease-in-out infinite;
+}
+@keyframes loadingIn    { to { opacity: 0.35; } }
+@keyframes loadingPulse { 0%,100% { opacity: 0.35; } 50% { opacity: 0.15; } }
 
 /* ── Reduced motion ──────────────────────────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
