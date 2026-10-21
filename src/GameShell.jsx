@@ -24,6 +24,32 @@ function CalendarIcon() {
 }
 
 /**
+ * The bar across the top of every framed page: "← All games" on the left,
+ * the account menu (or a Sign in link for guests) on the right.
+ *
+ * @param {object} props
+ * @param {boolean} [props.showAccount] - false leaves the right side empty (the sign-in page itself)
+ */
+export function TopBar({ showAccount = true }) {
+  const { user } = useAuth()
+  return (
+    <header className="gs-top">
+      <a href="/" className="gs-back">← All games</a>
+      {showAccount && (user ? <UserMenu isInline /> : <a href="/login" className="gs-signin">Sign in</a>)}
+    </header>
+  )
+}
+
+/** The footer every framed page ends with. */
+export function ShellFooter() {
+  return (
+    <footer className="gs-foot">
+      <a href="/privacy">Privacy Policy / Politique de confidentialité</a>
+    </footer>
+  )
+}
+
+/**
  * The frame every daily game sits in: a top bar (back link + account), the
  * title with How to play / Archive, the puzzle date, the how-to panel, the
  * game itself and the footer.
@@ -40,16 +66,12 @@ function CalendarIcon() {
  * @param {import('react').ReactNode} props.children - the game
  */
 export default function GameShell({ game, date, howTo, onArchive, hc = false, onToggleHc, className = '', isLoading = false, children }) {
-  const { user } = useAuth()
   const [isHowOpen, setIsHowOpen] = useState(false)
   const { title, color, accent } = GAME_BY_KEY[game]
 
   return (
     <main className={`gs ${className}`.trim()} style={{ '--game': accent, '--game-deep': color }}>
-      <header className="gs-top">
-        <a href="/" className="gs-back">← All games</a>
-        {user ? <UserMenu isInline /> : <a href="/login" className="gs-signin">Sign in</a>}
-      </header>
+      <TopBar />
 
       <div className="gs-head">
         <div className="gs-brand">
@@ -82,9 +104,7 @@ export default function GameShell({ game, date, howTo, onArchive, hc = false, on
 
       {children}
 
-      <footer className="gs-foot">
-        <a href="/privacy">Privacy Policy / Politique de confidentialité</a>
-      </footer>
+      <ShellFooter />
     </main>
   )
 }

@@ -1,4 +1,5 @@
-/* GameShell — the frame around every daily game (see GameShell.jsx). */
+/* GameShell — the frame around every daily game (see GameShell.jsx), shared
+   by the non-game pages through PageShell.jsx. */
 
 .gs {
   min-height: 100vh;
@@ -187,6 +188,23 @@
   transition: color 0.15s;
 }
 .gs-foot a:hover { color: var(--gold); }
+
+/* ── Non-game pages (PageShell) ─────────────────────────────────────────── */
+/* The brand gold stands in for a game's colour in the top stripe. */
+.gs-page {
+  --game: var(--gold);
+  --game-deep: rgba(var(--gold-rgb), 0.4);
+}
+.gs-main {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.gs-body {
+  width: 100%;
+  padding: 0 16px;
+}
 
 /* ── Loading placeholder (GameLoading) ──────────────────────────────────── */
 .gs-skeleton {

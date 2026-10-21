@@ -22,11 +22,19 @@ const Mines    = lazy(() => import('./Mines.jsx'))
 const Weave    = lazy(() => import('./Weave.jsx'))
 const Scramble = lazy(() => import('./Scramble.jsx'))
 
-// Game pages carry their own Sign in link in GameShell's top bar.
+// Pages framed by PageShell, alongside the games' GameShell. Their top bar
+// carries the Sign in link (sign-in itself, by design, has none).
+const PAGE_SHELL_PATHS = ['/login', '/privacy', '/pools']
+
+function hasOwnTopBar(pathname) {
+  return isGamePath(pathname) || PAGE_SHELL_PATHS.includes(pathname.toLowerCase().replace(/\/+$/, ''))
+}
+
+// Pages without a top bar of their own get a floating Sign in link.
 function SignInBanner() {
   const { user } = useAuth()
   const { pathname } = useLocation()
-  if (user || isGamePath(pathname)) return null
+  if (user || hasOwnTopBar(pathname)) return null
 
   return (
     <a href="/login" className="sign-in-banner">

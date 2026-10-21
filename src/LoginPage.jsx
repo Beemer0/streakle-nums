@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useAuth } from './AuthContext.js'
 import { supabase } from './supabase.js'
 import { useSeo, PAGE_SEO } from './seo.js'
+import PageShell from './PageShell.jsx'
 
 export default function LoginPage() {
   const { user } = useAuth()
@@ -25,20 +26,10 @@ export default function LoginPage() {
     setLoading(false)
   }
 
+  // The top bar has no Sign in link here: this is where it leads.
   return (
-    <div style={{
-      minHeight: '100vh',
-      display: 'flex', flexDirection: 'column',
-      alignItems: 'center', justifyContent: 'center',
-      color: 'var(--ink)', padding: 24,
-      position: 'relative',
-    }}>
-      <a href="/" style={{ position: 'absolute', left: 16, top: 24, color: 'var(--gold)', textDecoration: 'none', fontSize: 13, fontWeight: 600 }}>← Back</a>
-      <div style={{ fontFamily: 'var(--font-display)', fontSize: 60, fontWeight: 800, letterSpacing: 8, lineHeight: 1, color: 'var(--ink)', marginBottom: 8 }}>STREAKLE</div>
-      <div style={{ fontSize: 13, fontWeight: 600, letterSpacing: 2, color: 'var(--gold)', textTransform: 'uppercase', marginBottom: 48 }}>
-        Start your day with a puzzle
-      </div>
-      <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 16, padding: '40px 32px', maxWidth: 340, width: '100%', textAlign: 'center' }}>
+    <PageShell title="STREAKLE" subtitle="Start your day with a puzzle" showAccount={false}>
+      <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 16, padding: '40px 32px', maxWidth: 340, width: '100%', margin: '40px auto 0', textAlign: 'center' }}>
         <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--ink)', marginBottom: 8 }}>Save your progress</div>
         <div style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 32 }}>Sign in to track your streaks and unlock the archive</div>
         <button onClick={handleGoogleLogin} disabled={loading} style={{
@@ -61,6 +52,6 @@ export default function LoginPage() {
           <a href="/privacy" style={{ color: 'var(--gold)', textDecoration: 'none' }}>Privacy Policy</a>
         </div>
       </div>
-    </div>
+    </PageShell>
   )
 }

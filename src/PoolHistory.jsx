@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Navigate } from 'react-router-dom'
 import { useAuth } from './AuthContext'
 import { supabase } from './supabase'
-import UserMenu from './UserMenu'
+import PageShell from './PageShell'
 import { useSeo, PAGE_SEO } from './seo'
 import { usePoolMemberships } from './usePoolMemberships'
 import { groupPools, finishLines } from './pools'
@@ -91,26 +91,15 @@ function PoolSection({ title, pools, userId, delay }) {
   )
 }
 
-function Shell({ children }) {
-  return (
-    <div style={{ minHeight: '100vh', position: 'relative' }}>
-      <style>{css}</style>
-      <UserMenu />
-      <main style={{ maxWidth: 640, margin: '0 auto', padding: '48px 20px 64px', color: INK }}>
-        <a href="/" style={{ color: GOLD, fontSize: 13, fontWeight: 600, textDecoration: 'none' }}>← Back</a>
-        {children}
-      </main>
-    </div>
-  )
-}
-
+// Loading and error states leave the title out: nothing names the page
+// until membership is known.
 function Loading() {
-  return <Shell><p role="status" style={{ marginTop: 40, fontSize: 13, color: MUTED }}>Loading…</p></Shell>
+  return <PageShell><p role="status" style={{ marginTop: 40, fontSize: 13, color: MUTED }}>Loading…</p></PageShell>
 }
 
 function LoadError() {
   return (
-    <Shell>
+    <PageShell>
       <div role="alert" style={{ marginTop: 40, fontSize: 14, color: 'var(--text-2)' }}>
         Couldn't load this page.
         <button onClick={() => window.location.reload()} style={{
@@ -119,7 +108,7 @@ function LoadError() {
           color: GOLD, fontSize: 13, fontWeight: 600, padding: '7px 14px',
         }}>Try again</button>
       </div>
-    </Shell>
+    </PageShell>
   )
 }
 
@@ -156,18 +145,10 @@ export default function PoolHistory() {
 
   const { active, past } = groupPools(poolIds, current.rows)
   return (
-    <Shell>
-      <h1 style={{
-        fontFamily: 'var(--font-display)', fontSize: 36, fontWeight: 800,
-        letterSpacing: 3, color: INK, margin: '28px 0 0', lineHeight: 1.1,
-      }}>
-        POOL HISTORY
-      </h1>
-      <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: 4, textTransform: 'uppercase', color: GOLD, marginTop: 8 }}>
-        Your private pools
-      </div>
+    <PageShell title="POOL HISTORY" subtitle="Your private pools">
+      <style>{css}</style>
       {active.length > 0 && <PoolSection title="Active" pools={active} userId={userId} delay={0} />}
       {past.length > 0 && <PoolSection title="Past" pools={past} userId={userId} delay={active.length ? 80 : 0} />}
-    </Shell>
+    </PageShell>
   )
 }
