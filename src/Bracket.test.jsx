@@ -132,5 +132,17 @@ describe('archived World Cup pool', () => {
     await render(null)
     expect(text()).toContain('The World Cup 2026 pool has ended')
     expect(text()).toContain('Sign in')
+    expect(host.querySelector('header.gs-top a.gs-signin').getAttribute('href')).toBe('/login')
+  })
+
+  it('sits in the site frame: top bar, title and footer', async () => {
+    await render({ id: 'u-bo', user_metadata: {} })
+    expect(host.querySelector('main header.gs-top a.gs-back').getAttribute('href')).toBe('/')
+    expect(host.querySelector('header.gs-top [aria-label="Account menu"]')).not.toBeNull()
+    expect([...host.querySelectorAll('h1')].map(h => [h.className, h.textContent])).toEqual([['gs-title', 'BRACKET']])
+    expect(host.querySelector('.gs-by').textContent).toBe('World Cup 2026 · Final results')
+    const footer = host.querySelector('footer.gs-foot')
+    expect(footer.querySelector('a').getAttribute('href')).toBe('/privacy')
+    expect(host.querySelector('main').contains(footer)).toBe(false)
   })
 })

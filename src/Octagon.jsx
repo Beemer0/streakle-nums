@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useCallback, useSyncExternalStore } from 'react'
 import { useAuth } from './AuthContext'
 import { supabase } from './supabase'
-import UserMenu from './UserMenu'
+import PageShell from './PageShell'
 import { useSeo, PAGE_SEO } from './seo'
 import { scoreEvent, eventRanking, deriveBelt, formRanking, METHOD_LABELS, POINTS } from './octagon/scoring'
 import { fetchResults, parsePasted, matchFights } from './octagon/wiki'
@@ -23,6 +23,7 @@ const css = `
 @keyframes slideUp{from{transform:translateY(12px);opacity:0}to{transform:translateY(0);opacity:1}}
 @keyframes fadeIn{from{opacity:0}to{opacity:1}}
 @keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-6px)}40%{transform:translateX(6px)}60%{transform:translateX(-4px)}80%{transform:translateX(4px)}}
+.oc-page{display:flex;flex-direction:column;align-items:center}
 .oc-fighters{display:flex;gap:8px}
 .oc-fbtn{flex:1 1 0;min-width:0}
 .oc-chips{display:flex;gap:6px;flex-wrap:wrap}
@@ -329,44 +330,25 @@ export default function Octagon() {
   }
 
   // ── Chrome ──
-  const header = (
-    <>
+  // Every state shares the site's frame (top bar, title, footer) and names
+  // the pool — guests see its name too, so loading can.
+  const page = (children) => (
+    <PageShell title="OCTAGON" subtitle="UFC Pick'em · by Streakle" width={560}>
       <style>{css}</style>
-      <UserMenu />
-      <div style={{ width: '100%', display: 'flex', alignItems: 'center', padding: '12px 16px 0', minHeight: 44 }}>
-        <a href="/" style={{ color: GOLD, textDecoration: 'none', fontSize: 13, fontWeight: 600 }}>← Back</a>
-      </div>
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: 2 }}>
-        <h1 style={{ fontSize: 32, fontWeight: 900, letterSpacing: 2, color: 'var(--ink)', margin: 0 }}>OCTAGON</h1>
-        <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: 3, color: GOLD, textTransform: 'uppercase', marginTop: 2 }}>
-          UFC Pick'em · by Streakle
-        </div>
-        <button onClick={() => setShowRules(true)} style={{ background: 'none', border: `1px solid ${BORDER}`, borderRadius: 6, color: GOLD, cursor: 'pointer', fontSize: 12, padding: '3px 12px', marginTop: 8 }}>
+      <div className="oc-page">
+        <button onClick={() => setShowRules(true)} style={{ background: 'none', border: `1px solid ${BORDER}`, borderRadius: 6, color: GOLD, cursor: 'pointer', fontSize: 12, padding: '3px 12px', marginTop: 10 }}>
           📖 Rules
         </button>
+        {flash && (
+          <div style={{ position: 'fixed', top: 80, left: '50%', transform: 'translateX(-50%)', background: CARD, border: `1px solid ${BORDER}`, borderRadius: 8, padding: '8px 20px', fontSize: 14, fontWeight: 600, color: RED, zIndex: 50, animation: 'slideUp 0.3s ease', whiteSpace: 'nowrap' }}>
+            {flash}
+          </div>
+        )}
+        {children}
       </div>
-    </>
-  )
-
-  const footer = (
-    <div style={{ marginTop: 40, marginBottom: 24, fontSize: 12, color: 'var(--faint)', textAlign: 'center' }}>
-      <a href="/privacy" style={{ color: 'var(--faint)', textDecoration: 'none' }}>Privacy Policy / Politique de confidentialité</a>
-    </div>
-  )
-
-  const page = (children) => (
-    <main style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', color: INK, position: 'relative' }}>
-      {header}
-      {flash && (
-        <div style={{ position: 'fixed', top: 80, left: '50%', transform: 'translateX(-50%)', background: CARD, border: `1px solid ${BORDER}`, borderRadius: 8, padding: '8px 20px', fontSize: 14, fontWeight: 600, color: RED, zIndex: 50, animation: 'slideUp 0.3s ease', whiteSpace: 'nowrap' }}>
-          {flash}
-        </div>
-      )}
-      {children}
-      {footer}
       {showRules && <RulesModal onClose={() => setShowRules(false)} />}
       {showLineage && <LineageModal belt={belt} rosterById={rosterById} onClose={() => setShowLineage(false)} />}
-    </main>
+    </PageShell>
   )
 
   // ── Signed out ──
@@ -449,7 +431,7 @@ export default function Octagon() {
       )}
 
       {events.length > 1 && view !== 'board' && (
-        <div className="oc-chips" style={{ justifyContent: 'center', maxWidth: 560, padding: '0 12px', marginBottom: 14 }}>
+        <div className="oc-chips" style={{ justifyContent: 'center', marginBottom: 14 }}>
           {events.map(ev => (
             <button key={ev.id} onClick={() => setSelEvent(ev.id)} className="oc-chip" style={{
               background: effEvent?.id === ev.id ? 'rgba(var(--gold-rgb),0.15)' : 'none',
@@ -464,7 +446,7 @@ export default function Octagon() {
       )}
 
       {view === 'event' && effEvent && (
-        <div style={{ width: '100%', maxWidth: 560, padding: '0 12px', boxSizing: 'border-box' }}>
+        <div style={{ width: '100%' }}>
           <div style={{ textAlign: 'center', marginBottom: 16 }}>
             <div style={{ fontFamily: 'var(--font-display)', fontSize: 24, fontWeight: 800, letterSpacing: 1, color: INK }}>{effEvent.name}</div>
             <div style={{ fontSize: 12, color: MUTED, marginTop: 2 }}>
@@ -498,7 +480,7 @@ export default function Octagon() {
       )}
 
       {view === 'board' && (
-        <div style={{ width: '100%', maxWidth: 560, padding: '0 12px', boxSizing: 'border-box' }}>
+        <div style={{ width: '100%' }}>
           <BeltBanner belt={belt} rosterById={rosterById} onLineage={() => setShowLineage(true)} />
           {effEvent && liveRanking.length > 0 && (
             <StandingsTable
@@ -979,7 +961,7 @@ function AdminPanel({ events, effEvent, fights, now, onSaveEvent, onDeleteEvent,
   }
 
   return (
-    <div style={{ width: '100%', maxWidth: 560, padding: '0 12px', boxSizing: 'border-box' }}>
+    <div style={{ width: '100%' }}>
       {/* Event builder */}
       <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 12, padding: '14px 16px', marginBottom: 16 }}>
         <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1.5, color: GOLD, textTransform: 'uppercase', marginBottom: 8 }}>

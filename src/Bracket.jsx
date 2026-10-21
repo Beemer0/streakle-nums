@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef, useSyncExternalStore } from 'react'
 import { useAuth } from './AuthContext'
 import { supabase } from './supabase'
-import UserMenu from './UserMenu'
+import PageShell from './PageShell'
 import { useSeo, PAGE_SEO } from './seo'
 import { score, STAGE_LABELS, STAGE_POINTS } from './bracket/scoring'
 import { flagUrl } from './bracket/flags'
@@ -23,6 +23,7 @@ const css = `
 @keyframes fadeIn{from{opacity:0}to{opacity:1}}
 @keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-6px)}40%{transform:translateX(6px)}60%{transform:translateX(-4px)}80%{transform:translateX(4px)}}
 @keyframes blink{0%,100%{opacity:1}50%{opacity:0.25}}
+.bk-page{display:flex;flex-direction:column;align-items:center}
 .bk-row{display:flex;align-items:center;gap:10px}
 .bk-time{width:84px;flex-shrink:0}
 .bk-btns{display:flex;gap:6px;flex:1;justify-content:center;min-width:0}
@@ -262,39 +263,20 @@ export default function Bracket() {
     })
   }
 
-  const header = (
-    <>
+  // Every state shares the site's frame (top bar, title, footer) and names
+  // the pool — guests and non-members see its name too, so loading can.
+  const page = (children) => (
+    <PageShell title="BRACKET" subtitle="World Cup 2026 · Final results" width={560}>
       <style>{css}</style>
-      <UserMenu />
-      <div style={{ width: '100%', display: 'flex', alignItems: 'center', padding: '12px 16px 0', minHeight: 44 }}>
-        <a href="/" style={{ color: GOLD, textDecoration: 'none', fontSize: 13, fontWeight: 600 }}>← Back</a>
-      </div>
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: 2 }}>
-        <h1 style={{ fontSize: 32, fontWeight: 900, letterSpacing: 2, color: 'var(--ink)', margin: 0 }}>BRACKET</h1>
-        <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: 3, color: GOLD, textTransform: 'uppercase', marginTop: 2 }}>
-          World Cup 2026 · Final results
-        </div>
-        <button onClick={() => setShowRules(true)} style={{ background: 'none', border: `1px solid ${BORDER}`, borderRadius: 6, color: GOLD, cursor: 'pointer', fontSize: 12, padding: '3px 12px', marginTop: 8 }}>
+      <div className="bk-page">
+        <button onClick={() => setShowRules(true)} style={{ background: 'none', border: `1px solid ${BORDER}`, borderRadius: 6, color: GOLD, cursor: 'pointer', fontSize: 12, padding: '3px 12px', marginTop: 10 }}>
           📖 Rules
         </button>
+        {children}
       </div>
-    </>
-  )
-
-  const footer = (
-    <div style={{ marginTop: 40, marginBottom: 24, fontSize: 12, color: 'var(--faint)', textAlign: 'center' }}>
-      <a href="/privacy" style={{ color: 'var(--faint)', textDecoration: 'none' }}>Privacy Policy / Politique de confidentialité</a>
-    </div>
-  )
-
-  const page = (children) => (
-    <main style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', color: INK, position: 'relative' }}>
-      {header}
-      {children}
-      {footer}
       {showRules && <RulesModal onClose={() => setShowRules(false)} />}
       {historyTeam && <TeamHistoryModal team={historyTeam} matches={matches} onClose={() => setHistoryTeam(null)} />}
-    </main>
+    </PageShell>
   )
 
   // ── Signed out ──
@@ -381,7 +363,7 @@ export default function Bracket() {
       )}
 
       {view === 'picks' && matches.length > 0 && (
-        <div style={{ width: '100%', maxWidth: 560, padding: '0 12px', boxSizing: 'border-box' }}>
+        <div style={{ width: '100%' }}>
           <div style={{ textAlign: 'center', fontSize: 12, color: MUTED, marginBottom: 14 }}>
             You got <b style={{ color: GOLD }}>{myCorrect}</b> of <b style={{ color: GOLD }}>{myScored}</b> scored picks right · tap a day, then a match to see everyone's picks
             {TZ_ABBR && <div style={{ fontSize: 11, color: 'var(--faint)', marginTop: 3 }}>Kickoff times shown in {TZ_ABBR} (your local time)</div>}
@@ -436,7 +418,7 @@ export default function Bracket() {
       )}
 
       {view === 'board' && (
-        <div style={{ width: '100%', maxWidth: 480, padding: '0 12px', boxSizing: 'border-box' }}>
+        <div style={{ width: '100%', maxWidth: 480 }}>
           {standings.map((s, i) => {
             const hist = historyFor(s.user_id)
             const expandable = hist.length > 0
@@ -482,7 +464,7 @@ export default function Bracket() {
       )}
 
       {view === 'tournament' && (
-        <div style={{ width: '100%', maxWidth: 560, padding: '0 12px', boxSizing: 'border-box' }}>
+        <div style={{ width: '100%' }}>
           <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginBottom: 16 }}>
             {[['groups', 'Groups'], ['bracket', 'Bracket']].map(([k, l]) => (
               <button key={k} onClick={() => setTourTab(k)} style={{

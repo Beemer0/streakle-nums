@@ -24,7 +24,7 @@ const Scramble = lazy(() => import('./Scramble.jsx'))
 
 // Pages framed by PageShell, alongside the games' GameShell. Their top bar
 // carries the Sign in link (sign-in itself, by design, has none).
-const PAGE_SHELL_PATHS = ['/login', '/privacy', '/pools']
+const PAGE_SHELL_PATHS = ['/login', '/privacy', '/pools', '/bracket', '/octagon']
 
 function hasOwnTopBar(pathname) {
   return isGamePath(pathname) || PAGE_SHELL_PATHS.includes(pathname.toLowerCase().replace(/\/+$/, ''))
