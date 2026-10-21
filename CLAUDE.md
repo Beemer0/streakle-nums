@@ -272,18 +272,25 @@ whose cells all fill in counts as found. Score = active time + hint penalty;
   saved while the board's date is still today. Keyed by date like Weave;
   the clock pauses when hidden and on unmount; honours `streakle-hc`.
 
-## Current focus — SEO optimization
-Done: `<title>`, meta description, Open Graph + Twitter tags, the OG image
+## SEO
+`<title>`, meta description, Open Graph + Twitter tags, OG image
 (`public/og-image.png`), `theme-color`, font-loading perf, `public/robots.txt`,
 `public/sitemap.xml`, and — via the `useSeo` hook in `src/seo.js`, wired into
 every route — per-route `<title>`, meta description, `<link rel="canonical">`,
-social tags and JSON-LD. Semantic HTML is in place too: one `<h1>` per page and
+social tags and JSON-LD. Semantic HTML too: one `<h1>` per page and
 `<main>`/`<nav>`/`<footer>` landmarks. `index.html` carries a `WebSite` JSON-LD
 block.
-
-Remaining SEO work:
-1. Optional/bigger: pre-render the routes so content is crawlable without JS.
-   Per-route metadata currently updates client-side only — Googlebot runs JS so
-   it sees it, but non-JS social scrapers still read the homepage OG tags from
-   `index.html`. Pre-rendering (or SSG) would give each route static tags.
-2. Run a Lighthouse SEO audit on the deployed site.
+- `scripts/prerender.mjs` runs after `vite build` (via `npm run build`) and
+  writes a static per-route `index.html` into `dist/<route>/` for every public
+  page, templating in that route's title, description, OG/Twitter tags,
+  canonical and Game JSON-LD from `PAGE_SEO`. Non-JS scrapers (Slack, iMessage,
+  Discord) now get the right head on `/words`, `/scramble` etc. instead of the
+  homepage fallback. `vercel.json` sets `cleanUrls: true` so the files are
+  served without redirects; the `/(.*) → /index.html` rewrite still catches
+  anything not pre-rendered. The private pools (`/bracket`, `/octagon`,
+  `/pools`) stay off the prerender list so no scraper ever finds them.
+- Lighthouse SEO scores 100/100 on `/` and `/words` on the deployed site
+  (2026-10-21); accessibility is 100 too. Performance (77) and best-practices
+  (77) have room: the Google Fonts stylesheet is render-blocking, the main
+  index chunk is ~466 KB (~191 KB of unused JS flagged), and AdSense sets one
+  third-party cookie — all separate from SEO, listed here as future work.
