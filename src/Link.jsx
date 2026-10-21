@@ -290,8 +290,8 @@ const PUZZLES = [
   },
   {
     categories: [
-      { label: "Greek letters", words: ["ALPHA", "GAMMA", "DELTA", "SIGMA"] },
-      { label: "Wolf pack roles", words: ["OMEGA", "BETA", "LONE", "PUP"] },
+      { label: "Greek letters", words: ["GAMMA", "DELTA", "SIGMA", "KAPPA"] },
+      { label: "Wolf pack roles", words: ["ALPHA", "BETA", "OMEGA", "PUP"] },
       { label: "Watch brands", words: ["ROLEX", "SEIKO", "CASIO", "TAG"] },
       { label: "Software releases", words: ["STABLE", "NIGHTLY", "CANARY", "PATCH"] },
     ]
@@ -314,8 +314,8 @@ const PUZZLES = [
   },
   {
     categories: [
-      { label: "Snooker colours", words: ["RED", "PINK", "YELLOW", "BROWN"] },
-      { label: "Karate belts", words: ["WHITE", "PURPLE", "ORANGE", "BLACK"] },
+      { label: "Snooker balls", words: ["RED", "PINK", "YELLOW", "BROWN"] },
+      { label: "Martial arts", words: ["JUDO", "KARATE", "KENDO", "AIKIDO"] },
       { label: "Charlie ___", words: ["CHAPLIN", "SHEEN", "HORSE", "BUCKET"] },
       { label: "Feeling down", words: ["BLUE", "GLOOMY", "LOW", "GLUM"] },
     ]
@@ -381,7 +381,7 @@ const PUZZLES = [
       { label: "Famous Davids", words: ["BOWIE", "BECKHAM", "ATTENBOROUGH", "COPPERFIELD"] },
       { label: "Knife types", words: ["STANLEY", "BUTTER", "PARING", "CLEAVER"] },
       { label: "Dickens novels", words: ["OLIVER", "DOMBEY", "DORRIT", "DROOD"] },
-      { label: "Stage magicians", words: ["HOUDINI", "BLAINE", "ANGEL", "PENN"] },
+      { label: "Stage magicians", words: ["HOUDINI", "TELLER", "ANGEL", "PENN"] },
     ]
   },
   {
@@ -565,7 +565,7 @@ const PUZZLES = [
       { label: "Pasta shapes", words: ["PENNE", "FUSILLI", "RIGATONI", "FARFALLE"] },
       { label: "Tie a ___", words: ["KNOT", "BOW", "RIBBON", "SHOELACE"] },
       { label: "Tie ___", words: ["BREAKER", "DYE", "PIN", "CLIP"] },
-      { label: "Hair accessories", words: ["BAND", "SCRUNCHIE", "GRIP", "SLIDE"] },
+      { label: "Hair accessories", words: ["BAND", "SCRUNCHIE", "BARRETTE", "TIARA"] },
     ]
   },
   {
