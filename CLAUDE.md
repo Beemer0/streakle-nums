@@ -88,6 +88,9 @@ the 2026-07-19 final (ESP 1–0 ARG); Mehdi Saeed won it with 113 points.
   `pool_members` — Octagon's `join_pool(pool, code)` is still the only way in.
 - Results are frozen: the admin-override policy on `matches` is dropped;
   picks were already immutable (every match has kicked off).
+- The roster comes from `get_pool_members('wc2026')`. The zero-arg
+  `get_pool_members()` is dropped (2026-10-21): it returned every pool's
+  members to a member of any pool.
 - `pool_archive` (members-only RLS via `is_member_of`) holds the final
   standings and tournament result, computed once with `scoring.js`. The
   Standings tab reads it rather than recomputing, so the record survives a
@@ -129,9 +132,10 @@ functions in `src/octagon/scoring.js` (tested).
   the pick lock), `fights`, `fight_picks` (`event_id` trigger-filled; one lock
   per event via a partial unique index) + RLS. Pool-scoped helpers
   `is_member_of(pool)`/`is_admin_of(pool)` and arity-overloaded
-  `join_pool(pool, code)`/`get_pool_members(pool)` RPCs sit beside the wc
-  originals; the wc helpers `is_pool_member/admin()` are now explicitly scoped
-  to `'wc2026'`. Members may delete their own picks pre-start (frees a Lock
+  `join_pool(pool, code)`/`get_pool_members(pool)` RPCs replaced the wc
+  originals (both since dropped); the wc helpers `is_pool_member/admin()`
+  are now explicitly scoped to `'wc2026'`. Members may delete their own
+  picks pre-start (frees a Lock
   stranded on a scratched fight — updates there are RLS-blocked). Invite code
   seeded as `octagon`:
   `update pool_config set invite_code = '…' where pool_id = 'octagon'`.

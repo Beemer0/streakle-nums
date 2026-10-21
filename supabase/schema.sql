@@ -235,3 +235,16 @@ create policy pa_select on pool_archive for select using (is_member_of(pool_id))
 drop policy if exists pm_select on pool_members;
 create policy pm_select on pool_members for select to authenticated
   using (user_id = auth.uid() or is_member_of(pool_id));
+
+-- ════════════════════════════════════════════════════════════════════════════
+-- Zero-arg roster RPC dropped (applied 2026-10-21)
+-- ════════════════════════════════════════════════════════════════════════════
+-- get_pool_members() above only checked that the caller belonged to SOME
+-- pool, never which one, and as SECURITY DEFINER it skipped pm_select. So a
+-- member of any pool got every pool's roster with names and avatars: World
+-- Cup members saw the Octagon roster, the one member of both pools came back
+-- twice, and an Octagon-only member got the World Cup roster plus their own
+-- row, so /bracket took them for a member. /bracket now calls the
+-- pool-scoped get_pool_members('wc2026') from octagon.sql, which returns a
+-- pool's roster only to that pool's members. Nothing calls the zero-arg one.
+drop function if exists get_pool_members();
