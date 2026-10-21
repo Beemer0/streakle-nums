@@ -370,6 +370,8 @@ function formatDate(dateStr) {
   return new Date(y,m-1,d).toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
 }
 
+const todayStr = () => new Date().toLocaleDateString('en-CA');
+
 // ── CSS ───────────────────────────────────────────────────────────────────────
 
 const css = `
@@ -388,8 +390,11 @@ export default function KnockoutGame() {
   const { streak } = useStreak('knockout');
   useSeo(PAGE_SEO.knockout)
   const [showArchive, setShowArchive] = useState(false);
-  const [puzzleDate, setPuzzleDate] = useState(() => new Date().toLocaleDateString('en-CA'));
+  const [puzzleDate, setPuzzleDate] = useState(todayStr);
   const puzzle = useMemo(() => getDailyPuzzle(puzzleDate), [puzzleDate]);
+  // saveResult stamps today's date, so an archive replay must never save
+  // (nor a board left open past midnight, which is yesterday's by then).
+  const isToday = puzzleDate === todayStr();
   const { rows: rowHeaders, cols: colHeaders } = puzzle;
 
   const [cells, setCells] = useState({});
@@ -453,7 +458,7 @@ export default function KnockoutGame() {
       setGuessesLeft(newGuesses);
       if (newGuesses === 0) {
         setGameOver(true);
-        saveResult({ game: 'knockout', completed: false, score: totalScore });
+        if (isToday) saveResult({ game: 'knockout', completed: false, score: totalScore });
       }
       setQuery('');
       setSuggestions([]);
@@ -476,7 +481,7 @@ export default function KnockoutGame() {
 
     if (Object.keys(newCells).length === 9) {
       setWon(true);
-      saveResult({ game: 'knockout', completed: true, score: newTotal });
+      if (isToday) saveResult({ game: 'knockout', completed: true, score: newTotal });
       const colors = ['var(--gold)','var(--ink)','var(--success-text)','var(--danger-text)','#93C5FD'];
       setConfetti(Array.from({length:30},(_,i)=>({
         id:i, x:Math.random()*100, size:Math.random()*10+6,
@@ -487,13 +492,15 @@ export default function KnockoutGame() {
 
     if (newGuesses === 0) {
       setGameOver(true);
-      saveResult({ game: 'knockout', completed: false, score: newTotal });
+      if (isToday) saveResult({ game: 'knockout', completed: false, score: newTotal });
     }
   }
 
   function handleSelectDate(date) {
-    setPuzzleDate(date);
     setShowArchive(false);
+    // Already on that board: keep it, as the other games do.
+    if (date === puzzleDate) return;
+    setPuzzleDate(date);
     setCells({});
     setGuessesLeft(9);
     setWon(false);

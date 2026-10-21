@@ -171,6 +171,8 @@ function formatDate(dateStr) {
   return d.toLocaleDateString('en-US', { month:'long', day:'numeric', year:'numeric' });
 }
 
+const todayStr = () => new Date().toLocaleDateString('en-CA')
+
 const ROWS = 6, COLS = 5;
 const KEYBOARD = [
   ['Q','W','E','R','T','Y','U','I','O','P'],
@@ -250,7 +252,7 @@ export default function WordsGame() {
       {showArchive && (
         <Archive
           game="words"
-          onSelectDate={(date) => setPuzzleDate(date)}
+          onSelectDate={(date) => setPuzzleDate(date === todayStr() ? null : date)}
           onClose={() => setShowArchive(false)}
         />
       )}
@@ -260,6 +262,8 @@ export default function WordsGame() {
 
 function WordsBoard({ puzzleDate, hc, palette }) {
   const daily = useMemo(() => getDailyWord(puzzleDate), [puzzleDate])
+  // saveResult stamps today's date, so an archive replay must never save.
+  const isToday = puzzleDate === null
   const [guesses, setGuesses] = useState(Array(ROWS).fill(''));
   const [current, setCurrent] = useState(0);
   const [input, setInput] = useState('');
@@ -329,16 +333,16 @@ function WordsBoard({ puzzleDate, hc, palette }) {
       const isWin=result.every(s=>s===ST.correct);
       if (isWin) {
         setBounceRow(rowIdx); setTimeout(()=>setBounceRow(null),1000);
-        saveResult({ game: 'words', completed: true });
+        if (isToday) saveResult({ game: 'words', completed: true });
         setTimeout(()=>{setWon(true);setGameOver(true);spawnConfetti();setShowFact(true);},400);
       } else if (rowIdx+1>=ROWS) {
-        saveResult({ game: 'words', completed: false });
+        if (isToday) saveResult({ game: 'words', completed: false });
         setTimeout(()=>{setGameOver(true);setShowFact(true);showMsg(daily.word,3000);},200);
       } else {
         setCurrent(c=>c+1);
       }
     }, totalDelay);
-  }, [input, current, daily.word]);
+  }, [input, current, daily.word, isToday]);
 
   const handleKey = useCallback((key) => {
     if (gameOver || revealingRef.current) return;

@@ -590,6 +590,8 @@ function formatDate(dateStr) {
   return d.toLocaleDateString('en-US', { month:'long', day:'numeric', year:'numeric' });
 }
 
+const todayStr = () => new Date().toLocaleDateString('en-CA')
+
 function seededShuffle(arr, seed) {
   const a = [...arr];
   let s = seed;
@@ -675,7 +677,7 @@ export default function GridGame() {
       {showArchive && (
         <Archive
           game="link"
-          onSelectDate={(date) => setPuzzleDate(date)}
+          onSelectDate={(date) => setPuzzleDate(date === todayStr() ? null : date)}
           onClose={() => setShowArchive(false)}
         />
       )}
@@ -690,6 +692,8 @@ function LinkBoard({ puzzleDate, streak }) {
     const p = getDailyPuzzle(puzzleDate)
     return { ...p, shuffled: seededShuffle(p.categories.flatMap(c => c.words), seed) }
   }, [puzzleDate])
+  // saveResult stamps today's date, so an archive replay must never save.
+  const isToday = puzzleDate === null
 
   const [selected, setSelected] = useState([]);
   const [solved, setSolved] = useState([]);
@@ -747,7 +751,7 @@ function LinkBoard({ puzzleDate, streak }) {
       if (!container) {
         setSolved(prev => {
           const ns = [...prev, catIdx];
-          if (ns.length === 4) { saveResult({ game: 'link', completed: true }); setWon(true); spawnConfetti(); }
+          if (ns.length === 4) { if (isToday) saveResult({ game: 'link', completed: true }); setWon(true); spawnConfetti(); }
           else showMsg(`✅ ${cat.label}!`);
           return ns;
         });
@@ -781,7 +785,7 @@ function LinkBoard({ puzzleDate, streak }) {
         setGuessHistory(h => [...h, { correct: true }]);
         setSolved(prev => {
           const ns = [...prev, catIdx];
-          if (ns.length === 4) { saveResult({ game: 'link', completed: true }); setWon(true); spawnConfetti(); }
+          if (ns.length === 4) { if (isToday) saveResult({ game: 'link', completed: true }); setWon(true); spawnConfetti(); }
           else showMsg(`✅ ${cat.label}!`);
           return ns;
         });
@@ -802,7 +806,7 @@ function LinkBoard({ puzzleDate, streak }) {
       if (bestMatch === 3) { setOneAway(true); showMsg("One away! 👀", 2000); }
       else { setOneAway(false); showMsg("Not quite! Try again."); }
 
-      if (newLives === 0) { saveResult({ game: 'link', completed: false }); setTimeout(() => setGameOver(true), 600); }
+      if (newLives === 0) { if (isToday) saveResult({ game: 'link', completed: false }); setTimeout(() => setGameOver(true), 600); }
     }
   };
 

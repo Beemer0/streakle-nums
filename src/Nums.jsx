@@ -68,6 +68,8 @@ function formatDate(dateStr) {
   return d.toLocaleDateString('en-US', { month:'long', day:'numeric', year:'numeric' });
 }
 
+const todayStr = () => new Date().toLocaleDateString('en-CA')
+
 function buildShareText(swaps, solved, dateStr) {
   const used = 20 - swaps;
   const over = swaps < 0;
@@ -132,7 +134,7 @@ export default function App() {
       {showArchive && (
         <Archive
           game="nums"
-          onSelectDate={(date) => setPuzzleDate(date)}
+          onSelectDate={(date) => setPuzzleDate(date === todayStr() ? null : date)}
           onClose={() => setShowArchive(false)}
         />
       )}
@@ -149,6 +151,8 @@ function NumsBoard({ puzzleDate, streak }) {
     const sol = generateSolution(rng)
     return { sol, cl: computeClues(sol), sc: scramble(sol, rng) }
   }, [puzzleDate])
+  // saveResult stamps today's date, so an archive replay must never save.
+  const isToday = puzzleDate === null
 
   const [board, setBoard] = useState(() => pz.sc.map(r => [...r]));
   const [sel, setSel] = useState(null);
@@ -213,7 +217,7 @@ function NumsBoard({ puzzleDate, streak }) {
 
       if (isSolved(nb)) {
         setSolved(true);
-        saveResult({ game: 'nums', completed: true, swaps_used: 20 - newSwaps });
+        if (isToday) saveResult({ game: 'nums', completed: true, swaps_used: 20 - newSwaps });
         setTimeout(()=>{ spawnConfetti(); setStarsAnim(true); },100);
       }
     }, 380);

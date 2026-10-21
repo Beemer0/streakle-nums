@@ -522,6 +522,8 @@ function formatDate(dateStr) {
   return d.toLocaleDateString('en-US', { month:'long', day:'numeric', year:'numeric' });
 }
 
+const todayStr = () => new Date().toLocaleDateString('en-CA')
+
 function isValid(player, criteria) {
   return player.t.includes(criteria) || player.a.includes(criteria);
 }
@@ -568,7 +570,7 @@ export default function GridironGame() {
       {showArchive && (
         <Archive
           game="gridiron"
-          onSelectDate={(date) => setPuzzleDate(date)}
+          onSelectDate={(date) => setPuzzleDate(date === todayStr() ? null : date)}
           onClose={() => setShowArchive(false)}
         />
       )}
@@ -578,6 +580,8 @@ export default function GridironGame() {
 
 function GridironBoard({ puzzleDate, streak }) {
   const puzzle = useMemo(() => getDailyPuzzle(puzzleDate), [puzzleDate])
+  // saveResult stamps today's date, so an archive replay must never save.
+  const isToday = puzzleDate === null
   const [cells, setCells] = useState({});
   const [activeCell, setActiveCell] = useState(null);
   const [query, setQuery] = useState('');
@@ -660,11 +664,11 @@ function GridironBoard({ puzzleDate, streak }) {
       setPendingPlayer(null);
       setSuggestions([]);
       if (Object.keys(newCells).length === 9) {
-        saveResult({ game: 'gridiron', completed: true, score: totalScore + score });
+        if (isToday) saveResult({ game: 'gridiron', completed: true, score: totalScore + score });
         setWon(true);
         spawnConfetti();
       } else if (newGuesses === 0) {
-        saveResult({ game: 'gridiron', completed: false, score: totalScore });
+        if (isToday) saveResult({ game: 'gridiron', completed: false, score: totalScore });
         setGameOver(true);
       }
     } else {
@@ -674,7 +678,7 @@ function GridironBoard({ puzzleDate, streak }) {
       setQuery('');
       if (newGuesses === 0) {
         setActiveCell(null);
-        saveResult({ game: 'gridiron', completed: false, score: totalScore });
+        if (isToday) saveResult({ game: 'gridiron', completed: false, score: totalScore });
         setGameOver(true);
       }
     }
