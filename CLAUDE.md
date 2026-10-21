@@ -38,9 +38,14 @@ puzzles every day; signed-in players build streaks.
   title, the game's own stats as children (`.rc-headline` / `.rc-detail`),
   then Share and "Next: GAME →". Its `ShareButton` owns the share-sheet →
   clipboard → "Copied!" logic — games only pass a `shareText()` builder.
-- Shared: `AuthContext.js` (`useAuth`), `AuthProvider.jsx`, `supabase.js`, `saveResult.js`, `useStreak.js`,
+- Shared: `AuthContext.js` (`useAuth`), `AuthProvider.jsx`, `supabase.js` (PKCE
+  OAuth, so no tokens ever sit in the URL — keep it that way), `analytics.js` (strips
+  the hash and OAuth params from Vercel Analytics URLs), `saveResult.js`, `useStreak.js`,
   `streak.js`, `evaluate.js` (Wordle logic, tested), `a11y.js` (`clickableProps`),
   `AwardIcon.jsx`, `ErrorBoundary.jsx`, `validWords.txt` (~14.8k words).
+- `saveResult` stamps today's date, so every game calls it only on today's board
+  (`isToday`) and maps an Archive pick of today back to the live board; archive
+  replays never save (`archiveReplay.test.jsx`).
 - Tests live next to the code as `*.test.js` (`evaluate.test.js`, `streak.test.js`,
   `mines/engine.test.js`, `weave/engine.test.js`, `scramble/engine.test.js`,
   the pool scoring suites).
