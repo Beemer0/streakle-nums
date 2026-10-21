@@ -132,9 +132,13 @@ known. `noindex`.
 - `src/usePoolMemberships.js` asks `is_member_of(pool)` for each registered
   pool, cached per user per page load and shared by UserMenu and PoolHistory. A pool's in-page join form must call
   `refreshPoolMemberships()` after a successful join (Octagon's does), or the
-  menu item waits for the next page load. Not a `pool_members` select: that table's RLS
-  is `is_pool_member()`, hard-scoped to `wc2026`, so World Cup members can read
-  every pool's rows while an Octagon-only member reads none.
+  menu item waits for the next page load.
+- `pool_members` RLS is pool-scoped (since 2026-10-21; last section of
+  `supabase/schema.sql`): `pm_select` lets a signed-in user read their own rows
+  plus the rosters of pools they belong to (`user_id = auth.uid() or
+  is_member_of(pool_id)`); guests read nothing. It used to be
+  `is_pool_member()` — `wc2026`-only, so World Cup members saw every pool's
+  rows and Octagon-only members saw none. Still no write policy.
 
 ## Mines — daily no-guess minesweeper ladder (`/mines`)
 Three date-seeded boards a day (Easy 9×9/10, Medium 10×14/22, Hard 10×24/48)

@@ -3,7 +3,8 @@
 -- Paste this whole file into the Supabase SQL editor and run it once.
 --
 -- ARCHIVED 2026-10-20: the pool is closed and read-only. See the "Archive"
--- section at the bottom for what was switched off and the pool_archive table.
+-- section at the bottom for what was switched off and the pool_archive table,
+-- and the section after it for the pool-scoped pool_members read policy.
 -- ════════════════════════════════════════════════════════════════════════════
 
 -- ── Tables ──────────────────────────────────────────────────────────────────
@@ -219,3 +220,18 @@ drop policy if exists pa_select on pool_archive;
 create policy pa_select on pool_archive for select using (is_member_of(pool_id));
 -- (The wc2026 row itself was inserted from a production dump; no client can
 -- write to this table.)
+
+-- ════════════════════════════════════════════════════════════════════════════
+-- pool_members read policy, pool-scoped (applied 2026-10-21)
+-- ════════════════════════════════════════════════════════════════════════════
+-- pm_select above used is_pool_member(), which octagon.sql scoped to wc2026.
+-- On a table every pool shares, that was wrong both ways: a World Cup member
+-- could read every pool's rows (the Octagon roster's user ids included), and
+-- an Octagon-only member could read none, not even their own. Now a signed-in
+-- user sees their own rows plus the rosters of the pools they belong to;
+-- guests see nothing. is_member_of is SECURITY DEFINER, so it reads
+-- pool_members without recursing into this policy. Still no insert/update/
+-- delete policy: join_pool(pool, code) stays the only way in.
+drop policy if exists pm_select on pool_members;
+create policy pm_select on pool_members for select to authenticated
+  using (user_id = auth.uid() or is_member_of(pool_id));

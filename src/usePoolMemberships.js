@@ -5,10 +5,8 @@ import { POOLS } from './pools'
 
 // Which registered pools (src/pools.js) the signed-in user belongs to, asked
 // through is_member_of — the pool-scoped SECURITY DEFINER helper the pool RLS
-// is built on. A plain pool_members select would not do: that table's RLS
-// (is_pool_member) only shows rows to World Cup members, so an Octagon-only
-// member would read none. One lookup per user per page load, shared by every
-// caller; a failed lookup is dropped so the next mount asks again.
+// is built on. One lookup per user per page load, shared by every caller; a
+// failed lookup is dropped so the next mount asks again.
 let cache = null // { userId, promise }
 let refreshes = 0
 const listeners = new Set()
