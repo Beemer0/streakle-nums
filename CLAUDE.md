@@ -28,6 +28,12 @@ puzzles every day; signed-in players build streaks.
   `games.js` is the registry (key, group, path, title, emoji, colours, badge;
   `GROUPS` = Home's sections, `nextGame`) that Home, GameShell, ResultCard and
   App's sign-in banner read. `GameIcon.jsx` draws each game's line icon.
+- `PageShell.jsx` gives the non-game pages (Login, Privacy, Pool History,
+  Bracket, Octagon) the same frame: GameShell's exported `TopBar` and
+  `ShellFooter` around a `title` / `subtitle` / `date` head and a `width`-capped
+  column (no `title` = the page names nothing yet). A new framed page also
+  goes in `PAGE_SHELL_PATHS` in `App.jsx`, so the floating `SignInBanner`
+  skips it.
 - `ResultCard.jsx` (+ `.css`) is every game's end-of-game card: outcome
   title, the game's own stats as children (`.rc-headline` / `.rc-detail`),
   then Share and "Next: GAME →". Its `ShareButton` owns the share-sheet →
