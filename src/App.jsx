@@ -5,6 +5,7 @@ import { isGamePath } from './games.js'
 import Home from './Home.jsx'
 import ErrorBoundary from './ErrorBoundary.jsx'
 import LoginPage from './LoginPage.jsx'
+import { GameLoading } from './GameShell.jsx'
 
 // Game routes are code-split — each loads its own chunk on demand.
 const Nums     = lazy(() => import('./Nums.jsx'))
@@ -34,6 +35,11 @@ function SignInBanner() {
   )
 }
 
+// A game route shows its own header while the game's chunk loads.
+function GameRoute({ game, children }) {
+  return <Suspense fallback={<GameLoading game={game} />}>{children}</Suspense>
+}
+
 function LoadingScreen() {
   return (
     <div className="loading-screen" role="status" aria-label="Loading">
@@ -53,15 +59,15 @@ export default function AppRoutes() {
         <Suspense fallback={<LoadingScreen />}>
           <Routes>
             <Route path="/" element={<Home />} />
-            <Route path="/nums" element={<Nums />} />
-            <Route path="/mines" element={<Mines />} />
-            <Route path="/weave" element={<Weave />} />
-            <Route path="/scramble" element={<Scramble />} />
-            <Route path="/link" element={<Link />} />
-            <Route path="/words" element={<Words />} />
-            <Route path="/gridiron" element={<Gridiron />} />
-            <Route path="/faceoff" element={<Faceoff />} />
-            <Route path="/knockout" element={<Knockout />} />
+            <Route path="/nums" element={<GameRoute game="nums"><Nums /></GameRoute>} />
+            <Route path="/mines" element={<GameRoute game="mines"><Mines /></GameRoute>} />
+            <Route path="/weave" element={<GameRoute game="weave"><Weave /></GameRoute>} />
+            <Route path="/scramble" element={<GameRoute game="scramble"><Scramble /></GameRoute>} />
+            <Route path="/link" element={<GameRoute game="link"><Link /></GameRoute>} />
+            <Route path="/words" element={<GameRoute game="words"><Words /></GameRoute>} />
+            <Route path="/gridiron" element={<GameRoute game="gridiron"><Gridiron /></GameRoute>} />
+            <Route path="/faceoff" element={<GameRoute game="faceoff"><Faceoff /></GameRoute>} />
+            <Route path="/knockout" element={<GameRoute game="knockout"><Knockout /></GameRoute>} />
             <Route path="/bracket" element={<Bracket />} />
             <Route path="/octagon" element={<Octagon />} />
             <Route path="/pools" element={<PoolHistory />} />

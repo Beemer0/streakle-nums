@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useRef, useCallback, memo } from 'react'
 import Archive from './Archive'
 import GameShell from './GameShell'
+import ResultCard from './ResultCard'
 import { saveResult } from './saveResult'
 import { useStreak } from './useStreak'
 import { useSeo, PAGE_SEO } from './seo'
@@ -22,7 +23,6 @@ const css = `
 @keyframes mnConfetti{0%{transform:translateY(0) rotate(0deg);opacity:1}100%{transform:translateY(130px) rotate(720deg);opacity:0}}
 @keyframes mnSlideUp{from{transform:translateY(12px);opacity:0}to{transform:translateY(0);opacity:1}}
 @keyframes mnFadeIn{from{opacity:0}to{opacity:1}}
-@keyframes mnCopied{0%{opacity:0;transform:translateY(4px)}20%{opacity:1;transform:translateY(0)}80%{opacity:1}100%{opacity:0}}
 .mn-wrap{width:100%;padding:0 12px;box-sizing:border-box}
 .mn-grid{user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;touch-action:manipulation}
 .mn-shake{animation:mnShake 0.45s ease}
@@ -174,7 +174,6 @@ export default function Mines() {
   const [now, setNow] = useState(0)
   const [mode, setMode] = useState('dig')
   const [focusIdx, setFocusIdx] = useState(() => g.board.open)
-  const [copied, setCopied] = useState(false)
   const [confetti, setConfetti] = useState([])
   const [live, setLive] = useState({ n: 0, text: '' })
   const [toast, setToast] = useState(null)
@@ -221,7 +220,6 @@ export default function Mines() {
     setSegStart(null)
     setNow(0)
     setFocusIdx(next.board.open)
-    setCopied(false)
     setConfetti([])
     setLive({ n: 0, text: '' })
     setToast(null)
@@ -423,13 +421,7 @@ export default function Mines() {
     }
   }
 
-  const handleShare = async () => {
-    const text = buildShareText(g, puzzleDate);
-    try {
-      if (navigator.share) await navigator.share({ text });
-      else { await navigator.clipboard.writeText(text); setCopied(true); setTimeout(()=>setCopied(false),2000); }
-    } catch { await navigator.clipboard.writeText(text); setCopied(true); setTimeout(()=>setCopied(false),2000); }
-  };
+  const shareText = () => buildShareText(g, puzzleDate)
 
   // ── Derived render data ──
   const variantOf = (i) => {
@@ -462,18 +454,6 @@ export default function Mines() {
     return 'current'
   }
 
-  const shareBtn = (gold) => (
-    <div style={{ position: 'relative', display: 'inline-block', marginTop: gold ? 0 : 12 }}>
-      <button onClick={handleShare} style={gold
-        ? { background: GOLD, color: 'var(--bg)', border: 'none', borderRadius: 8, padding: '10px 28px', fontSize: 15, fontWeight: 700, cursor: 'pointer', transition: 'background 0.2s' }
-        : { background: CARD, color: GOLD, border: `1px solid ${BORDER}`, borderRadius: 8, padding: '8px 20px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
-        onMouseOver={gold ? e => e.currentTarget.style.background = 'var(--gold-hover)' : undefined}
-        onMouseOut={gold ? e => e.currentTarget.style.background = GOLD : undefined}>
-        📋 Share result
-      </button>
-      {copied && <div style={{ position: 'absolute', top: -32, left: '50%', transform: 'translateX(-50%)', background: 'var(--correct-deep)', color: 'var(--ink)', fontSize: 12, fontWeight: 600, padding: '4px 12px', borderRadius: 6, whiteSpace: 'nowrap', animation: 'mnCopied 2s ease forwards', pointerEvents: 'none' }}>Copied!</div>}
-    </div>
-  )
 
   const howTo = (
     <>
@@ -570,22 +550,18 @@ export default function Mines() {
         )}
 
         {phase === 'won' && (
-          <div style={{ textAlign: 'center', marginTop: 18, animation: 'mnSlideUp 0.5s ease' }}>
-            <div style={{ fontSize: 22, fontWeight: 700, color: GREEN, marginBottom: 6 }}>🎉 All clear!</div>
-            <div style={{ fontSize: 15, fontWeight: 700, color: GOLD, marginBottom: 4 }}>{formatTime(totalMs)} · {plural(mistakes, 'mistake')}</div>
-            <div style={{ fontSize: 13, color: 'var(--text-2)', marginBottom: 16 }}>
+          <ResultCard game="mines" outcome="won" title="🎉 All clear!" shareText={shareText}>
+            <div className="rc-headline">{formatTime(totalMs)} · {plural(mistakes, 'mistake')}</div>
+            <div className="rc-detail">
               {RUNGS.map((s, i) => `${s.label} ${formatTime(acc[i])}`).join(' · ')}
             </div>
-            {shareBtn(true)}
-          </div>
+          </ResultCard>
         )}
 
         {phase === 'lost' && (
-          <div style={{ textAlign: 'center', marginTop: 18, animation: 'mnSlideUp 0.4s ease' }}>
-            <div style={{ fontSize: 20, fontWeight: 700, color: RED, marginBottom: 6 }}>Game over!</div>
-            <div style={{ fontSize: 13, color: 'var(--text-2)' }}>Out of attempts on {spec.label} · {formatTime(totalMs)} · {plural(mistakes, 'mistake')}</div>
-            {shareBtn(false)}
-          </div>
+          <ResultCard game="mines" outcome="lost" title="Game over!" shareText={shareText}>
+            <div className="rc-detail">Out of attempts on {spec.label} · {formatTime(totalMs)} · {plural(mistakes, 'mistake')}</div>
+          </ResultCard>
         )}
       </div>
 

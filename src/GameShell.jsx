@@ -36,9 +36,10 @@ function CalendarIcon() {
  * @param {boolean} [props.hc] - high-contrast colours are on
  * @param {() => void} [props.onToggleHc] - adds a high-contrast switch to the how-to panel
  * @param {string} [props.className] - extra class on <main>
+ * @param {boolean} [props.isLoading] - the game's code is still loading: actions off
  * @param {import('react').ReactNode} props.children - the game
  */
-export default function GameShell({ game, date, howTo, onArchive, hc = false, onToggleHc, className = '', children }) {
+export default function GameShell({ game, date, howTo, onArchive, hc = false, onToggleHc, className = '', isLoading = false, children }) {
   const { user } = useAuth()
   const [isHowOpen, setIsHowOpen] = useState(false)
   const { title, color, accent } = GAME_BY_KEY[game]
@@ -56,10 +57,10 @@ export default function GameShell({ game, date, howTo, onArchive, hc = false, on
           <div className="gs-by">by Streakle</div>
         </div>
         <div className="gs-actions">
-          <button type="button" className="gs-btn" aria-label="How to play" aria-expanded={isHowOpen} onClick={() => setIsHowOpen(open => !open)}>
+          <button type="button" className="gs-btn" aria-label="How to play" aria-expanded={isHowOpen} disabled={isLoading} onClick={() => setIsHowOpen(open => !open)}>
             <HelpIcon /><span className="gs-btn-label">How to play</span>
           </button>
-          <button type="button" className="gs-btn" aria-label="Archive" onClick={onArchive}>
+          <button type="button" className="gs-btn" aria-label="Archive" disabled={isLoading} onClick={onArchive}>
             <CalendarIcon /><span className="gs-btn-label">Archive</span>
           </button>
         </div>
@@ -85,5 +86,21 @@ export default function GameShell({ game, date, howTo, onArchive, hc = false, on
         <a href="/privacy">Privacy Policy / Politique de confidentialité</a>
       </footer>
     </main>
+  )
+}
+
+/**
+ * Shown while a game's code loads: its real header and today's date at once,
+ * with a soft placeholder where the board will be.
+ *
+ * @param {object} props
+ * @param {string} props.game - key in GAMES
+ */
+export function GameLoading({ game }) {
+  const today = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+  return (
+    <GameShell game={game} date={today} isLoading>
+      <div className="gs-skeleton" role="status" aria-label="Loading the puzzle" />
+    </GameShell>
   )
 }

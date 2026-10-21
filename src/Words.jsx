@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import Archive from './Archive'
 import GameShell from "./GameShell";
+import ResultCard from './ResultCard';
 import { saveResult } from './saveResult';
 import { useStreak } from './useStreak';
 import { evaluate } from './evaluate';
@@ -191,7 +192,6 @@ const css = `
 @keyframes cardFlip{0%{transform:rotateY(0deg)}100%{transform:rotateY(180deg)}}
 @keyframes slideUp{from{transform:translateY(20px);opacity:0}to{transform:translateY(0);opacity:1}}
 @keyframes confetti{0%{transform:translateY(0) rotate(0deg);opacity:1}100%{transform:translateY(130px) rotate(720deg);opacity:0}}
-@keyframes copied{0%{opacity:0;transform:translateY(4px)}20%{opacity:1;transform:translateY(0)}80%{opacity:1}100%{opacity:0}}
 .wd-board{--wd-tile:52px}
 .wd-kb{display:flex;flex-direction:column;gap:6px;width:min(500px,calc(100vw - 16px))}
 .wd-kb-row{display:flex;gap:5px}
@@ -265,7 +265,6 @@ function WordsBoard({ puzzleDate, hc, palette }) {
   const [won, setWon] = useState(false);
   const [message, setMessage] = useState(null);
   const [confetti, setConfetti] = useState([]);
-  const [copied, setCopied] = useState(false);
   const [showFact, setShowFact] = useState(false);
   const [revealingTiles, setRevealingTiles] = useState({});
   const revealingRef = useRef(false);
@@ -379,13 +378,6 @@ function WordsBoard({ puzzleDate, hc, palette }) {
     return `WORDS by Streakle 🔥 — ${formatDate(puzzleDate)}\n${result}\n${rows.join('\n')}\n\nPlay at: playstreakle.com/words`;
   };
 
-  const handleShare=async()=>{
-    const text=buildShare();
-    try {
-      if (navigator.share) await navigator.share({text});
-      else {await navigator.clipboard.writeText(text);setCopied(true);setTimeout(()=>setCopied(false),2000);}
-    } catch {await navigator.clipboard.writeText(text);setCopied(true);setTimeout(()=>setCopied(false),2000);}
-  };
 
   return (
     <>
@@ -445,25 +437,14 @@ function WordsBoard({ puzzleDate, hc, palette }) {
       </div>
 
       {showFact&&(
-        <div style={{background:'var(--surface)',border:`1px solid ${won?'var(--correct)':'var(--border)'}`,borderRadius:12,padding:'16px 20px',maxWidth:340,width:'90%',marginBottom:16,animation:'slideUp 0.5s ease'}}>
-          <div style={{fontSize:11,fontWeight:700,letterSpacing:2,color:won?'var(--success-text)':'var(--gold)',textTransform:'uppercase',marginBottom:6}}>
-            {won?"✅ Today's word":"❌ Today's word was"}
+        <ResultCard game="words" outcome={won?'won':'lost'} title={won?`🎉 Got it in ${current+1}!`:'So close!'} shareText={buildShare}>
+          <div style={{fontSize:11,fontWeight:700,letterSpacing:2,color:'var(--muted)',textTransform:'uppercase',marginTop:4,marginBottom:4}}>
+            {won?"Today's word":"Today's word was"}
           </div>
-          <div style={{fontSize:28,fontWeight:900,letterSpacing:3,color:'var(--ink)',marginBottom:4}}>{daily.word}</div>
+          <div style={{fontFamily:'var(--font-display)',fontSize:34,fontWeight:800,letterSpacing:4,color:'var(--ink)',lineHeight:1,marginBottom:6}}>{daily.word}</div>
           <div style={{fontSize:13,color:'var(--gold)',fontStyle:'italic',marginBottom:10}}>{daily.def}</div>
-          <div style={{fontSize:13,color:'var(--text-2)',lineHeight:1.65}}>{daily.fact}</div>
-        </div>
-      )}
-
-      {gameOver&&(
-        <div style={{position:'relative',display:'inline-block',marginBottom:20}}>
-          <button onClick={handleShare} style={{background:'var(--gold)',color:'var(--bg)',border:'none',borderRadius:8,padding:'10px 28px',fontSize:15,fontWeight:700,cursor:'pointer',transition:'background 0.2s'}}
-            onMouseOver={e=>e.currentTarget.style.background='var(--gold-hover)'}
-            onMouseOut={e=>e.currentTarget.style.background='var(--gold)'}>
-            📋 Share result
-          </button>
-          {copied&&<div style={{position:'absolute',top:-32,left:'50%',transform:'translateX(-50%)',background:'var(--correct-deep)',color:'var(--ink)',fontSize:12,fontWeight:600,padding:'4px 12px',borderRadius:6,whiteSpace:'nowrap',animation:'copied 2s ease forwards',pointerEvents:'none'}}>Copied!</div>}
-        </div>
+          <div className="rc-detail" style={{lineHeight:1.65}}>{daily.fact}</div>
+        </ResultCard>
       )}
 
       {!gameOver&&(

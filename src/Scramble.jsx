@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import Archive from './Archive'
 import GameShell from './GameShell'
+import ResultCard from './ResultCard'
 import { saveResult } from './saveResult'
 import { useStreak } from './useStreak'
 import { useSeo, PAGE_SEO } from './seo'
@@ -11,7 +12,7 @@ import {
 } from './scramble/engine'
 import { GOLD, INK } from './theme'
 
-const WIN = 'var(--success)', DARK_INK = 'var(--bg)'
+const DARK_INK = 'var(--bg)'
 // Found letters and hinted letters; light tiles take dark ink for contrast.
 const PALETTE = { done: 'var(--correct)', doneInk: INK, hint: 'var(--present)', hintInk: DARK_INK }
 const PALETTE_HC = { done: 'var(--hc-correct)', doneInk: DARK_INK, hint: 'var(--hc-present)', hintInk: DARK_INK }
@@ -26,7 +27,6 @@ const css = `
 @keyframes scPop{0%{transform:scale(1)}45%{transform:scale(1.14)}100%{transform:scale(1)}}
 @keyframes scConfetti{0%{transform:translateY(0) rotate(0deg);opacity:1}100%{transform:translateY(130px) rotate(720deg);opacity:0}}
 @keyframes scSlideUp{from{transform:translateY(12px);opacity:0}to{transform:translateY(0);opacity:1}}
-@keyframes scCopied{0%{opacity:0;transform:translateY(4px)}20%{opacity:1;transform:translateY(0)}80%{opacity:1}100%{opacity:0}}
 .sc-board{display:grid;gap:4px;justify-content:center;margin:0 auto}
 .sc-cell{width:var(--sc-cell);height:var(--sc-cell);box-sizing:border-box;border-radius:6px;display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-weight:800;font-size:calc(var(--sc-cell) * 0.58);line-height:1;color:var(--ink);border:2px solid transparent;user-select:none;-webkit-user-select:none}
 .sc-empty{background:var(--surface);border-color:var(--border-strong)}
@@ -170,7 +170,6 @@ function ScrambleBoard({ seedDate, isToday, palette, keysBlocked }) {
   const [pop, setPop] = useState([])             // words that just filled in
   const [live, setLive] = useState({ n: 0, text: '' })
   const [toast, setToast] = useState(null)     // { id, msg }
-  const [copied, setCopied] = useState(false)
   const [confetti, setConfetti] = useState([])
   const timeouts = useRef([])
   const keyHandler = useRef(null)
@@ -372,17 +371,7 @@ function ScrambleBoard({ seedDate, isToday, palette, keysBlocked }) {
     }
   }, [pause])
 
-  const handleShare = async () => {
-    const text = buildShareText(pz, g, isToday ? null : seedDate)
-    const flash = () => { setCopied(true); pushTimeout(() => setCopied(false), 2000) }
-    try {
-      if (navigator.share) await navigator.share({ text })
-      else { await navigator.clipboard.writeText(text); flash() }
-    } catch (err) {
-      if (err?.name === 'AbortError') return // the player closed the share sheet
-      try { await navigator.clipboard.writeText(text); flash() } catch { /* sharing unavailable */ }
-    }
-  }
+  const shareText = () => buildShareText(pz, g, isToday ? null : seedDate)
 
   // ── Render ──
   const popCells = new Set(pop.flatMap(i => cellsOf(pz.placements[i]).map(([r, c]) => cellKey(r, c))))
@@ -411,14 +400,6 @@ function ScrambleBoard({ seedDate, isToday, palette, keysBlocked }) {
   const remaining = chips.filter(ch => !found.includes(ch.i)).map(ch => ch.len)
   const cellSize = `min(52px, calc((min(100vw, 480px) - 32px - ${(pz.cols - 1) * 4}px) / ${pz.cols}))`
 
-  const shareBtn = (
-    <div style={{ position: 'relative', display: 'inline-block', marginTop: 4 }}>
-      <button onClick={handleShare} style={{ background: GOLD, color: 'var(--bg)', border: 'none', borderRadius: 8, padding: '10px 28px', fontSize: 15, fontWeight: 700, cursor: 'pointer' }}>
-        📋 Share result
-      </button>
-      {copied && <div style={{ position: 'absolute', top: -32, left: '50%', transform: 'translateX(-50%)', background: 'var(--correct-deep)', color: 'var(--ink)', fontSize: 12, fontWeight: 600, padding: '4px 12px', borderRadius: 6, whiteSpace: 'nowrap', animation: 'scCopied 2s ease forwards', pointerEvents: 'none' }}>Copied!</div>}
-    </div>
-  )
 
   return (
     <>
@@ -474,14 +455,12 @@ function ScrambleBoard({ seedDate, isToday, palette, keysBlocked }) {
       )}
 
       {done && (
-        <div ref={resultRef} tabIndex={-1} style={{ textAlign: 'center', marginTop: 18, animation: 'scSlideUp 0.5s ease', outline: 'none' }}>
-          <div style={{ fontSize: 22, fontWeight: 700, color: WIN, marginBottom: 6 }}>🎉 Unscrambled!</div>
-          <div style={{ fontSize: 15, fontWeight: 700, color: GOLD, marginBottom: 4 }}>{formatTime(seconds)} · {plural(hints, 'hint')}</div>
-          <div style={{ fontSize: 13, color: 'var(--text-2)', margin: '6px 0 14px', letterSpacing: 1 }}>
+        <ResultCard ref={resultRef} game="scramble" outcome="won" title="🎉 Unscrambled!" shareText={shareText}>
+          <div className="rc-headline">{formatTime(seconds)} · {plural(hints, 'hint')}</div>
+          <div className="rc-detail" style={{ letterSpacing: 1 }}>
             {chips.map(ch => pz.words[ch.i]).join(' · ')}
           </div>
-          {shareBtn}
-        </div>
+        </ResultCard>
       )}
 
       {toast && <div className="sc-toast" role="presentation">{toast.msg}</div>}

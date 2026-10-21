@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useMemo } from "react";
 import Archive from './Archive'
 import GameShell from "./GameShell";
+import ResultCard from './ResultCard';
 import { saveResult } from './saveResult';
 import { useStreak } from './useStreak';
 import { clickableProps } from './a11y';
@@ -613,27 +614,28 @@ const css = `
 @keyframes slideUp{from{transform:translateY(16px);opacity:0}to{transform:translateY(0);opacity:1}}
 @keyframes fadeIn{from{opacity:0}to{opacity:1}}
 @keyframes confetti{0%{transform:translateY(0) rotate(0deg);opacity:1}100%{transform:translateY(120px) rotate(720deg);opacity:0}}
-@keyframes copied{0%{opacity:0;transform:translateY(4px)}20%{opacity:1;transform:translateY(0)}80%{opacity:1}100%{opacity:0}}
 `;
 
-function FlyingTile({ word, fr, fc, tr, tc, cs, color }) {
+// One word of a solved group flipping from its grid spot (fromX/fromY, px
+// from the board's top-left) into the solved row (toX/toY), staggered by delay.
+function FlyingTile({ word, fromX, fromY, toX, toY, delay, color }) {
   const ref = useRef(null);
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
-    const fromX = fc * (cs + TILE_GAP), fromY = fr * (cs + TILE_GAP);
-    const toX = tc * (cs + TILE_GAP), toY = tr * (cs + TILE_GAP);
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     el.animate([
       { transform: `translate(${fromX}px,${fromY}px) rotateY(0deg) scale(1)`, offset: 0 },
       { transform: `translate(${fromX}px,${fromY}px) rotateY(90deg) scale(0.85)`, offset: 0.3 },
       { transform: `translate(${toX}px,${toY}px) rotateY(-90deg) scale(0.85)`, offset: 0.6 },
       { transform: `translate(${toX}px,${toY}px) rotateY(0deg) scale(1)`, offset: 1 },
-    ], { duration: 700, easing: 'cubic-bezier(0.4, 0, 0.2, 1)', fill: 'forwards' });
-  }, [fr, fc, tr, tc, cs]);
+    ], { duration: reduced ? 0 : 700, delay: reduced ? 0 : delay, easing: 'cubic-bezier(0.4, 0, 0.2, 1)', fill: 'both' });
+  }, [fromX, fromY, toX, toY, delay]);
 
   return (
     <div ref={ref} style={{
       position: 'absolute', left: 0, top: 0,
+      transform: `translate(${fromX}px,${fromY}px)`,
       width: '23%', height: 56,
       background: color, borderRadius: 8,
       display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -698,7 +700,6 @@ function LinkBoard({ puzzleDate, streak }) {
   const [message, setMessage] = useState(null);
   const [guessHistory, setGuessHistory] = useState([]);
   const [confetti, setConfetti] = useState([]);
-  const [copied, setCopied] = useState(false);
   const [oneAway, setOneAway] = useState(false);
   const [flyingTiles, setFlyingTiles] = useState([]);
   const [animating, setAnimating] = useState(false);
@@ -765,7 +766,7 @@ function LinkBoard({ puzzleDate, streak }) {
         const fromX = fromRect ? fromRect.left - containerRect.left : 0;
         const fromY = fromRect ? fromRect.top - containerRect.top : 0;
         const toX = ti * (containerRect.width / 4);
-        return { word, fromX, fromY, toX, toY, color: TIER[catIdx] };
+        return { word, fromX, fromY, toX, toY, delay: ti * 60, color: TIER[catIdx] };
       });
 
       setHiddenWords([...selected]);
@@ -805,14 +806,10 @@ function LinkBoard({ puzzleDate, streak }) {
     }
   };
 
-  const handleShare = async () => {
+  const buildShareText = () => {
     const lines = guessHistory.map(g => g.correct ? '🟩🟩🟩🟩' : '🟥🟥🟥🟥');
     const result = won ? `Solved in ${guessHistory.length} guess${guessHistory.length !== 1 ? 'es' : ''}!` : `Could not solve today's Link`;
-    const text = `LINK by Streakle 🔥 — ${formatDate(puzzleDate)}\n${result}\n${lines.join('\n')}\n\nPlay at: playstreakle.com/link`;
-    try {
-      if (navigator.share) await navigator.share({ text });
-      else { await navigator.clipboard.writeText(text); setCopied(true); setTimeout(() => setCopied(false), 2000); }
-    } catch { await navigator.clipboard.writeText(text); setCopied(true); setTimeout(() => setCopied(false), 2000); }
+    return `LINK by Streakle 🔥 — ${formatDate(puzzleDate)}\n${result}\n${lines.join('\n')}\n\nPlay at: playstreakle.com/link`;
   };
 
   return (
@@ -875,7 +872,7 @@ function LinkBoard({ puzzleDate, streak }) {
         </div>
 
         {flyingTiles.map((ft, i) => (
-          <FlyingTile key={`${ft.word}-${i}`} {...ft} cs={56} color={ft.color} />
+          <FlyingTile key={`${ft.word}-${i}`} {...ft} />
         ))}
       </div>
 
@@ -897,37 +894,21 @@ function LinkBoard({ puzzleDate, streak }) {
       )}
 
       {won && (
-        <div style={{ textAlign: 'center', animation: 'slideUp 0.5s ease' }}>
-          <div style={{ fontSize: 22, fontWeight: 700, color: 'var(--success)', marginBottom: 6 }}>🎉 Solved!</div>
-          <div style={{ fontSize: 13, color: 'var(--text-2)', marginBottom: 16 }}>{guessHistory.length} guess{guessHistory.length !== 1 ? 'es' : ''} · {lives} life{lives !== 1 ? 's' : ''} remaining</div>
-          <div style={{ position: 'relative', display: 'inline-block' }}>
-            <button onClick={handleShare} style={{ background: 'var(--gold)', color: 'var(--bg)', border: 'none', borderRadius: 8, padding: '10px 28px', fontSize: 15, fontWeight: 700, cursor: 'pointer' }}
-              onMouseOver={e => e.currentTarget.style.background = 'var(--gold-hover)'}
-              onMouseOut={e => e.currentTarget.style.background = 'var(--gold)'}>
-              📋 Share result
-            </button>
-            {copied && <div style={{ position: 'absolute', top: -32, left: '50%', transform: 'translateX(-50%)', background: 'var(--correct-deep)', color: 'var(--ink)', fontSize: 12, fontWeight: 600, padding: '4px 12px', borderRadius: 6, whiteSpace: 'nowrap', animation: 'copied 2s ease forwards', pointerEvents: 'none' }}>Copied!</div>}
-          </div>
-        </div>
+        <ResultCard game="link" outcome="won" title="🎉 Solved!" shareText={buildShareText}>
+          <div className="rc-detail">{guessHistory.length} guess{guessHistory.length !== 1 ? 'es' : ''} · {lives} {lives === 1 ? 'life' : 'lives'} remaining</div>
+        </ResultCard>
       )}
 
       {gameOver && !won && (
-        <div style={{ textAlign: 'center', animation: 'slideUp 0.4s ease', width: '100%', maxWidth: 500, padding: '0 12px', boxSizing: 'border-box' }}>
-          <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--danger)', marginBottom: 8 }}>Game over!</div>
-          <div style={{ fontSize: 13, color: 'var(--text-2)', marginBottom: 10 }}>The categories were:</div>
+        <ResultCard game="link" outcome="lost" title="Game over!" shareText={buildShareText}>
+          <div className="rc-detail" style={{ marginBottom: 10 }}>The categories were:</div>
           {puzzle.categories.map((cat, i) => !solved.includes(i) && (
             <div key={i} style={{ background: TIER[i], borderRadius: 8, padding: '8px 16px', marginBottom: 6, textAlign: 'center' }}>
               <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(0,0,0,0.75)', textTransform: 'uppercase' }}>{cat.label}</div>
               <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--bg)' }}>{cat.words.join(', ')}</div>
             </div>
           ))}
-          <div style={{ position: 'relative', display: 'inline-block', marginTop: 12 }}>
-            <button onClick={handleShare} style={{ background: 'var(--surface)', color: 'var(--gold)', border: '1px solid var(--border)', borderRadius: 8, padding: '8px 20px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
-              📋 Share result
-            </button>
-            {copied && <div style={{ position: 'absolute', top: -32, left: '50%', transform: 'translateX(-50%)', background: 'var(--correct-deep)', color: 'var(--ink)', fontSize: 12, fontWeight: 600, padding: '4px 12px', borderRadius: 6, whiteSpace: 'nowrap', animation: 'copied 2s ease forwards', pointerEvents: 'none' }}>Copied!</div>}
-          </div>
-        </div>
+        </ResultCard>
       )}
     </>
   );

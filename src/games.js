@@ -1,8 +1,17 @@
-// The daily games, in Home's display order. `color` is the game's deep accent
-// (Home's row stripe, badge tint); `accent` its light text tone on dark.
+// Home's sections, in order; each game names its group.
+export const GROUPS = [
+  { key: 'word', label: 'Word games' },
+  { key: 'logic', label: 'Logic' },
+  { key: 'sports', label: 'Sports trivia' },
+]
+
+// The daily games, in Home's display order: grouped, newest first within a
+// group. `color` is the game's deep accent (Home's row stripe, icon and badge
+// tint); `accent` its light tone on dark.
 export const GAMES = [
   {
     key: 'scramble',
+    group: 'word',
     path: '/scramble',
     title: 'SCRAMBLE',
     emoji: '🔀',
@@ -13,6 +22,7 @@ export const GAMES = [
   },
   {
     key: 'weave',
+    group: 'word',
     path: '/weave',
     title: 'WEAVE',
     emoji: '🧶',
@@ -22,47 +32,8 @@ export const GAMES = [
     badge: 'Untangle It',
   },
   {
-    key: 'mines',
-    path: '/mines',
-    title: 'MINES',
-    emoji: '💣',
-    description: 'Sweep three no-guess minefields — Easy, Medium, Hard. Logic only, never luck.',
-    color: '#9A3412',
-    accent: '#FDBA74',
-    badge: 'Sweep It',
-  },
-  {
-    key: 'faceoff',
-    path: '/faceoff',
-    title: 'FACEOFF',
-    emoji: '🏒',
-    description: 'Test your NHL knowledge. Match players to teams and awards in the grid.',
-    color: '#0C4A6E',
-    accent: '#7DD3FC',
-    badge: 'Know It',
-  },
-  {
-    key: 'gridiron',
-    path: '/gridiron',
-    title: 'GRIDIRON',
-    emoji: '🏈',
-    description: 'Test your NFL knowledge. Match players to teams and awards in the grid.',
-    color: '#991B1B',
-    accent: '#FCA5A5',
-    badge: 'Know It',
-  },
-  {
-    key: 'knockout',
-    path: '/knockout',
-    title: 'KNOCKOUT',
-    emoji: '🥊',
-    description: 'Name MMA fighters by promotion, weight class, and achievement.',
-    color: '#7F1D1D',
-    accent: '#FCA5A5',
-    badge: 'Know It',
-  },
-  {
     key: 'words',
+    group: 'word',
     path: '/words',
     title: 'WORDS',
     emoji: '🔤',
@@ -73,6 +44,7 @@ export const GAMES = [
   },
   {
     key: 'link',
+    group: 'word',
     path: '/link',
     title: 'LINK',
     emoji: '🔗',
@@ -82,7 +54,19 @@ export const GAMES = [
     badge: 'Group It',
   },
   {
+    key: 'mines',
+    group: 'logic',
+    path: '/mines',
+    title: 'MINES',
+    emoji: '💣',
+    description: 'Sweep three no-guess minefields — Easy, Medium, Hard. Logic only, never luck.',
+    color: '#9A3412',
+    accent: '#FDBA74',
+    badge: 'Sweep It',
+  },
+  {
     key: 'nums',
+    group: 'logic',
     path: '/nums',
     title: 'NUMS',
     emoji: '🔢',
@@ -91,9 +75,48 @@ export const GAMES = [
     accent: '#93C5FD',
     badge: 'Swap It',
   },
+  {
+    key: 'faceoff',
+    group: 'sports',
+    path: '/faceoff',
+    title: 'FACEOFF',
+    emoji: '🏒',
+    description: 'Test your NHL knowledge. Match players to teams and awards in the grid.',
+    color: '#0C4A6E',
+    accent: '#7DD3FC',
+    badge: 'Know It',
+  },
+  {
+    key: 'gridiron',
+    group: 'sports',
+    path: '/gridiron',
+    title: 'GRIDIRON',
+    emoji: '🏈',
+    description: 'Test your NFL knowledge. Match players to teams and awards in the grid.',
+    color: '#991B1B',
+    accent: '#FCA5A5',
+    badge: 'Know It',
+  },
+  {
+    key: 'knockout',
+    group: 'sports',
+    path: '/knockout',
+    title: 'KNOCKOUT',
+    emoji: '🥊',
+    description: 'Name MMA fighters by promotion, weight class, and achievement.',
+    color: '#7F1D1D',
+    accent: '#FCA5A5',
+    badge: 'Know It',
+  },
 ]
 
 export const GAME_BY_KEY = Object.fromEntries(GAMES.map(g => [g.key, g]))
+
+/** The game after `key` in Home's order, wrapping round — a result card's "Next" link. */
+export function nextGame(key) {
+  const i = GAMES.findIndex(g => g.key === key)
+  return GAMES[(i + 1) % GAMES.length]
+}
 
 /** True for a game page's path: '/weave', '/weave/', '/Weave' (routes match case-insensitively). */
 export function isGamePath(pathname) {

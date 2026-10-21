@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, useMemo } from "react";
 import Archive from './Archive'
 import GameShell from "./GameShell";
+import ResultCard from './ResultCard';
 import { saveResult } from './saveResult';
 import { useStreak } from './useStreak';
 import AwardIcon from './AwardIcon';
@@ -600,7 +601,6 @@ const css = `
 @keyframes slideUp{from{transform:translateY(16px);opacity:0}to{transform:translateY(0);opacity:1}}
 @keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-5px)}40%{transform:translateX(5px)}60%{transform:translateX(-4px)}80%{transform:translateX(4px)}}
 @keyframes confetti{0%{transform:translateY(0) rotate(0deg);opacity:1}100%{transform:translateY(130px) rotate(720deg);opacity:0}}
-@keyframes copied{0%{opacity:0}20%{opacity:1}80%{opacity:1}100%{opacity:0}}
 @keyframes cellReveal{0%{transform:scale(0.85);opacity:0}100%{transform:scale(1);opacity:1}}
 .faceoff-grid{display:grid;grid-template-columns:90px repeat(3,110px);grid-template-rows:70px repeat(3,100px);gap:4px;padding:0 12px}
 @media(max-width:480px){.faceoff-grid{grid-template-columns:72px repeat(3,88px);grid-template-rows:60px repeat(3,86px)}}
@@ -654,7 +654,6 @@ function FaceoffBoard({ puzzleDate, streak }) {
   const [won, setWon] = useState(false);
   const [gameOver, setGameOver] = useState(false);
   const [confetti, setConfetti] = useState([]);
-  const [copied, setCopied] = useState(false);
   const [totalScore, setTotalScore] = useState(0);
   const inputRef = useRef(null);
 
@@ -736,13 +735,9 @@ function FaceoffBoard({ puzzleDate, streak }) {
     }
   };
 
-  const handleShare = async () => {
+  const buildShareText = () => {
     const grid = Array.from({length:3},(_,r)=>Array.from({length:3},(_,c)=>cells[`${r}-${c}`]?'✅':'⬜').join('')).join('\n');
-    const text = `FACEOFF by Streakle 🏒 — ${formatDate(puzzleDate)}\nScore: ${totalScore} | ${Object.keys(cells).length}/9 cells\n${grid}\n\nPlay at: playstreakle.com/faceoff`;
-    try {
-      if (navigator.share) await navigator.share({text});
-      else { await navigator.clipboard.writeText(text); setCopied(true); setTimeout(()=>setCopied(false),2000); }
-    } catch { await navigator.clipboard.writeText(text); setCopied(true); setTimeout(()=>setCopied(false),2000); }
+    return `FACEOFF by Streakle 🏒 — ${formatDate(puzzleDate)}\nScore: ${totalScore} | ${Object.keys(cells).length}/9 cells\n${grid}\n\nPlay at: playstreakle.com/faceoff`;
   };
 
   return (
@@ -856,20 +851,10 @@ function FaceoffBoard({ puzzleDate, streak }) {
       )}
 
       {(won||gameOver)&&(
-        <div style={{textAlign:'center',marginTop:20,animation:'slideUp 0.5s ease'}}>
-          {won&&<div style={{fontSize:22,fontWeight:700,color:'var(--success)',marginBottom:6}}>🎉 Board Complete!</div>}
-          {gameOver&&!won&&<div style={{fontSize:20,fontWeight:700,color:'var(--danger)',marginBottom:6}}>Game Over!</div>}
-          <div style={{fontSize:16,color:'var(--gold)',fontWeight:700,marginBottom:4}}>Final Score: {totalScore} / {totalPossible}</div>
-          <div style={{fontSize:13,color:'var(--text-2)',marginBottom:16}}>{Object.keys(cells).length}/9 cells filled</div>
-          <div style={{position:'relative',display:'inline-block'}}>
-            <button onClick={handleShare} style={{background:'var(--gold)',color:'var(--bg)',border:'none',borderRadius:8,padding:'10px 28px',fontSize:15,fontWeight:700,cursor:'pointer'}}
-              onMouseOver={e=>e.currentTarget.style.background='var(--gold-hover)'}
-              onMouseOut={e=>e.currentTarget.style.background='var(--gold)'}>
-              📋 Share result
-            </button>
-            {copied&&<div style={{position:'absolute',top:-32,left:'50%',transform:'translateX(-50%)',background:'var(--correct-deep)',color:'var(--ink)',fontSize:12,fontWeight:600,padding:'4px 12px',borderRadius:6,whiteSpace:'nowrap',animation:'copied 2s ease forwards',pointerEvents:'none'}}>Copied!</div>}
-          </div>
-        </div>
+        <ResultCard game="faceoff" outcome={won?'won':'lost'} title={won?'🎉 Board Complete!':'Game Over!'} shareText={buildShareText}>
+          <div className="rc-headline">Final Score: {totalScore} / {totalPossible}</div>
+          <div className="rc-detail">{Object.keys(cells).length}/9 cells filled</div>
+        </ResultCard>
       )}
     </>
   );

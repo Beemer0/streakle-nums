@@ -93,3 +93,24 @@ describe('GameShell', () => {
     expect(onToggleHc).toHaveBeenCalledOnce()
   })
 })
+
+describe('GameLoading', () => {
+  it('shows the game\'s header with today\'s date and its actions off while the game loads', async () => {
+    const { GameLoading } = await import('./GameShell.jsx')
+    host = document.createElement('div')
+    document.body.appendChild(host)
+    root = createRoot(host)
+    await act(async () => {
+      root.render(
+        <AuthContext.Provider value={{ user: null, signOut: () => {} }}>
+          <GameLoading game="mines" />
+        </AuthContext.Provider>
+      )
+    })
+    expect(host.querySelector('h1').textContent).toBe('MINES')
+    expect(host.querySelector('.gs-date').textContent).toBe(new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }))
+    expect(button('How to play').disabled).toBe(true)
+    expect(button('Archive').disabled).toBe(true)
+    expect(host.querySelector('[role="status"]').getAttribute('aria-label')).toBe('Loading the puzzle')
+  })
+})

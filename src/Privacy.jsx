@@ -39,7 +39,7 @@ export default function Privacy() {
       {/* ENGLISH */}
       <h2 style={h2Style}>🇨🇦 English</h2>
 
-      <p>Welcome to <b>Nums by Streakle</b> ("we", "us", or "our"), operated at playstreakle.com. This Privacy Policy explains how we collect, use, and protect your information when you use our website and games.</p>
+      <p>Welcome to <b>Streakle</b> ("we", "us", or "our"), operated at playstreakle.com. This Privacy Policy explains how we collect, use, and protect your information when you use our website and games.</p>
 
       <h3 style={h3Style}>1. Information We Collect</h3>
       <p><b>a) Information You Provide</b><br/>When you create an account or subscribe, we may collect your name, email address, payment information (processed securely by Stripe — we never store your card details directly), and username or display name.</p>
@@ -86,7 +86,7 @@ export default function Privacy() {
       {/* FRENCH */}
       <h2 style={h2Style}>🇫🇷 Français</h2>
 
-      <p>Bienvenue sur <b>Nums by Streakle</b> (« nous »), accessible à playstreakle.com. Cette politique de confidentialité explique comment nous collectons, utilisons et protégeons vos informations lorsque vous utilisez notre site et nos jeux.</p>
+      <p>Bienvenue sur <b>Streakle</b> (« nous »), accessible à playstreakle.com. Cette politique de confidentialité explique comment nous collectons, utilisons et protégeons vos informations lorsque vous utilisez notre site et nos jeux.</p>
 
       <h3 style={h3Style}>1. Informations que nous collectons</h3>
       <p><b>a) Informations que vous nous fournissez</b><br/>Lors de la création d'un compte ou d'un abonnement, nous pouvons collecter votre nom, votre adresse courriel, vos informations de paiement (traitées de manière sécurisée par Stripe — nous ne stockons jamais directement vos coordonnées bancaires), ainsi que votre nom d'utilisateur ou pseudonyme.</p>

@@ -4,7 +4,8 @@ import { supabase } from './supabase'
 import UserMenu from './UserMenu'
 import { calcStreak } from './streak'
 import { useSeo, PAGE_SEO } from './seo'
-import { GAMES } from './games'
+import { GAMES, GROUPS } from './games'
+import GameIcon from './GameIcon'
 
 function calcStreaks(allResults) {
   const byGame = {}
@@ -23,8 +24,14 @@ export default function Home() {
   const { user } = useAuth()
   const [todayResults, setTodayResults] = useState({})
   const [streaks, setStreaks] = useState({})
+  // Whose results todayResults/streaks hold: they only show for that player,
+  // never before they arrive, after a failed read or once signed out.
+  const [resultsFor, setResultsFor] = useState(null)
 
   useSeo(PAGE_SEO.home)
+
+  const hasResults = !!user && resultsFor === user.id
+  const doneToday = GAMES.filter(g => todayResults[g.key] === true).length
 
   useEffect(() => {
     if (!user) return
@@ -40,6 +47,7 @@ export default function Home() {
         setTodayResults(map)
         const completed = data.filter(r => r.completed)
         setStreaks(calcStreaks(completed))
+        setResultsFor(user.id)
       })
   }, [user])
 
@@ -54,6 +62,7 @@ export default function Home() {
         @keyframes fadeIn { from { opacity:0; transform:translateY(10px) } to { opacity:1; transform:translateY(0) } }
         @keyframes pulse  { 0%,100%{opacity:1} 50%{opacity:0.4} }
         .game-row { text-decoration: none; display: flex; align-items: center; transition: background 0.15s; }
+        .home-group { font-size: 11px; font-weight: 700; letter-spacing: 2.5px; text-transform: uppercase; color: var(--muted); margin: 0 0 10px 4px; }
         .game-row:hover { background: var(--surface-raised) !important; }
         .game-row:hover .game-row-cta { background: var(--gold-hover) !important; }
         @media (max-width: 520px) {
@@ -64,7 +73,9 @@ export default function Home() {
             grid-template-areas: 'icon name cta' 'icon desc status';
             align-items: center;
           }
-          .game-icon { grid-area: icon; align-self: start; font-size: 24px !important; width: 32px !important; }
+          .game-icon { grid-area: icon; align-self: start; }
+          .game-icon-tile { width: 32px !important; height: 32px !important; border-radius: 9px !important; }
+          .game-icon-tile svg { width: 19px; height: 19px; }
           .game-name { grid-area: name; width: auto !important; }
           .game-desc { grid-area: desc; font-size: 12px !important; line-height: 1.45 !important; }
           .game-status { grid-area: status; align-self: start; min-width: 0 !important; }
@@ -103,109 +114,51 @@ export default function Home() {
         </div>
       </div>
 
-      {/* ── Live badge ── */}
+      {/* ── Today: progress for players, the daily promise for guests ── */}
       <div className="home-badge" style={{
         background: 'rgba(var(--gold-rgb),0.07)',
         border: '1px solid rgba(var(--gold-rgb),0.22)',
         borderRadius: 20, padding: '6px 16px',
         fontSize: 12, color: 'var(--gold)', fontWeight: 600,
-        marginBottom: 52, animation: 'fadeIn 0.65s ease',
-        display: 'flex', alignItems: 'center', gap: 7,
+        marginBottom: 44, animation: 'fadeIn 0.65s ease',
+        display: 'flex', alignItems: 'center', gap: 8,
       }}>
-        <span style={{
-          display: 'inline-block', width: 7, height: 7,
-          borderRadius: '50%', background: 'var(--gold)',
-          animation: 'pulse 2s infinite',
-        }} />
-        New puzzles every day
+        {hasResults ? (
+          <>
+            <span>{doneToday} of {GAMES.length} done today</span>
+            <span aria-hidden="true" style={{ width: 64, height: 5, borderRadius: 3, background: 'rgba(var(--gold-rgb),0.15)', overflow: 'hidden' }}>
+              <span style={{ display: 'block', height: '100%', width: `${(doneToday / GAMES.length) * 100}%`, background: 'var(--gold)', borderRadius: 3, transition: 'width 0.6s ease' }} />
+            </span>
+          </>
+        ) : (
+          <>
+            <span style={{
+              display: 'inline-block', width: 7, height: 7,
+              borderRadius: '50%', background: 'var(--gold)',
+              animation: 'pulse 2s infinite',
+            }} />
+            New puzzles every day
+          </>
+        )}
       </div>
 
-      {/* ── Game list ── */}
-      <nav aria-label="Games" style={{
-        width: '100%', maxWidth: 820,
-        border: '1px solid var(--border)',
-        borderRadius: 12, overflow: 'hidden',
-        marginBottom: 60,
-        boxShadow: '0 4px 24px rgba(0,0,0,0.35)',
-      }}>
-        {GAMES.map((g, i) => {
-          const played    = g.key in todayResults
-          const completed = todayResults[g.key] === true
-          const failed    = played && !completed
-
+      {/* ── Game list, by group ── */}
+      <nav aria-label="Games" style={{ width: '100%', maxWidth: 820, marginBottom: 60 }}>
+        {GROUPS.map(group => {
+          const games = GAMES.filter(g => g.group === group.key)
           return (
-            <a
-              key={g.path}
-              href={g.path}
-              className="game-row"
-              style={{
-                background: 'var(--surface)',
-                borderLeft: `4px solid ${g.color}`,
-                borderBottom: i < GAMES.length - 1 ? '1px solid var(--border)' : 'none',
-                padding: '18px 24px',
-                gap: 20,
-                animation: `fadeIn 0.4s ${i * 70}ms both ease`,
-              }}
-            >
-              {/* Emoji */}
-              <div className="game-icon" style={{ fontSize: 28, flexShrink: 0, width: 36, textAlign: 'center' }}>{g.emoji}</div>
-
-              {/* Name + badge */}
-              <div className="game-name" style={{ width: 148, flexShrink: 0 }}>
-                <div className="game-name-title" style={{
-                  fontFamily: 'var(--font-display)',
-                  fontSize: 28, fontWeight: 800, letterSpacing: 1.5,
-                  color: 'var(--ink)', lineHeight: 1,
-                }}>{g.title}</div>
-                <div className="game-badge" style={{
-                  marginTop: 6,
-                  display: 'inline-block',
-                  background: `${g.color}18`,
-                  border: `1px solid ${g.color}40`,
-                  borderRadius: 4, padding: '2px 8px',
-                  fontSize: 9, fontWeight: 700, color: g.accent,
-                  textTransform: 'uppercase', letterSpacing: 1.5, whiteSpace: 'nowrap',
-                }}>{g.badge}</div>
+            <section key={group.key} aria-labelledby={`group-${group.key}`} style={{ marginBottom: 22 }}>
+              <h2 id={`group-${group.key}`} className="home-group">{group.label}</h2>
+              <div style={{
+                border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden',
+                boxShadow: '0 4px 24px rgba(0,0,0,0.35)',
+              }}>
+                {games.map((g, i) => (
+                  <GameRow key={g.key} game={g} isLast={i === games.length - 1} delayMs={GAMES.indexOf(g) * 60}
+                    result={hasResults ? todayResults[g.key] : undefined} streak={hasResults ? streaks[g.key] : 0} />
+                ))}
               </div>
-
-              {/* Description */}
-              <div className="game-desc" style={{
-                flex: 1,
-                fontSize: 13, color: 'var(--muted)', lineHeight: 1.55,
-              }}>{g.description}</div>
-
-              {/* Status + streak — only rendered when there's something to show */}
-              {user && (completed || failed || streaks[g.key] > 0) && (
-                <div className="game-status" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4, flexShrink: 0, minWidth: 52 }}>
-                  {completed && (
-                    <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--success-text)', letterSpacing: 0.3 }}>✓ Done</div>
-                  )}
-                  {failed && (
-                    <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--danger-text)', letterSpacing: 0.3 }}>✗ Tried</div>
-                  )}
-                  {streaks[g.key] > 0 && (
-                    <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--gold)' }}>🔥 {streaks[g.key]}</div>
-                  )}
-                </div>
-              )}
-
-              {/* CTA */}
-              <div
-                className={completed ? 'game-cta' : 'game-cta game-row-cta'}
-                style={{
-                  flexShrink: 0,
-                  background: completed ? 'rgba(var(--success-text-rgb),0.08)' : failed ? 'transparent' : 'var(--gold)',
-                  border: completed ? '1px solid rgba(var(--success-text-rgb),0.22)' : failed ? '1px solid rgba(var(--danger-text-rgb),0.3)' : 'none',
-                  borderRadius: 20, padding: '7px 16px',
-                  fontSize: 12, fontWeight: 700, letterSpacing: 0.4,
-                  color: completed ? 'var(--success-text)' : failed ? 'var(--danger-text)' : 'var(--bg)',
-                  whiteSpace: 'nowrap',
-                  transition: 'background 0.15s',
-                }}
-              >
-                {completed ? 'Play Again →' : failed ? 'Archive →' : 'Play →'}
-              </div>
-            </a>
+            </section>
           )
         })}
       </nav>
@@ -223,5 +176,93 @@ export default function Home() {
         <div style={{ marginTop: 6, color: 'var(--muted)' }}>© 2026 Streakle. All rights reserved.</div>
       </footer>
     </div>
+  )
+}
+
+/**
+ * One game on Home: icon, name + badge, description, today's status and streak
+ * (players only), and the call to action.
+ *
+ * @param {object} props
+ * @param {object} props.game - a GAMES entry
+ * @param {boolean} props.isLast - last row of its group (no bottom rule)
+ * @param {number} props.delayMs - entrance stagger
+ * @param {boolean} [props.result] - today's result: true done, false tried, undefined unplayed
+ * @param {number} [props.streak]
+ */
+function GameRow({ game: g, isLast, delayMs, result, streak = 0 }) {
+  const completed = result === true
+  const failed    = result !== undefined && !completed
+  return (
+    <a
+      href={g.path}
+      className="game-row"
+      style={{
+        background: 'var(--surface)',
+        borderLeft: `4px solid ${g.color}`,
+        borderBottom: isLast ? 'none' : '1px solid var(--border)',
+        padding: '18px 24px',
+        gap: 20,
+        animation: `fadeIn 0.4s ${delayMs}ms both ease`,
+      }}
+    >
+      <div className="game-icon"><GameIcon game={g} /></div>
+
+      {/* Name + badge */}
+      <div className="game-name" style={{ width: 148, flexShrink: 0 }}>
+        <div className="game-name-title" style={{
+          fontFamily: 'var(--font-display)',
+          fontSize: 28, fontWeight: 800, letterSpacing: 1.5,
+          color: 'var(--ink)', lineHeight: 1,
+        }}>{g.title}</div>
+        <div className="game-badge" style={{
+          marginTop: 6,
+          display: 'inline-block',
+          background: `${g.color}18`,
+          border: `1px solid ${g.color}40`,
+          borderRadius: 4, padding: '2px 8px',
+          fontSize: 9, fontWeight: 700, color: g.accent,
+          textTransform: 'uppercase', letterSpacing: 1.5, whiteSpace: 'nowrap',
+        }}>{g.badge}</div>
+      </div>
+
+      {/* Description */}
+      <div className="game-desc" style={{
+        flex: 1,
+        fontSize: 13, color: 'var(--muted)', lineHeight: 1.55,
+      }}>{g.description}</div>
+
+      {/* Status + streak — only rendered when there's something to show */}
+      {(completed || failed || streak > 0) && (
+        <div className="game-status" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4, flexShrink: 0, minWidth: 52 }}>
+          {completed && (
+            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--success-text)', letterSpacing: 0.3 }}>✓ Done</div>
+          )}
+          {failed && (
+            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--danger-text)', letterSpacing: 0.3 }}>✗ Tried</div>
+          )}
+          {streak > 0 && (
+            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--gold)' }}>🔥 {streak}</div>
+          )}
+        </div>
+      )}
+
+      {/* CTA */}
+      <div
+        className={completed ? 'game-cta' : 'game-cta game-row-cta'}
+        style={{
+          flexShrink: 0,
+          background: completed ? 'rgba(var(--success-text-rgb),0.08)' : failed ? 'transparent' : 'var(--gold)',
+          border: completed ? '1px solid rgba(var(--success-text-rgb),0.22)' : failed ? '1px solid rgba(var(--danger-text-rgb),0.3)' : 'none',
+          borderRadius: 20, padding: '7px 16px',
+          fontSize: 12, fontWeight: 700, letterSpacing: 0.4,
+          color: completed ? 'var(--success-text)' : failed ? 'var(--danger-text)' : 'var(--bg)',
+          whiteSpace: 'nowrap',
+          transition: 'background 0.15s',
+        }}
+      >
+        {completed ? 'Play Again →' : failed ? 'Archive →' : 'Play →'}
+      </div>
+    </a>
   )
 }

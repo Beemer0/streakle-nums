@@ -1,6 +1,7 @@
 import { useState, useEffect, useLayoutEffect, useMemo, useRef } from 'react'
 import Archive from './Archive'
 import GameShell from './GameShell'
+import ResultCard from './ResultCard'
 import { saveResult } from './saveResult'
 import { useStreak } from './useStreak'
 import { useSeo, PAGE_SEO } from './seo'
@@ -8,7 +9,7 @@ import {
   SIZE, MAX_SWAPS, PAR, ACTIVE, HOLE,
   generatePuzzle, colours, swap, isActive, shareGrid,
 } from './weave/engine'
-import { GOLD, CARD, BORDER, INK } from './theme'
+import { GOLD, INK } from './theme'
 
 const WIN = 'var(--success)', RED = 'var(--danger)'
 // Keyed by the engine's colour names (GREEN/YELLOW/GREY). Light tiles take
@@ -31,7 +32,6 @@ const DRAG_START_PX = { mouse: 6, pen: 6, touch: 10 } // fingers jitter more
 const css = `
 @keyframes wvConfetti{0%{transform:translateY(0) rotate(0deg);opacity:1}100%{transform:translateY(130px) rotate(720deg);opacity:0}}
 @keyframes wvSlideUp{from{transform:translateY(12px);opacity:0}to{transform:translateY(0);opacity:1}}
-@keyframes wvCopied{0%{opacity:0;transform:translateY(4px)}20%{opacity:1;transform:translateY(0)}80%{opacity:1}100%{opacity:0}}
 @keyframes wvStar{0%{transform:scale(0) rotate(-20deg);opacity:0}60%{transform:scale(1.3) rotate(5deg);opacity:1}100%{transform:scale(1);opacity:1}}
 .wv-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;width:min(400px,calc(100vw - 32px));touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
 .wv-tile{position:relative;aspect-ratio:1;min-width:0;padding:0;border:2px solid transparent;border-radius:8px;color:var(--ink);cursor:grab;container-type:inline-size;display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-weight:800;-webkit-tap-highlight-color:transparent;transition:background-color .2s,color .2s,border-color .15s,box-shadow .15s,translate .15s}
@@ -165,7 +165,6 @@ function WeaveBoard({ seedDate, isToday, palette, hc }) {
   const [drag, setDrag] = useState(null) // { from, dx, dy, over }
   const [live, setLive] = useState({ n: 0, text: '' })
   const [toast, setToast] = useState(null)
-  const [copied, setCopied] = useState(false)
   const [confetti, setConfetti] = useState([])
   const [focusIdx, setFocusIdx] = useState(ACTIVE[0]) // the board's one tab stop
 
@@ -324,17 +323,7 @@ function WeaveBoard({ seedDate, isToday, palette, hc }) {
     tileEls.current[r * SIZE + c]?.focus()
   }
 
-  const handleShare = async () => {
-    const text = buildShareText(g, solution, isToday ? null : seedDate, hc)
-    const flash = () => { setCopied(true); pushTimeout(() => setCopied(false), 2000) }
-    try {
-      if (navigator.share) await navigator.share({ text })
-      else { await navigator.clipboard.writeText(text); flash() }
-    } catch (err) {
-      if (err?.name === 'AbortError') return // the player closed the share sheet
-      try { await navigator.clipboard.writeText(text); flash() } catch { /* sharing unavailable */ }
-    }
-  }
+  const shareText = () => buildShareText(g, solution, isToday ? null : seedDate, hc)
 
   // ── Render ──
   const shown = phase === 'lost' ? solution : board
@@ -374,19 +363,8 @@ function WeaveBoard({ seedDate, isToday, palette, hc }) {
   else if (phase === 'lost') { status = 'Out of swaps'; statusColor = RED }
   else { status = `${plural(left, 'swap')} left`; if (left <= 3) statusColor = RED }
 
-  const shareBtn = (primary) => (
-    <div style={{ position: 'relative', display: 'inline-block', marginTop: 4 }}>
-      <button onClick={handleShare} style={primary
-        ? { background: GOLD, color: 'var(--bg)', border: 'none', borderRadius: 8, padding: '10px 28px', fontSize: 15, fontWeight: 700, cursor: 'pointer' }
-        : { background: CARD, color: GOLD, border: `1px solid ${BORDER}`, borderRadius: 8, padding: '8px 20px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
-        📋 Share result
-      </button>
-      {copied && <div style={{ position: 'absolute', top: -32, left: '50%', transform: 'translateX(-50%)', background: 'var(--correct-deep)', color: 'var(--ink)', fontSize: 12, fontWeight: 600, padding: '4px 12px', borderRadius: 6, whiteSpace: 'nowrap', animation: 'wvCopied 2s ease forwards', pointerEvents: 'none' }}>Copied!</div>}
-    </div>
-  )
-
   const wordList = (
-    <div style={{ fontSize: 13, color: 'var(--text-2)', margin: '6px 0 14px', letterSpacing: 1 }}>
+    <div className="rc-detail" style={{ letterSpacing: 1 }}>
       {pz.words.join(' · ')}
     </div>
   )
@@ -422,25 +400,21 @@ function WeaveBoard({ seedDate, isToday, palette, hc }) {
       )}
 
       {phase === 'won' && (
-        <div style={{ textAlign: 'center', marginTop: 18, animation: 'wvSlideUp 0.5s ease' }}>
-          <div style={{ fontSize: 22, fontWeight: 700, color: WIN, marginBottom: 6 }}>🎉 Woven!</div>
-          <div role="img" aria-label={`${plural(left, 'star')} out of ${MAX_STARS}`} style={{ display: 'flex', gap: 6, justifyContent: 'center', marginBottom: 4 }}>
+        <ResultCard game="weave" outcome="won" title="🎉 Woven!" shareText={shareText}>
+          <div role="img" aria-label={`${plural(left, 'star')} out of ${MAX_STARS}`} style={{ display: 'flex', gap: 6, justifyContent: 'center', marginBottom: 6 }}>
             {Array.from({ length: MAX_STARS }, (_, k) => (
               <span key={k} aria-hidden="true" style={{ fontSize: 24, color: k < left ? 'var(--star)' : 'var(--border-strong)', animation: k < left ? `wvStar 0.4s ${k * 100}ms both ease` : 'none' }}>★</span>
             ))}
           </div>
           {wordList}
-          {shareBtn(true)}
-        </div>
+        </ResultCard>
       )}
 
       {phase === 'lost' && (
-        <div style={{ textAlign: 'center', marginTop: 18, animation: 'wvSlideUp 0.4s ease' }}>
-          <div style={{ fontSize: 20, fontWeight: 700, color: RED, marginBottom: 4 }}>So close!</div>
-          <div style={{ fontSize: 13, color: 'var(--text-2)' }}>Here's how it weaves together:</div>
+        <ResultCard game="weave" outcome="lost" title="So close!" shareText={shareText}>
+          <div className="rc-detail">Here's how it weaves together:</div>
           {wordList}
-          {shareBtn(false)}
-        </div>
+        </ResultCard>
       )}
 
       {toast && <div className="wv-toast" role="presentation">{toast}</div>}

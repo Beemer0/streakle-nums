@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useMemo, useSyncExternalStore } from "react";
 import Archive from './Archive'
 import GameShell from "./GameShell";
+import ResultCard, { ShareButton } from './ResultCard';
 import { saveResult } from './saveResult';
 import { useStreak } from './useStreak';
 import { clickableProps } from './a11y';
@@ -101,7 +102,6 @@ const css = `
 @keyframes confetti{0%{transform:translateY(0) rotate(0deg);opacity:1}100%{transform:translateY(130px) rotate(720deg);opacity:0}}
 @keyframes fadeIn{from{opacity:0}to{opacity:1}}
 @keyframes slideUp{from{transform:translateY(12px);opacity:0}to{transform:translateY(0);opacity:1}}
-@keyframes copied{0%{opacity:0;transform:translateY(4px)}20%{opacity:1;transform:translateY(0)}80%{opacity:1}100%{opacity:0}}
 @keyframes dropPulse{0%{transform:scale(1)}50%{transform:scale(1.08)}100%{transform:scale(1)}}
 `;
 
@@ -159,7 +159,6 @@ function NumsBoard({ puzzleDate, streak }) {
   const [cellAnim, setCellAnim] = useState({});
   const [flyingTiles, setFlyingTiles] = useState([]);
   const [swapping, setSwapping] = useState(false);
-  const [copied, setCopied] = useState(false);
   const [dragOver, setDragOver] = useState(null); // [r,c] being hovered
   const [dragging, setDragging] = useState(null); // [r,c] being dragged
 
@@ -278,13 +277,7 @@ function NumsBoard({ puzzleDate, streak }) {
 
   const handleDragEnd = () => { setDragging(null); setDragOver(null); };
 
-  const handleShare = async () => {
-    const text = buildShareText(swaps, solved, puzzleDate);
-    try {
-      if (navigator.share) await navigator.share({ text });
-      else { await navigator.clipboard.writeText(text); setCopied(true); setTimeout(()=>setCopied(false),2000); }
-    } catch { await navigator.clipboard.writeText(text); setCopied(true); setTimeout(()=>setCopied(false),2000); }
-  };
+  const shareText = () => buildShareText(swaps, solved, puzzleDate);
 
   const gSize = 7*TOTAL - GAP;
   const starCount = Math.max(0, swaps);
@@ -375,8 +368,7 @@ function NumsBoard({ puzzleDate, streak }) {
       </div>
 
       {solved&&(
-        <div style={{textAlign:'center',animation:'slideUp 0.5s ease'}}>
-          <div style={{fontSize:22,fontWeight:700,color:'var(--success)',marginBottom:6}}>🎉 Solved!</div>
+        <ResultCard game="nums" outcome="won" title="🎉 Solved!" shareText={shareText}>
           {starCount>0&&(
             <div style={{display:'flex',gap:6,justifyContent:'center',marginBottom:8}}>
               {Array.from({length:starCount},(_,i)=>(
@@ -384,26 +376,15 @@ function NumsBoard({ puzzleDate, streak }) {
               ))}
             </div>
           )}
-          <div style={{fontSize:13,color:'var(--text-2)',marginBottom:16}}>
+          <div className="rc-detail">
             {20-swaps} swap{20-swaps!==1?'s':''} used{swaps<0?` (${Math.abs(swaps)} over budget)`:''}
           </div>
-          <div style={{position:'relative',display:'inline-block'}}>
-            <button onClick={handleShare} style={{background:'var(--gold)',color:'var(--bg)',border:'none',borderRadius:8,padding:'10px 28px',fontSize:15,fontWeight:700,cursor:'pointer',transition:'background 0.2s'}}
-              onMouseOver={e=>e.currentTarget.style.background='var(--gold-hover)'}
-              onMouseOut={e=>e.currentTarget.style.background='var(--gold)'}>
-              📋 Share result
-            </button>
-            {copied&&<div style={{position:'absolute',top:-32,left:'50%',transform:'translateX(-50%)',background:'var(--correct-deep)',color:'var(--ink)',fontSize:12,fontWeight:600,padding:'4px 12px',borderRadius:6,whiteSpace:'nowrap',animation:'copied 2s ease forwards',pointerEvents:'none'}}>Copied!</div>}
-          </div>
-        </div>
+        </ResultCard>
       )}
 
       {!solved&&swaps<0&&(
-        <div style={{position:'relative',display:'inline-block',marginTop:4}}>
-          <button onClick={handleShare} style={{background:'var(--surface)',color:'var(--gold)',border:'1px solid var(--border)',borderRadius:8,padding:'8px 20px',fontSize:13,fontWeight:600,cursor:'pointer'}}>
-            📋 Share progress
-          </button>
-          {copied&&<div style={{position:'absolute',top:-32,left:'50%',transform:'translateX(-50%)',background:'var(--correct-deep)',color:'var(--ink)',fontSize:12,fontWeight:600,padding:'4px 12px',borderRadius:6,whiteSpace:'nowrap',animation:'copied 2s ease forwards',pointerEvents:'none'}}>Copied!</div>}
+        <div style={{marginTop:4}}>
+          <ShareButton getText={shareText} label="Share progress" isPrimary={false} />
         </div>
       )}
 

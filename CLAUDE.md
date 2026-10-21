@@ -23,8 +23,15 @@ puzzles every day; signed-in players build streaks.
   Sign in / account menu), title, How to play / Archive, date, how-to panel
   (optional high-contrast switch), footer. A game passes `game` (its key in
   `games.js`), `date`, `howTo`, `onArchive` and renders only its board.
-  `games.js` is the registry (key, path, title, emoji, colours, badge) that
-  Home, GameShell and App's sign-in banner read.
+  `GameLoading` (same file) is each game route's Suspense fallback in
+  `App.jsx`: the real header plus a placeholder board while the chunk loads.
+  `games.js` is the registry (key, group, path, title, emoji, colours, badge;
+  `GROUPS` = Home's sections, `nextGame`) that Home, GameShell, ResultCard and
+  App's sign-in banner read. `GameIcon.jsx` draws each game's line icon.
+- `ResultCard.jsx` (+ `.css`) is every game's end-of-game card: outcome
+  title, the game's own stats as children (`.rc-headline` / `.rc-detail`),
+  then Share and "Next: GAME →". Its `ShareButton` owns the share-sheet →
+  clipboard → "Copied!" logic — games only pass a `shareText()` builder.
 - Shared: `AuthContext.js` (`useAuth`), `AuthProvider.jsx`, `supabase.js`, `saveResult.js`, `useStreak.js`,
   `streak.js`, `evaluate.js` (Wordle logic, tested), `a11y.js` (`clickableProps`),
   `AwardIcon.jsx`, `ErrorBoundary.jsx`, `validWords.txt` (~14.8k words).
