@@ -332,10 +332,20 @@ function WordsBoard({ puzzleDate, hc, palette }) {
   }, [gameOver, input, submitGuess]);
 
   useEffect(()=>{
-    const handler=(e)=>handleKey(e.key.toUpperCase());
+    const handler=(e)=>{
+      if (e.ctrlKey||e.metaKey||e.altKey) return;
+      // Enter on a focused link or switch belongs to that control, as does
+      // Enter on any other button while nothing is typed (same as Scramble).
+      if (e.key==='Enter'&&e.target instanceof HTMLElement) {
+        const control=e.target.closest('a[href], button, [role="button"], [role="switch"]');
+        if (control&&(!input.length||control.matches('a[href], [role="switch"]'))) return;
+        if (control) e.preventDefault();
+      }
+      handleKey(e.key.toUpperCase());
+    };
     window.addEventListener('keydown',handler);
     return ()=>window.removeEventListener('keydown',handler);
-  }, [handleKey]);
+  }, [handleKey, input.length]);
 
   const getLetter=(r,c)=>{
     if (guesses[r]) return guesses[r][c]||'';
