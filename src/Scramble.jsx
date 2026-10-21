@@ -35,7 +35,7 @@ const css = `
 .sc-guess{display:flex;gap:4px;justify-content:center;align-items:center;min-height:44px;margin:16px 0 4px}
 .sc-guess-tile{width:34px;height:40px;border-radius:6px;background:var(--surface-gold);border:2px solid var(--gold);display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-weight:800;font-size:22px;color:var(--ink)}
 .sc-rack{display:flex;gap:6px;justify-content:center;flex-wrap:nowrap;margin:10px 0 12px}
-.sc-tile{width:min(46px,calc((100vw - 68px) / 7));height:min(52px,calc((100vw - 68px) / 7 * 1.12));border-radius:8px;border:2px solid var(--gold);background:var(--surface-gold);color:var(--ink);font-family:var(--font-display);font-weight:800;font-size:min(28px,calc((100vw - 68px) / 7 * 0.6));cursor:pointer;padding:0;touch-action:manipulation;-webkit-tap-highlight-color:transparent;transition:transform .12s}
+.sc-tile{width:min(54px,calc((100vw - 68px) / 7));height:min(60px,calc((100vw - 68px) / 7 * 1.12));border-radius:8px;border:2px solid var(--gold);background:var(--surface-gold);color:var(--ink);font-family:var(--font-display);font-weight:800;font-size:min(32px,calc((100vw - 68px) / 7 * 0.6));cursor:pointer;padding:0;touch-action:manipulation;-webkit-tap-highlight-color:transparent;transition:transform .12s}
 .sc-tile:active{transform:scale(.94)}
 .sc-tile-used{opacity:.18;cursor:default}
 .sc-tile:focus-visible,.sc-ctl:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
@@ -409,7 +409,7 @@ function ScrambleBoard({ seedDate, isToday, palette, keysBlocked }) {
   // One chip per word, shortest first: its length, or ✓ once found.
   const chips = pz.words.map((w, i) => ({ i, len: w.length })).sort((a, b) => a.len - b.len || a.i - b.i)
   const remaining = chips.filter(ch => !found.includes(ch.i)).map(ch => ch.len)
-  const cellSize = `min(44px, calc((min(100vw, 400px) - 32px - ${(pz.cols - 1) * 4}px) / ${pz.cols}))`
+  const cellSize = `min(52px, calc((min(100vw, 480px) - 32px - ${(pz.cols - 1) * 4}px) / ${pz.cols}))`
 
   const shareBtn = (
     <div style={{ position: 'relative', display: 'inline-block', marginTop: 4 }}>

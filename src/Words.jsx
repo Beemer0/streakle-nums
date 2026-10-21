@@ -192,6 +192,13 @@ const css = `
 @keyframes slideUp{from{transform:translateY(20px);opacity:0}to{transform:translateY(0);opacity:1}}
 @keyframes confetti{0%{transform:translateY(0) rotate(0deg);opacity:1}100%{transform:translateY(130px) rotate(720deg);opacity:0}}
 @keyframes copied{0%{opacity:0;transform:translateY(4px)}20%{opacity:1;transform:translateY(0)}80%{opacity:1}100%{opacity:0}}
+.wd-board{--wd-tile:52px}
+.wd-kb{display:flex;flex-direction:column;gap:6px;width:min(500px,calc(100vw - 16px))}
+.wd-kb-row{display:flex;gap:5px}
+.wd-kb-row:nth-child(2)::before,.wd-kb-row:nth-child(2)::after{content:'';flex:.5 1 0}
+.wd-key{flex:1 1 0;min-width:0;height:50px;padding:0;border:none;border-radius:6px;font-size:14px;font-weight:700;cursor:pointer;user-select:none;transition:background .3s,color .3s}
+.wd-key-wide{flex:1.5 1 0;font-size:11px}
+@media (min-width:600px) and (min-height:800px){.wd-board{--wd-tile:60px}.wd-key{height:56px;font-size:15px}.wd-key-wide{font-size:12px}}
 `;
 
 export default function WordsGame() {
@@ -392,7 +399,7 @@ function WordsBoard({ puzzleDate, hc, palette }) {
         </div>
       )}
 
-      <div style={{display:'flex',flexDirection:'column',gap:6,marginBottom:20}}>
+      <div className="wd-board" style={{display:'flex',flexDirection:'column',gap:6,marginBottom:20}}>
         {Array.from({length:ROWS},(_,rowIdx)=>{
           const isShaking=shakeRow===rowIdx;
           const isBouncing=bounceRow===rowIdx;
@@ -404,7 +411,7 @@ function WordsBoard({ puzzleDate, hc, palette }) {
                 const colored=tileColor!==CLR.empty;
                 const revealing=!!revealingTiles[`${rowIdx}-${colIdx}`];
                 return (
-                  <div key={colIdx} style={{width:52,height:52,perspective:'200px',flexShrink:0,animation:isBouncing?`bounce 0.4s ${colIdx*80}ms ease`:'none'}}>
+                  <div key={colIdx} style={{width:'var(--wd-tile)',height:'var(--wd-tile)',perspective:'200px',flexShrink:0,animation:isBouncing?`bounce 0.4s ${colIdx*80}ms ease`:'none'}}>
                     <div style={{
                       width:'100%',height:'100%',position:'relative',
                       transformStyle:'preserve-3d',
@@ -417,7 +424,7 @@ function WordsBoard({ puzzleDate, hc, palette }) {
                         background:letter?CLR.active:CLR.empty,
                         border:`2px solid ${letter?'var(--gold)':'var(--border)'}`,
                         borderRadius:6,display:'flex',alignItems:'center',justifyContent:'center',
-                        fontSize:22,fontWeight:800,color:'var(--ink)',
+                        fontSize:'calc(var(--wd-tile) * 0.42)',fontWeight:800,color:'var(--ink)',
                         animation:letter&&!colored?'letterPop 0.1s ease':'none',
                       }}>{letter}</div>
                       <div style={{
@@ -426,7 +433,7 @@ function WordsBoard({ puzzleDate, hc, palette }) {
                         transform:'rotateY(180deg)',
                         background:tileColor,border:'2px solid transparent',
                         borderRadius:6,display:'flex',alignItems:'center',justifyContent:'center',
-                        fontSize:22,fontWeight:800,color:getTileInk(rowIdx,colIdx),
+                        fontSize:'calc(var(--wd-tile) * 0.42)',fontWeight:800,color:getTileInk(rowIdx,colIdx),
                       }}>{letter}</div>
                     </div>
                   </div>
@@ -460,21 +467,16 @@ function WordsBoard({ puzzleDate, hc, palette }) {
       )}
 
       {!gameOver&&(
-        <div style={{display:'flex',flexDirection:'column',gap:6,alignItems:'center'}}>
+        <div className="wd-kb">
           {KEYBOARD.map((row,ri)=>(
-            <div key={ri} style={{display:'flex',gap:5}}>
+            <div key={ri} className="wd-kb-row">
               {row.map(key=>{
                 const st=keyStates[key];
                 const wide=key==='ENTER'||key==='⌫';
                 return (
-                  <button key={key} onClick={()=>handleKey(key)} style={{
-                    minWidth:wide?56:34,height:46,
+                  <button key={key} onClick={()=>handleKey(key)} className={wide?'wd-key wd-key-wide':'wd-key'} style={{
                     background:st===ST.correct?palette.correct:st===ST.present?palette.present:st===ST.absent?palette.absent:'var(--key)',
-                    border:'none',borderRadius:6,
                     color:st===ST.absent?'var(--muted)':palette.ink[st]||'var(--ink)',
-                    fontSize:wide?11:14,fontWeight:700,
-                    cursor:'pointer',userSelect:'none',
-                    transition:'background 0.3s, color 0.3s',padding:'0 4px',
                   }}>{key}</button>
                 );
               })}

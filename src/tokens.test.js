@@ -15,11 +15,19 @@ describe('design tokens', () => {
     expect(sources.filter(([, text]) => bad.test(text)).map(([f]) => f)).toEqual([])
   })
 
-  it('are all defined in index.css', () => {
-    const defined = new Set([...css.matchAll(/^\s*(--[a-z0-9-]+):/gm)].map(m => m[1]))
-    const used = new Set(sources.flatMap(([, text]) => [...text.matchAll(/var\((--[a-z0-9-]+)\)/g)].map(m => m[1])))
-    // Scramble sets --sc-cell on its own board.
-    const missing = [...used].filter(t => !defined.has(t) && !t.startsWith('--sc-'))
-    expect(missing).toEqual([])
+  it('are all defined, in index.css or by the component that uses them', () => {
+    // A component may define a local size/colour variable in its <style>
+    // block (`.wd-board{--wd-tile:52px}`) or inline style (`'--sc-cell': …`);
+    // only that same file may then use it.
+    const definedIn = (text) => new Set([...text.matchAll(/['"]?(--[a-z0-9-]+)['"]?\s*:/g)].map(m => m[1]))
+    const global = definedIn(css)
+    const missing = sources.flatMap(([file, text]) => {
+      const local = definedIn(text)
+      return [...text.matchAll(/var\((--[a-z0-9-]+)\)/g)]
+        .map(m => m[1])
+        .filter(t => !global.has(t) && !local.has(t))
+        .map(t => `${file}: ${t}`)
+    })
+    expect([...new Set(missing)]).toEqual([])
   })
 })

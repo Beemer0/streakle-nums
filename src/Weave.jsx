@@ -33,7 +33,7 @@ const css = `
 @keyframes wvSlideUp{from{transform:translateY(12px);opacity:0}to{transform:translateY(0);opacity:1}}
 @keyframes wvCopied{0%{opacity:0;transform:translateY(4px)}20%{opacity:1;transform:translateY(0)}80%{opacity:1}100%{opacity:0}}
 @keyframes wvStar{0%{transform:scale(0) rotate(-20deg);opacity:0}60%{transform:scale(1.3) rotate(5deg);opacity:1}100%{transform:scale(1);opacity:1}}
-.wv-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;width:min(340px,calc(100vw - 32px));touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+.wv-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;width:min(400px,calc(100vw - 32px));touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
 .wv-tile{position:relative;aspect-ratio:1;min-width:0;padding:0;border:2px solid transparent;border-radius:8px;color:var(--ink);cursor:grab;container-type:inline-size;display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-weight:800;-webkit-tap-highlight-color:transparent;transition:background-color .2s,color .2s,border-color .15s,box-shadow .15s,translate .15s}
 .wv-tile[aria-disabled="true"]{cursor:default}
 .wv-tile:focus-visible{outline:2px solid var(--ink);outline-offset:2px}

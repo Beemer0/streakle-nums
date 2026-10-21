@@ -57,16 +57,28 @@ export default function Home() {
         .game-row:hover { background: var(--surface-raised) !important; }
         .game-row:hover .game-row-cta { background: var(--gold-hover) !important; }
         @media (max-width: 520px) {
-          .game-row { padding: 14px 16px !important; gap: 10px !important; }
-          .game-desc { display: none; }
-          .game-name { width: 100px !important; }
+          /* Phones: name and Play on one line; the description and any ✓ Done / 🔥 streak under them. */
+          .game-row {
+            display: grid !important; padding: 14px 16px !important; gap: 4px 12px !important;
+            grid-template-columns: 32px minmax(0, 1fr) auto;
+            grid-template-areas: 'icon name cta' 'icon desc status';
+            align-items: center;
+          }
+          .game-icon { grid-area: icon; align-self: start; font-size: 24px !important; width: 32px !important; }
+          .game-name { grid-area: name; width: auto !important; }
+          .game-desc { grid-area: desc; font-size: 12px !important; line-height: 1.45 !important; }
+          .game-status { grid-area: status; align-self: start; min-width: 0 !important; }
+          .game-cta { grid-area: cta; }
           .game-name-title { font-size: 22px !important; }
-          .game-status { min-width: 36px !important; }
           .game-cta { padding: 7px 10px !important; font-size: 11px !important; }
           .game-row-cta { padding: 7px 10px !important; font-size: 11px !important; }
           .home-logo { font-size: 48px !important; letter-spacing: 6px !important; }
           .home-section { margin-bottom: 6px !important; }
           .home-badge { margin-bottom: 24px !important; }
+        }
+        /* The narrowest phones: a long badge beside Play Again may wrap. */
+        @media (max-width: 359px) {
+          .game-badge { white-space: normal !important; }
         }
       `}</style>
 
@@ -136,7 +148,7 @@ export default function Home() {
               }}
             >
               {/* Emoji */}
-              <div style={{ fontSize: 28, flexShrink: 0, width: 36, textAlign: 'center' }}>{g.emoji}</div>
+              <div className="game-icon" style={{ fontSize: 28, flexShrink: 0, width: 36, textAlign: 'center' }}>{g.emoji}</div>
 
               {/* Name + badge */}
               <div className="game-name" style={{ width: 148, flexShrink: 0 }}>
@@ -145,14 +157,14 @@ export default function Home() {
                   fontSize: 28, fontWeight: 800, letterSpacing: 1.5,
                   color: 'var(--ink)', lineHeight: 1,
                 }}>{g.title}</div>
-                <div style={{
+                <div className="game-badge" style={{
                   marginTop: 6,
                   display: 'inline-block',
                   background: `${g.color}18`,
                   border: `1px solid ${g.color}40`,
                   borderRadius: 4, padding: '2px 8px',
                   fontSize: 9, fontWeight: 700, color: g.accent,
-                  textTransform: 'uppercase', letterSpacing: 1.5,
+                  textTransform: 'uppercase', letterSpacing: 1.5, whiteSpace: 'nowrap',
                 }}>{g.badge}</div>
               </div>
 

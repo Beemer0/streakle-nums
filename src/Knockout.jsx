@@ -379,6 +379,7 @@ const css = `
 @keyframes copied{0%{opacity:0;transform:translateY(4px)}20%{opacity:1;transform:translateY(0)}80%{opacity:1}100%{opacity:0}}
 .ko-grid{display:grid;grid-template-columns:90px repeat(3,110px);grid-template-rows:70px repeat(3,100px);gap:4px;padding:0 12px}
 @media(max-width:480px){.ko-grid{grid-template-columns:72px repeat(3,88px);grid-template-rows:60px repeat(3,86px)}}
+@media(min-width:700px) and (min-height:760px){.ko-grid{grid-template-columns:100px repeat(3,128px);grid-template-rows:78px repeat(3,116px)}}
 `;
 
 // ── Component ─────────────────────────────────────────────────────────────────

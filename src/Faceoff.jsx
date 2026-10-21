@@ -604,6 +604,7 @@ const css = `
 @keyframes cellReveal{0%{transform:scale(0.85);opacity:0}100%{transform:scale(1);opacity:1}}
 .faceoff-grid{display:grid;grid-template-columns:90px repeat(3,110px);grid-template-rows:70px repeat(3,100px);gap:4px;padding:0 12px}
 @media(max-width:480px){.faceoff-grid{grid-template-columns:72px repeat(3,88px);grid-template-rows:60px repeat(3,86px)}}
+@media(min-width:700px) and (min-height:760px){.faceoff-grid{grid-template-columns:100px repeat(3,128px);grid-template-rows:78px repeat(3,116px)}}
 `;
 
 export default function FaceoffGame() {

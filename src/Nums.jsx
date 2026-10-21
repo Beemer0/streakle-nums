@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useMemo } from "react";
+import { useState, useRef, useEffect, useMemo, useSyncExternalStore } from "react";
 import Archive from './Archive'
 import GameShell from "./GameShell";
 import { saveResult } from './saveResult';
@@ -79,7 +79,19 @@ function buildShareText(swaps, solved, dateStr) {
   return `${header}\n${result}\n${stars}\n\nPlay at: playstreakle.com`;
 }
 
-const CS = 44, GAP = 4, TOTAL = CS + GAP;
+const GAP = 4;
+
+// Cell size follows the viewport: 54px on roomy screens, 44px on phones,
+// shrinking further only when 7 cells wouldn't otherwise fit.
+function cellSizeFor(w, h) {
+  if (w >= 600 && h >= 760) return 54;
+  return Math.max(34, Math.min(44, Math.floor((w - 24 - 6 * GAP) / 7)));
+}
+const subscribeResize = (onChange) => {
+  window.addEventListener('resize', onChange);
+  return () => window.removeEventListener('resize', onChange);
+};
+const useCellSize = () => useSyncExternalStore(subscribeResize, () => cellSizeFor(window.innerWidth, window.innerHeight), () => 44);
 
 const css = `
 @keyframes ripple{0%{transform:scale(0.5);opacity:.8}100%{transform:scale(2.4);opacity:0}}
@@ -129,6 +141,7 @@ export default function App() {
 }
 
 function NumsBoard({ puzzleDate, streak }) {
+  const CS = useCellSize(), TOTAL = CS + GAP;
   const pz = useMemo(() => {
     const seedDate = puzzleDate ?? new Date().toLocaleDateString('en-CA')
     const seed = parseInt(seedDate.replace(/-/g, ''))
@@ -235,7 +248,7 @@ function NumsBoard({ puzzleDate, streak }) {
       width:`${CS}px`, height:`${CS}px`,
       background:'var(--surface-gold)', border:'2px solid var(--gold)',
       borderRadius:'8px', display:'flex', alignItems:'center',
-      justifyContent:'center', fontSize:'20px', fontWeight:'700',
+      justifyContent:'center', fontSize:`${Math.round(CS*0.45)}px`, fontWeight:'700',
       color:'var(--ink)', position:'fixed', top:'-200px', left:'-200px',
       boxShadow:'0 4px 20px rgba(var(--gold-rgb),0.4)',
     });
@@ -307,7 +320,7 @@ function NumsBoard({ puzzleDate, streak }) {
             background:bg, border:`2px solid ${border}`, borderRadius:8,
             display:'flex', alignItems:'center', justifyContent:'center',
             cursor: swapping ? 'default' : isCorr ? 'not-allowed' : isDragging ? 'grabbing' : 'grab',
-            fontSize:20, fontWeight:700, color, userSelect:'none',
+            fontSize:Math.round(CS*0.45), fontWeight:700, color, userSelect:'none',
             transition:'background 0.15s, border-color 0.15s, transform 0.15s',
             animation: an ? `${an} ${an==='correctPulse'?'0.55s':'0.45s'} ease` : 'none',
             opacity: isFlying ? 0 : isDragging ? 0.5 : 1,
@@ -424,7 +437,7 @@ function FlyingTile({num, fr, fc, tr, tc, cs, total}) {
       position:'absolute', left:0, top:0, width:cs, height:cs,
       background:'var(--surface-gold)', border:'2px solid var(--gold)', borderRadius:8,
       display:'flex', alignItems:'center', justifyContent:'center',
-      fontSize:20, fontWeight:700, color:'var(--ink)',
+      fontSize:Math.round(cs*0.45), fontWeight:700, color:'var(--ink)',
       pointerEvents:'none', zIndex:10,
       boxShadow:'0 4px 20px rgba(var(--gold-rgb),0.4)', willChange:'transform',
     }}>{num}</div>

@@ -839,7 +839,7 @@ function LinkBoard({ puzzleDate, streak }) {
         </div>
       )}
 
-      <div ref={gridRef} style={{ position: 'relative', width: '100%', maxWidth: 440, padding: '0 12px', boxSizing: 'border-box' }}>
+      <div ref={gridRef} style={{ position: 'relative', width: '100%', maxWidth: 500, padding: '0 12px', boxSizing: 'border-box' }}>
         <div ref={solvedRef} style={{ marginBottom: solved.length > 0 ? 6 : 0 }}>
           {solved.map(i => (
             <div key={i} style={{ background: TIER[i], borderRadius: 8, padding: '12px 16px', marginBottom: 6, textAlign: 'center', animation: 'revealRow 0.35s ease' }}>
@@ -912,7 +912,7 @@ function LinkBoard({ puzzleDate, streak }) {
       )}
 
       {gameOver && !won && (
-        <div style={{ textAlign: 'center', animation: 'slideUp 0.4s ease', width: '100%', maxWidth: 440, padding: '0 12px', boxSizing: 'border-box' }}>
+        <div style={{ textAlign: 'center', animation: 'slideUp 0.4s ease', width: '100%', maxWidth: 500, padding: '0 12px', boxSizing: 'border-box' }}>
           <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--danger)', marginBottom: 8 }}>Game over!</div>
           <div style={{ fontSize: 13, color: 'var(--text-2)', marginBottom: 10 }}>The categories were:</div>
           {puzzle.categories.map((cat, i) => !solved.includes(i) && (
