@@ -10,6 +10,18 @@
   padding-bottom: 24px;
   color: var(--ink);
 }
+/* The game's own colour (set from games.js) as a stripe across the top,
+   echoing its row stripe on Home. */
+.gs::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, transparent, var(--game-deep) 25%, var(--game) 50%, var(--game-deep) 75%, transparent);
+  pointer-events: none;
+}
 
 /* ── Top bar: back link left, account right ─────────────────────────────── */
 .gs-top {
@@ -158,7 +170,7 @@
   background: var(--ink);
   transition: transform 0.2s;
 }
-.gs-switch[aria-checked="true"] { background: var(--hc-accent); }
+.gs-switch[aria-checked="true"] { background: var(--hc-correct); }
 .gs-switch[aria-checked="true"]::after { transform: translateX(22px); }
 
 /* ── Footer ─────────────────────────────────────────────────────────────── */

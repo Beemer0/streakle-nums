@@ -44,6 +44,12 @@ puzzles every day; signed-in players build streaks.
   `var(--gold)` / `rgba(var(--gold-rgb),0.2)` — never a palette hex literal, never a
   hex alpha suffix on a token (`tokens.test.js` enforces both directions).
   `src/theme.js` exports `GOLD`, `CARD`, … as `var()` strings for JS.
+  Game feedback shares one set: `--correct` (green, light letters),
+  `--present` (amber, kept clear of the brand gold — dark letters),
+  `--absent` (warm grey), `--correct-deep`/`--correct-wash` for solved
+  surfaces, `--hc-correct`/`--hc-present` for high-contrast mode, and
+  `--link-1..4` for Link's groups — coloured by position (easiest →
+  trickiest), so Link's PUZZLES carry no colours.
   Two fonts only: `var(--font-display)` Barlow Condensed (titles),
   `var(--font-body)` DM Sans.
 - Push directly to `master` — no PRs unless asked.

@@ -13,6 +13,7 @@
 
   /* Text, strongest to weakest (all but --faint pass 4.5:1 on --surface) */
   --ink: #F5F0E8;              /* headings, tile letters */
+  --ink-rgb: 245, 240, 232;
   --ink-2: #CFC7BA;            /* body copy */
   --text-2: #A89880;           /* secondary copy */
   --muted: #948670;            /* captions, dates */
@@ -23,14 +24,35 @@
   --gold-hover: #D4B45A;
   --gold-rgb: 201, 168, 76;
 
+  /* Game feedback: the right spot / wrong spot / not-in-it trio the word
+     games share. Letters go light on --correct and --absent, dark (--bg) on
+     --present. --present is amber, kept clear of the brand gold. */
+  --correct: #4F8A47;
+  --correct-deep: #2F5E33;     /* solved surfaces, "Copied!" toasts */
+  --correct-wash: #1D3424;     /* filled cells in the trivia grids */
+  --present: #C9952F;
+  --absent: #3A3428;
+  --key: #5A5245;              /* untouched on-screen keyboard key (lighter than --absent) */
+  --star: #F2C94C;
+
+  /* High-contrast mode (Words, Weave, Scramble): orange / blue */
+  --hc-correct: #f5793a;
+  --hc-present: #85c0f9;
+
+  /* Link's four groups, easiest to trickiest; dark letters on all four */
+  --link-1: #C9952F;
+  --link-2: #5C9552;
+  --link-3: #5E8CC0;
+  --link-4: #9C78BC;
+
   /* Feedback */
-  --success: #4caf50;
+  --success: var(--correct);
   --success-text: #86EFAC;
   --success-text-rgb: 134, 239, 172;
   --danger: #e94560;
+  --danger-wash: #3A1A1E;
   --danger-text: #FCA5A5;
   --danger-text-rgb: 252, 165, 165;
-  --hc-accent: #f5793a;        /* high-contrast mode's "on" colour */
 
   /* Type: one display face, one text face */
   --font-display: 'Barlow Condensed', 'Arial Narrow', sans-serif;

@@ -13,8 +13,8 @@ import { GOLD, INK } from './theme'
 
 const WIN = 'var(--success)', DARK_INK = 'var(--bg)'
 // Found letters and hinted letters; light tiles take dark ink for contrast.
-const PALETTE = { done: '#41733c', doneInk: INK, hint: '#b59f3b', hintInk: DARK_INK }
-const PALETTE_HC = { done: '#f5793a', doneInk: DARK_INK, hint: '#85c0f9', hintInk: DARK_INK }
+const PALETTE = { done: 'var(--correct)', doneInk: INK, hint: 'var(--present)', hintInk: DARK_INK }
+const PALETTE_HC = { done: 'var(--hc-correct)', doneInk: DARK_INK, hint: 'var(--hc-present)', hintInk: DARK_INK }
 const CHECKPOINT_KEY = 'streakle-scramble'
 const CHECKPOINT_VERSION = 2 // v1 was the one-word-at-a-time ladder
 const HC_KEY = 'streakle-hc' // shared with Words and Weave
@@ -42,7 +42,7 @@ const css = `
 .sc-ctl{background:none;border:1px solid var(--border);border-radius:8px;color:var(--gold);cursor:pointer;font-size:13px;font-weight:600;padding:8px 12px;touch-action:manipulation;white-space:nowrap}
 .sc-ctl-primary{background:var(--gold);color:var(--bg);border-color:var(--gold)}
 .sc-ctl[aria-disabled="true"]{opacity:.4;cursor:default}
-.sc-chip{min-width:26px;padding:3px 6px;border-radius:6px;border:1px solid var(--border);font-size:12px;font-weight:700;color:#A09482;text-align:center;font-variant-numeric:tabular-nums}
+.sc-chip{min-width:26px;padding:3px 6px;border-radius:6px;border:1px solid var(--border);font-size:12px;font-weight:700;color:var(--text-2);text-align:center;font-variant-numeric:tabular-nums}
 .sc-toast{position:fixed;top:80px;left:50%;transform:translateX(-50%);background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px 20px;font-size:14px;font-weight:600;color:var(--ink);z-index:60;animation:scSlideUp .2s ease;white-space:nowrap}
 .sc-sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 `
@@ -219,7 +219,7 @@ function ScrambleBoard({ seedDate, isToday, palette, keysBlocked }) {
   const spawnConfetti = () => {
     setConfetti(Array.from({ length: 30 }, (_, i) => ({
       id: i, x: 20 + Math.random() * 60, delay: Math.random() * 700,
-      color: ['var(--success)', 'var(--gold)', 'var(--gold)', 'var(--danger)', '#ffd700', 'var(--ink)'][i % 6],
+      color: ['var(--success)', 'var(--gold)', 'var(--gold)', 'var(--danger)', 'var(--star)', 'var(--ink)'][i % 6],
       size: 5 + Math.random() * 8,
     })))
     pushTimeout(() => setConfetti([]), 1600)
@@ -416,7 +416,7 @@ function ScrambleBoard({ seedDate, isToday, palette, keysBlocked }) {
       <button onClick={handleShare} style={{ background: GOLD, color: 'var(--bg)', border: 'none', borderRadius: 8, padding: '10px 28px', fontSize: 15, fontWeight: 700, cursor: 'pointer' }}>
         📋 Share result
       </button>
-      {copied && <div style={{ position: 'absolute', top: -32, left: '50%', transform: 'translateX(-50%)', background: '#2d6a30', color: 'var(--ink)', fontSize: 12, fontWeight: 600, padding: '4px 12px', borderRadius: 6, whiteSpace: 'nowrap', animation: 'scCopied 2s ease forwards', pointerEvents: 'none' }}>Copied!</div>}
+      {copied && <div style={{ position: 'absolute', top: -32, left: '50%', transform: 'translateX(-50%)', background: 'var(--correct-deep)', color: 'var(--ink)', fontSize: 12, fontWeight: 600, padding: '4px 12px', borderRadius: 6, whiteSpace: 'nowrap', animation: 'scCopied 2s ease forwards', pointerEvents: 'none' }}>Copied!</div>}
     </div>
   )
 
@@ -431,7 +431,7 @@ function ScrambleBoard({ seedDate, isToday, palette, keysBlocked }) {
         {chips.map(ch => {
           const got = found.includes(ch.i)
           return (
-            <span key={ch.i} className="sc-chip" aria-hidden="true" style={got ? { color: 'var(--success-text)', borderColor: '#2d6a30' } : null}>
+            <span key={ch.i} className="sc-chip" aria-hidden="true" style={got ? { color: 'var(--success-text)', borderColor: 'var(--correct-deep)' } : null}>
               {got ? '✓' : ch.len}
             </span>
           )
@@ -453,7 +453,7 @@ function ScrambleBoard({ seedDate, isToday, palette, keysBlocked }) {
             <span className="sc-sr-only">{guessWord ? `Your word: ${guessWord.split('').join(' ')}` : 'No letters yet'}</span>
             {guess.length
               ? guess.map((t, k) => <span key={k} className="sc-guess-tile" aria-hidden="true">{pz.pool[t]}</span>)
-              : <span style={{ fontSize: 13, color: '#A09482' }} aria-hidden="true">Tap letters to spell a word</span>}
+              : <span style={{ fontSize: 13, color: 'var(--text-2)' }} aria-hidden="true">Tap letters to spell a word</span>}
           </div>
           <div className="sc-rack" role="group" aria-label="Today's letters">
             {order.map(t => (

@@ -15,11 +15,11 @@ const WIN = 'var(--success)', RED = 'var(--danger)'
 // dark ink so every letter clears 3:1 against its tile.
 const DARK_INK = 'var(--bg)'
 const PALETTE = {
-  bg: { green: '#538d4e', yellow: '#b59f3b', grey: 'var(--border-strong)' },
+  bg: { green: 'var(--correct)', yellow: 'var(--present)', grey: 'var(--border-strong)' },
   ink: { green: INK, yellow: DARK_INK, grey: INK },
 }
 const PALETTE_HC = {
-  bg: { green: '#f5793a', yellow: '#85c0f9', grey: 'var(--border-strong)' },
+  bg: { green: 'var(--hc-correct)', yellow: 'var(--hc-present)', grey: 'var(--border-strong)' },
   ink: { green: DARK_INK, yellow: DARK_INK, grey: INK },
 }
 const CHECKPOINT_KEY = 'streakle-weave'
@@ -41,7 +41,7 @@ const css = `
 /* The lift uses \`translate\`, not \`transform\`: drags and the swap animation
    own \`transform\`, and a CSS transition on it would override the animation. */
 .wv-sel{border-color:var(--ink);translate:0 -3px;box-shadow:0 6px 16px rgba(0,0,0,.45)}
-.wv-over{border-color:var(--ink);box-shadow:0 0 0 3px rgba(245,240,232,.25)}
+.wv-over{border-color:var(--ink);box-shadow:0 0 0 3px rgba(var(--ink-rgb),.25)}
 .wv-drag{z-index:3;pointer-events:none;box-shadow:0 10px 24px rgba(0,0,0,.55);transition:none}
 .wv-reveal{background:var(--surface-gold) !important;color:var(--gold) !important}
 .wv-toast{position:fixed;top:80px;left:50%;transform:translateX(-50%);background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px 20px;font-size:14px;font-weight:600;color:var(--ink);z-index:60;animation:wvSlideUp .2s ease;white-space:nowrap}
@@ -216,7 +216,7 @@ function WeaveBoard({ seedDate, isToday, palette, hc }) {
   const spawnConfetti = () => {
     setConfetti(Array.from({ length: 30 }, (_, i) => ({
       id: i, x: 20 + Math.random() * 60, delay: Math.random() * 700,
-      color: ['var(--success)', 'var(--gold)', 'var(--gold)', 'var(--danger)', '#ffd700', 'var(--ink)'][i % 6],
+      color: ['var(--success)', 'var(--gold)', 'var(--gold)', 'var(--danger)', 'var(--star)', 'var(--ink)'][i % 6],
       size: 5 + Math.random() * 8,
     })))
     pushTimeout(() => setConfetti([]), 1600)
@@ -381,7 +381,7 @@ function WeaveBoard({ seedDate, isToday, palette, hc }) {
         : { background: CARD, color: GOLD, border: `1px solid ${BORDER}`, borderRadius: 8, padding: '8px 20px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
         📋 Share result
       </button>
-      {copied && <div style={{ position: 'absolute', top: -32, left: '50%', transform: 'translateX(-50%)', background: '#2d6a30', color: 'var(--ink)', fontSize: 12, fontWeight: 600, padding: '4px 12px', borderRadius: 6, whiteSpace: 'nowrap', animation: 'wvCopied 2s ease forwards', pointerEvents: 'none' }}>Copied!</div>}
+      {copied && <div style={{ position: 'absolute', top: -32, left: '50%', transform: 'translateX(-50%)', background: 'var(--correct-deep)', color: 'var(--ink)', fontSize: 12, fontWeight: 600, padding: '4px 12px', borderRadius: 6, whiteSpace: 'nowrap', animation: 'wvCopied 2s ease forwards', pointerEvents: 'none' }}>Copied!</div>}
     </div>
   )
 
@@ -426,7 +426,7 @@ function WeaveBoard({ seedDate, isToday, palette, hc }) {
           <div style={{ fontSize: 22, fontWeight: 700, color: WIN, marginBottom: 6 }}>🎉 Woven!</div>
           <div role="img" aria-label={`${plural(left, 'star')} out of ${MAX_STARS}`} style={{ display: 'flex', gap: 6, justifyContent: 'center', marginBottom: 4 }}>
             {Array.from({ length: MAX_STARS }, (_, k) => (
-              <span key={k} aria-hidden="true" style={{ fontSize: 24, color: k < left ? '#ffd700' : 'var(--border-strong)', animation: k < left ? `wvStar 0.4s ${k * 100}ms both ease` : 'none' }}>★</span>
+              <span key={k} aria-hidden="true" style={{ fontSize: 24, color: k < left ? 'var(--star)' : 'var(--border-strong)', animation: k < left ? `wvStar 0.4s ${k * 100}ms both ease` : 'none' }}>★</span>
             ))}
           </div>
           {wordList}

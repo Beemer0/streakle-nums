@@ -34,17 +34,18 @@ const css = `
 .mn-cell{aspect-ratio:1;min-width:0;min-height:0;overflow:hidden;white-space:nowrap;container-type:inline-size;border-radius:4px;display:flex;align-items:center;justify-content:center;cursor:pointer;box-sizing:border-box}
 .mn-grid[aria-disabled="true"] .mn-cell{cursor:default}
 .mn-cell:focus-visible{outline:2px solid var(--gold);outline-offset:-2px;z-index:1}
-.mn-hidden{background:var(--surface-gold);border:1px solid #3A3226}
-@media(hover:hover){.mn-grid:not([aria-disabled="true"]) .mn-hidden:hover{background:#3A3020}}
-.mn-flag{background:var(--surface-gold);border:1px solid #3A3226}
+/* Undug cells sit raised and lighter; dug ones sunken and dark. */
+.mn-hidden{background:linear-gradient(180deg,#403829,#342D22);border:1px solid #4A4236;box-shadow:inset 0 1px 0 rgba(var(--ink-rgb),.07)}
+@media(hover:hover){.mn-grid:not([aria-disabled="true"]) .mn-hidden:hover{background:#4A4132}}
+.mn-flag{background:linear-gradient(180deg,#403829,#342D22);border:1px solid #4A4236}
 .mn-flag .mn-glyph{animation:mnPop 0.18s ease}
 .mn-zero{background:#14120F;border:1px solid var(--surface);cursor:default}
 .mn-number{background:#14120F;border:1px solid var(--surface)}
 .mn-boom{background:var(--danger);border:1px solid var(--danger)}
 .mn-boom .mn-glyph{animation:mnBoom 0.45s ease}
 .mn-mine{background:var(--surface);border:1px solid var(--border)}
-.mn-wrongflag{background:#4a1a20;border:1px solid var(--danger);color:var(--danger);font-weight:800}
-.mn-autoflag{background:#1a3a2a;border:1px solid #2d6a30}
+.mn-wrongflag{background:var(--danger-wash);border:1px solid var(--danger);color:var(--danger);font-weight:800}
+.mn-autoflag{background:var(--correct-wash);border:1px solid var(--correct-deep)}
 .mn-digit{font-family:var(--font-display);font-weight:800;font-size:17px;font-size:52cqw;line-height:1}
 .mn-glyph{font-size:15px;font-size:46cqw;line-height:1}
 .mn-bar{display:flex;align-items:center;justify-content:center;gap:14px;margin:0 0 12px;font-variant-numeric:tabular-nums}
@@ -237,7 +238,7 @@ export default function Mines() {
   const spawnConfetti = () => {
     const items = Array.from({length:30},(_,i)=>({
       id:i, x:20+Math.random()*60, delay:Math.random()*700,
-      color:['var(--success)','var(--gold)','var(--gold)','var(--danger)','#ffd700','var(--ink)'][i%6],
+      color:['var(--success)','var(--gold)','var(--gold)','var(--danger)','var(--star)','var(--ink)'][i%6],
       size:5+Math.random()*8
     }));
     setConfetti(items);
@@ -470,7 +471,7 @@ export default function Mines() {
         onMouseOut={gold ? e => e.currentTarget.style.background = GOLD : undefined}>
         📋 Share result
       </button>
-      {copied && <div style={{ position: 'absolute', top: -32, left: '50%', transform: 'translateX(-50%)', background: '#2d6a30', color: 'var(--ink)', fontSize: 12, fontWeight: 600, padding: '4px 12px', borderRadius: 6, whiteSpace: 'nowrap', animation: 'mnCopied 2s ease forwards', pointerEvents: 'none' }}>Copied!</div>}
+      {copied && <div style={{ position: 'absolute', top: -32, left: '50%', transform: 'translateX(-50%)', background: 'var(--correct-deep)', color: 'var(--ink)', fontSize: 12, fontWeight: 600, padding: '4px 12px', borderRadius: 6, whiteSpace: 'nowrap', animation: 'mnCopied 2s ease forwards', pointerEvents: 'none' }}>Copied!</div>}
     </div>
   )
 

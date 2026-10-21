@@ -1,7 +1,8 @@
 // Validates the Link puzzle bank: every puzzle must have 4 categories, 4 words
 // each, all 16 words unique within the puzzle (Connections assigns each word to
-// exactly one category), ASCII-only, and the 4 standard colours. Run after
-// editing PUZZLES in src/Link.jsx:  node scripts/check-link.mjs
+// exactly one category), ASCII-only, and no per-category colour (Link colours
+// a group by its position, easiest to trickiest). Run after editing PUZZLES
+// in src/Link.jsx:  node scripts/check-link.mjs
 import { readFileSync } from 'node:fs'
 
 const src = readFileSync(new URL('../src/Link.jsx', import.meta.url), 'utf8')
@@ -14,15 +15,14 @@ for (let i = open; i < src.length; i++) {
 }
 const PUZZLES = new Function(`return ${src.slice(open, end + 1)}`)()
 
-const COLORS = ['#b59f3b', '#538d4e', '#3a7bd5', '#9b59b6']
 let bad = 0
 PUZZLES.forEach((p, i) => {
   const errs = []
   if (p.categories.length !== 4) errs.push(`${p.categories.length} categories`)
   const all = []
-  p.categories.forEach((c, ci) => {
+  p.categories.forEach((c) => {
     if (c.words.length !== 4) errs.push(`"${c.label}" has ${c.words.length} words`)
-    if (c.color !== COLORS[ci]) errs.push(`"${c.label}" colour ${c.color} (expected ${COLORS[ci]})`)
+    if ('color' in c) errs.push(`"${c.label}" has a colour; Link colours groups by position`)
     c.words.forEach(w => all.push(w))
   })
   const dupes = [...new Set(all.filter((w, j) => all.indexOf(w) !== j))]

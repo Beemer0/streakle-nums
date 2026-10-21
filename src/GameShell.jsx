@@ -41,10 +41,10 @@ function CalendarIcon() {
 export default function GameShell({ game, date, howTo, onArchive, hc = false, onToggleHc, className = '', children }) {
   const { user } = useAuth()
   const [isHowOpen, setIsHowOpen] = useState(false)
-  const { title } = GAME_BY_KEY[game]
+  const { title, color, accent } = GAME_BY_KEY[game]
 
   return (
-    <main className={`gs ${className}`.trim()}>
+    <main className={`gs ${className}`.trim()} style={{ '--game': accent, '--game-deep': color }}>
       <header className="gs-top">
         <a href="/" className="gs-back">← All games</a>
         {user ? <UserMenu isInline /> : <a href="/login" className="gs-signin">Sign in</a>}

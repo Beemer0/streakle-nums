@@ -601,7 +601,7 @@ function GridironBoard({ puzzleDate, streak }) {
   const totalPossible = 9 * 95;
 
   const spawnConfetti = () => {
-    const items = Array.from({length:30},(_,i)=>({id:i,x:20+Math.random()*60,delay:Math.random()*600,color:['var(--success)','var(--gold)','var(--gold)','var(--danger)','#ffd700'][i%5],size:5+Math.random()*8}));
+    const items = Array.from({length:30},(_,i)=>({id:i,x:20+Math.random()*60,delay:Math.random()*600,color:['var(--success)','var(--gold)','var(--gold)','var(--danger)','var(--star)'][i%5],size:5+Math.random()*8}));
     setConfetti(items);
     setTimeout(()=>setConfetti([]),1600);
   };
@@ -737,7 +737,7 @@ function GridironBoard({ puzzleDate, streak }) {
                 const isShaking=shakeCell===key;
                 return (
                   <div key={key} {...clickableProps(()=>handleCellClick(ri,ci), filled||gameOver||won)} style={{
-                    background:filled?'#1a3a2a':isActive?'var(--surface-gold)':'var(--surface)',
+                    background:filled?'var(--correct-wash)':isActive?'var(--surface-gold)':'var(--surface)',
                     border:`2px solid ${filled?'var(--success)':isActive?'var(--gold)':'var(--border)'}`,
                     borderRadius:8,cursor:filled||gameOver||won?'default':'pointer',
                     display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',
@@ -747,7 +747,7 @@ function GridironBoard({ puzzleDate, streak }) {
                   }}>
                     {filled?(
                       <>
-                        <div style={{fontSize:10,fontWeight:700,color:'var(--success)',marginBottom:2}}>+{filled.score}</div>
+                        <div style={{fontSize:10,fontWeight:700,color:'var(--success-text)',marginBottom:2}}>+{filled.score}</div>
                         <div style={{fontSize:11,fontWeight:700,color:'var(--ink)',lineHeight:1.3}}>{filled.player.n}</div>
                       </>
                     ):isActive?(
@@ -778,11 +778,11 @@ function GridironBoard({ puzzleDate, streak }) {
                 <div key={i} {...clickableProps(()=>handleSelect(p))} style={{
                   padding:'10px 14px',cursor:'pointer',fontSize:13,
                   borderBottom:i<suggestions.length-1?'1px solid var(--border)':'none',
-                  background:pendingPlayer?.n===p.n?'#1a3a2a':'transparent',
+                  background:pendingPlayer?.n===p.n?'var(--correct-wash)':'transparent',
                   transition:'background 0.15s',
                 }}
                   onMouseOver={e=>e.currentTarget.style.background='var(--surface-gold)'}
-                  onMouseOut={e=>e.currentTarget.style.background=pendingPlayer?.n===p.n?'#1a3a2a':'transparent'}
+                  onMouseOut={e=>e.currentTarget.style.background=pendingPlayer?.n===p.n?'var(--correct-wash)':'transparent'}
                 >
                   <span style={{color:'var(--ink)',fontWeight:600}}>{p.n}</span>
                 </div>
@@ -813,7 +813,7 @@ function GridironBoard({ puzzleDate, streak }) {
               onMouseOut={e=>e.currentTarget.style.background='var(--gold)'}>
               📋 Share result
             </button>
-            {copied&&<div style={{position:'absolute',top:-32,left:'50%',transform:'translateX(-50%)',background:'#2d6a30',color:'var(--ink)',fontSize:12,fontWeight:600,padding:'4px 12px',borderRadius:6,whiteSpace:'nowrap',animation:'copied 2s ease forwards',pointerEvents:'none'}}>Copied!</div>}
+            {copied&&<div style={{position:'absolute',top:-32,left:'50%',transform:'translateX(-50%)',background:'var(--correct-deep)',color:'var(--ink)',fontSize:12,fontWeight:600,padding:'4px 12px',borderRadius:6,whiteSpace:'nowrap',animation:'copied 2s ease forwards',pointerEvents:'none'}}>Copied!</div>}
           </div>
         </div>
       )}

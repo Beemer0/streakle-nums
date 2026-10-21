@@ -204,7 +204,7 @@ export default function Archive({ game, onSelectDate, onClose }) {
               <div style={{ fontSize: 21, fontWeight: 700, color: 'var(--ink)', letterSpacing: '-0.4px' }}>
                 {meta.emoji} {meta.label} Archive
               </div>
-              <div style={{ fontSize: 12, color: '#857F73', marginTop: 3 }}>
+              <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 3 }}>
                 {user ? 'All puzzles since launch' : 'Last 7 days · sign in for full history'}
               </div>
             </div>
@@ -240,7 +240,7 @@ export default function Archive({ game, onSelectDate, onClose }) {
                   <span style={{ fontSize: 13, color: 'var(--muted)' }}>day streak</span>
                 </div>
                 <div style={{ fontSize: 13, color: 'var(--muted)' }}>
-                  <span style={{ color: '#4ade80', fontWeight: 600 }}>{completed.length}</span>
+                  <span style={{ color: 'var(--success-text)', fontWeight: 600 }}>{completed.length}</span>
                   <span> / {available.length} this month</span>
                 </div>
               </div>
@@ -254,7 +254,7 @@ export default function Archive({ game, onSelectDate, onClose }) {
                   width: available.length
                     ? `${Math.round((completed.length / available.length) * 100)}%`
                     : '0%',
-                  background: 'linear-gradient(90deg, #4ade80 0%, #22d3ee 100%)',
+                  background: 'linear-gradient(90deg, var(--correct) 0%, var(--success-text) 100%)',
                   borderRadius: 99,
                   transition: 'width 0.7s cubic-bezier(0.34,1.4,0.64,1)',
                 }} />
@@ -318,14 +318,14 @@ export default function Archive({ game, onSelectDate, onClose }) {
               {['Su','Mo','Tu','We','Th','Fr','Sa'].map(d => (
                 <div key={d} style={{
                   textAlign: 'center', fontSize: 11,
-                  color: '#6E6A60', fontWeight: 700, letterSpacing: '0.04em', paddingBottom: 2,
+                  color: 'var(--muted)', fontWeight: 700, letterSpacing: '0.04em', paddingBottom: 2,
                 }}>{d}</div>
               ))}
             </div>
 
             {/* Day cells */}
             {loading ? (
-              <div style={{ textAlign: 'center', color: '#6E6A60', padding: '28px 0', fontSize: 13 }}>
+              <div style={{ textAlign: 'center', color: 'var(--muted)', padding: '28px 0', fontSize: 13 }}>
                 Loading…
               </div>
             ) : (
@@ -356,10 +356,10 @@ export default function Archive({ game, onSelectDate, onClose }) {
                   }
 
                   if (avail && !locked && (win || loss)) {
-                    borderLeft = `3px solid ${win ? '#4ade80' : '#f87171'}`
+                    borderLeft = `3px solid ${win ? 'var(--success-text)' : 'var(--danger-text)'}`
                   }
 
-                  const dotColor = win ? '#4ade80' : loss ? '#f87171' : 'transparent'
+                  const dotColor = win ? 'var(--success-text)' : loss ? 'var(--danger-text)' : 'transparent'
 
                   return (
                     <button
@@ -412,11 +412,11 @@ export default function Archive({ game, onSelectDate, onClose }) {
           {/* ── Legend ── */}
           <div style={{
             display: 'flex', gap: 14, justifyContent: 'center',
-            fontSize: 11, color: '#6E6A60',
+            fontSize: 11, color: 'var(--muted)',
           }}>
             {[
-              { color: '#4ade80', label: 'Completed' },
-              { color: '#f87171', label: 'Attempted' },
+              { color: 'var(--success-text)', label: 'Completed' },
+              { color: 'var(--danger-text)', label: 'Attempted' },
               { color: 'rgba(255,255,255,0.12)', label: 'Not played' },
             ].map(({ color, label }) => (
               <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>

@@ -164,7 +164,7 @@ function NumsBoard({ puzzleDate, streak }) {
   const spawnConfetti = () => {
     const items = Array.from({length:30},(_,i)=>({
       id:i, x:20+Math.random()*60, delay:Math.random()*700,
-      color:['var(--success)','var(--gold)','var(--gold)','var(--danger)','#ffd700','var(--ink)'][i%6],
+      color:['var(--success)','var(--gold)','var(--gold)','var(--danger)','var(--star)','var(--ink)'][i%6],
       size:5+Math.random()*8
     }));
     setConfetti(items);
@@ -233,7 +233,7 @@ function NumsBoard({ puzzleDate, streak }) {
     ghost.textContent = board[r][c];
     Object.assign(ghost.style, {
       width:`${CS}px`, height:`${CS}px`,
-      background:'#2C1F00', border:'2px solid var(--gold)',
+      background:'var(--surface-gold)', border:'2px solid var(--gold)',
       borderRadius:'8px', display:'flex', alignItems:'center',
       justifyContent:'center', fontSize:'20px', fontWeight:'700',
       color:'var(--ink)', position:'fixed', top:'-200px', left:'-200px',
@@ -287,11 +287,11 @@ function NumsBoard({ puzzleDate, streak }) {
     const an = cellAnim[key];
 
     if (isActive(r,c)) {
-      let bg='var(--surface)', border='var(--border)', color='#e0e0e0';
-      if (isCorr)     { bg='#2d6a30'; border='var(--success)'; color='var(--ink)'; }
-      if (isSel)      { bg='#2C1F00'; border='var(--gold)'; color='var(--ink)'; }
-      if (isDragging) { bg='#1a1200'; border='var(--gold)'; color='var(--ink)'; }
-      if (isDragOver) { bg='#1a3a6a'; border='#4a9eff'; color='var(--ink)'; }
+      let bg='var(--surface)', border='var(--border)', color='var(--ink)';
+      if (isCorr)     { bg='var(--correct-deep)'; border='var(--success)'; color='var(--ink)'; }
+      if (isSel)      { bg='var(--surface-gold)'; border='var(--gold)'; color='var(--ink)'; }
+      if (isDragging) { bg='var(--surface-gold)'; border='var(--gold)'; color='var(--ink)'; }
+      if (isDragOver) { bg='rgba(var(--gold-rgb),0.16)'; border='var(--ink)'; color='var(--ink)'; }
 
       cells.push(
         <div key={key}
@@ -313,11 +313,11 @@ function NumsBoard({ puzzleDate, streak }) {
             opacity: isFlying ? 0 : isDragging ? 0.5 : 1,
             transform: isDragOver ? 'scale(1.08)' : 'scale(1)',
             overflow:'hidden',
-            boxShadow: isDragOver ? '0 0 0 3px #4a9eff44' : isSel ? '0 0 0 3px rgba(var(--gold-rgb),0.27)' : 'none',
+            boxShadow: isDragOver ? '0 0 0 3px rgba(var(--ink-rgb),0.25)' : isSel ? '0 0 0 3px rgba(var(--gold-rgb),0.27)' : 'none',
           }}>
           {board[r][c]}
           {isSel&&<div style={{position:'absolute',inset:0,borderRadius:6,border:'2px solid var(--gold)',animation:'ripple 0.5s ease forwards',pointerEvents:'none'}}/>}
-          {isDragOver&&<div style={{position:'absolute',inset:0,borderRadius:6,border:'2px solid #4a9eff',animation:'ripple 0.5s ease forwards',pointerEvents:'none'}}/>}
+          {isDragOver&&<div style={{position:'absolute',inset:0,borderRadius:6,border:'2px solid var(--ink)',animation:'ripple 0.5s ease forwards',pointerEvents:'none'}}/>}
         </div>
       );
     } else if (r%2===1&&c%2===1) {
@@ -367,7 +367,7 @@ function NumsBoard({ puzzleDate, streak }) {
           {starCount>0&&(
             <div style={{display:'flex',gap:6,justifyContent:'center',marginBottom:8}}>
               {Array.from({length:starCount},(_,i)=>(
-                <span key={i} style={{fontSize:22,color:'#ffd700',animation:starsAnim?`starPop 0.4s ${i*100}ms both ease`:'none'}}>★</span>
+                <span key={i} style={{fontSize:22,color:'var(--star)',animation:starsAnim?`starPop 0.4s ${i*100}ms both ease`:'none'}}>★</span>
               ))}
             </div>
           )}
@@ -380,7 +380,7 @@ function NumsBoard({ puzzleDate, streak }) {
               onMouseOut={e=>e.currentTarget.style.background='var(--gold)'}>
               📋 Share result
             </button>
-            {copied&&<div style={{position:'absolute',top:-32,left:'50%',transform:'translateX(-50%)',background:'#2d6a30',color:'var(--ink)',fontSize:12,fontWeight:600,padding:'4px 12px',borderRadius:6,whiteSpace:'nowrap',animation:'copied 2s ease forwards',pointerEvents:'none'}}>Copied!</div>}
+            {copied&&<div style={{position:'absolute',top:-32,left:'50%',transform:'translateX(-50%)',background:'var(--correct-deep)',color:'var(--ink)',fontSize:12,fontWeight:600,padding:'4px 12px',borderRadius:6,whiteSpace:'nowrap',animation:'copied 2s ease forwards',pointerEvents:'none'}}>Copied!</div>}
           </div>
         </div>
       )}
@@ -390,7 +390,7 @@ function NumsBoard({ puzzleDate, streak }) {
           <button onClick={handleShare} style={{background:'var(--surface)',color:'var(--gold)',border:'1px solid var(--border)',borderRadius:8,padding:'8px 20px',fontSize:13,fontWeight:600,cursor:'pointer'}}>
             📋 Share progress
           </button>
-          {copied&&<div style={{position:'absolute',top:-32,left:'50%',transform:'translateX(-50%)',background:'#2d6a30',color:'var(--ink)',fontSize:12,fontWeight:600,padding:'4px 12px',borderRadius:6,whiteSpace:'nowrap',animation:'copied 2s ease forwards',pointerEvents:'none'}}>Copied!</div>}
+          {copied&&<div style={{position:'absolute',top:-32,left:'50%',transform:'translateX(-50%)',background:'var(--correct-deep)',color:'var(--ink)',fontSize:12,fontWeight:600,padding:'4px 12px',borderRadius:6,whiteSpace:'nowrap',animation:'copied 2s ease forwards',pointerEvents:'none'}}>Copied!</div>}
         </div>
       )}
 
@@ -422,7 +422,7 @@ function FlyingTile({num, fr, fc, tr, tc, cs, total}) {
   return (
     <div ref={ref} style={{
       position:'absolute', left:0, top:0, width:cs, height:cs,
-      background:'#2C1F00', border:'2px solid var(--gold)', borderRadius:8,
+      background:'var(--surface-gold)', border:'2px solid var(--gold)', borderRadius:8,
       display:'flex', alignItems:'center', justifyContent:'center',
       fontSize:20, fontWeight:700, color:'var(--ink)',
       pointerEvents:'none', zIndex:10,

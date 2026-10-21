@@ -103,7 +103,7 @@ export default function Bracket() {
   const loadAll = useCallback(() => {
     // For non-members RLS returns empty sets for all four — harmless.
     return Promise.all([
-      supabase.rpc('get_pool_members'),
+      supabase.rpc('get_pool_members', { pool: 'wc2026' }),
       supabase.from('matches').select('*').order('kickoff_at'),
       supabase.from('predictions').select('user_id,match_id,pick,locked_at'),
       supabase.from('pool_archive').select('tournament,standings,archived_at').eq('pool_id', 'wc2026').maybeSingle(),

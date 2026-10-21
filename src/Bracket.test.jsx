@@ -49,7 +49,10 @@ vi.mock('./supabase', () => ({
     from: (table) => query(table),
     rpc: (name, args) => {
       writes.push(['rpc', name, args])
-      return Promise.resolve({ data: name === 'get_pool_members' ? (member ? DATA.rpc : []) : null, error: null })
+      // Only the pool-scoped roster exists: get_pool_members({ pool }) returns
+      // that pool's members, and only to one of them.
+      const roster = member && args?.pool === 'wc2026' ? DATA.rpc : []
+      return Promise.resolve({ data: name === 'get_pool_members' ? roster : null, error: null })
     },
   },
 }))
@@ -114,6 +117,15 @@ describe('archived World Cup pool', () => {
     expect(text()).toContain('This pool has ended')
     expect(host.querySelector('input')).toBeNull()
     expect(writes.some(([, name]) => name === 'join_pool')).toBe(false)
+  })
+
+  it('asks for the World Cup roster only, and gates on the viewer being in it', async () => {
+    // A roster that comes back without the viewer (say, an Octagon-only
+    // member) must still read as "not a member", not as an empty pool page.
+    await render({ id: 'u-octagon-only', user_metadata: {} })
+    expect(writes).toContainEqual(['rpc', 'get_pool_members', { pool: 'wc2026' }])
+    expect(text()).toContain('This pool has ended')
+    expect(buttons()).not.toContain('Standings')
   })
 
   it('tells signed-out visitors the pool has ended', async () => {

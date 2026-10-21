@@ -178,7 +178,11 @@ const KEYBOARD = [
 ];
 
 const ST = { empty:'empty', correct:'correct', present:'present', absent:'absent' };
-const CLR = { empty:'var(--surface)', active:'var(--surface-gold)', correct:'#538d4e', present:'#b59f3b', absent:'#161412' };
+const CLR = { empty:'var(--surface)', active:'var(--surface-gold)', correct:'var(--correct)', present:'var(--present)', absent:'var(--absent)' };
+// Letters on revealed tiles: light on green and grey, dark on amber and on
+// both high-contrast colours, so every letter clears 3:1 against its tile.
+const PALETTE = { ...CLR, ink:{ correct:'var(--ink)', present:'var(--bg)', absent:'var(--ink-2)' } };
+const PALETTE_HC = { ...CLR, correct:'var(--hc-correct)', present:'var(--hc-present)', ink:{ correct:'var(--bg)', present:'var(--bg)', absent:'var(--ink-2)' } };
 
 const css = `
 @keyframes shake{0%,100%{transform:translateX(0)}15%{transform:translateX(-6px)}30%{transform:translateX(6px)}45%{transform:translateX(-4px)}60%{transform:translateX(4px)}75%{transform:translateX(-2px)}90%{transform:translateX(2px)}}
@@ -198,7 +202,7 @@ export default function WordsGame() {
   const [hc, setHc] = useState(() => {
     try { return localStorage.getItem('streakle-hc') === '1' } catch { return false }
   });
-  const palette = hc ? { ...CLR, correct: '#f5793a', present: '#85c0f9' } : CLR;
+  const palette = hc ? PALETTE_HC : PALETTE;
   const toggleHc = () => setHc(v => {
     const n = !v;
     try { localStorage.setItem('streakle-hc', n ? '1' : '0') } catch { /* storage unavailable */ }
@@ -264,7 +268,7 @@ function WordsBoard({ puzzleDate, hc, palette }) {
   const spawnConfetti = () => {
     const items = Array.from({length:30},(_,i)=>({
       id:i, x:20+Math.random()*60, delay:Math.random()*600,
-      color:['#538d4e','#b59f3b','var(--gold)','var(--gold)','var(--ink)'][i%5], size:5+Math.random()*8
+      color:['var(--correct)','var(--present)','var(--gold)','var(--gold)','var(--ink)'][i%5], size:5+Math.random()*8
     }));
     setConfetti(items);
     setTimeout(()=>setConfetti([]),1600);
@@ -358,6 +362,8 @@ function WordsBoard({ puzzleDate, hc, palette }) {
     return st?palette[st]:palette.empty;
   };
 
+  const getTileInk=(r,c)=>palette.ink[tileStates[`${r}-${c}`]]||'var(--ink)';
+
   const buildShare=()=>{
     const emoji=hc?{[ST.correct]:'🟧',[ST.present]:'🟦',[ST.absent]:'⬛'}:{[ST.correct]:'🟩',[ST.present]:'🟨',[ST.absent]:'⬛'};
     const rows=guesses.slice(0,won?current+1:ROWS).filter(g=>g)
@@ -420,7 +426,7 @@ function WordsBoard({ puzzleDate, hc, palette }) {
                         transform:'rotateY(180deg)',
                         background:tileColor,border:'2px solid transparent',
                         borderRadius:6,display:'flex',alignItems:'center',justifyContent:'center',
-                        fontSize:22,fontWeight:800,color:'var(--ink)',
+                        fontSize:22,fontWeight:800,color:getTileInk(rowIdx,colIdx),
                       }}>{letter}</div>
                     </div>
                   </div>
@@ -432,8 +438,8 @@ function WordsBoard({ puzzleDate, hc, palette }) {
       </div>
 
       {showFact&&(
-        <div style={{background:'var(--surface)',border:`1px solid ${won?'#538d4e':'var(--border)'}`,borderRadius:12,padding:'16px 20px',maxWidth:340,width:'90%',marginBottom:16,animation:'slideUp 0.5s ease'}}>
-          <div style={{fontSize:11,fontWeight:700,letterSpacing:2,color:won?'var(--success)':'var(--gold)',textTransform:'uppercase',marginBottom:6}}>
+        <div style={{background:'var(--surface)',border:`1px solid ${won?'var(--correct)':'var(--border)'}`,borderRadius:12,padding:'16px 20px',maxWidth:340,width:'90%',marginBottom:16,animation:'slideUp 0.5s ease'}}>
+          <div style={{fontSize:11,fontWeight:700,letterSpacing:2,color:won?'var(--success-text)':'var(--gold)',textTransform:'uppercase',marginBottom:6}}>
             {won?"✅ Today's word":"❌ Today's word was"}
           </div>
           <div style={{fontSize:28,fontWeight:900,letterSpacing:3,color:'var(--ink)',marginBottom:4}}>{daily.word}</div>
@@ -449,7 +455,7 @@ function WordsBoard({ puzzleDate, hc, palette }) {
             onMouseOut={e=>e.currentTarget.style.background='var(--gold)'}>
             📋 Share result
           </button>
-          {copied&&<div style={{position:'absolute',top:-32,left:'50%',transform:'translateX(-50%)',background:'#2d6a30',color:'var(--ink)',fontSize:12,fontWeight:600,padding:'4px 12px',borderRadius:6,whiteSpace:'nowrap',animation:'copied 2s ease forwards',pointerEvents:'none'}}>Copied!</div>}
+          {copied&&<div style={{position:'absolute',top:-32,left:'50%',transform:'translateX(-50%)',background:'var(--correct-deep)',color:'var(--ink)',fontSize:12,fontWeight:600,padding:'4px 12px',borderRadius:6,whiteSpace:'nowrap',animation:'copied 2s ease forwards',pointerEvents:'none'}}>Copied!</div>}
         </div>
       )}
 
@@ -463,9 +469,9 @@ function WordsBoard({ puzzleDate, hc, palette }) {
                 return (
                   <button key={key} onClick={()=>handleKey(key)} style={{
                     minWidth:wide?56:34,height:46,
-                    background:st===ST.correct?palette.correct:st===ST.present?palette.present:st===ST.absent?palette.absent:'#4A433A',
+                    background:st===ST.correct?palette.correct:st===ST.present?palette.present:st===ST.absent?palette.absent:'var(--key)',
                     border:'none',borderRadius:6,
-                    color:st===ST.absent?'#5A5248':'var(--ink)',
+                    color:st===ST.absent?'var(--muted)':palette.ink[st]||'var(--ink)',
                     fontSize:wide?11:14,fontWeight:700,
                     cursor:'pointer',userSelect:'none',
                     transition:'background 0.3s, color 0.3s',padding:'0 4px',

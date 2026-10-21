@@ -202,13 +202,13 @@ export default function Home() {
 
       {/* ── Footer ── */}
       <footer style={{ textAlign: 'center', fontSize: 12 }}>
-        <a href="/privacy" style={{ color: '#9A8C73', textDecoration: 'none', transition: 'color 0.15s' }}
+        <a href="/privacy" style={{ color: 'var(--text-2)', textDecoration: 'none', transition: 'color 0.15s' }}
           onMouseOver={e => e.currentTarget.style.color = 'var(--gold)'}
-          onMouseOut={e => e.currentTarget.style.color = '#9A8C73'}
+          onMouseOut={e => e.currentTarget.style.color = 'var(--text-2)'}
         >
           Privacy Policy / Politique de confidentialité
         </a>
-        <div style={{ marginTop: 6, color: '#7E7158' }}>© 2026 Streakle. All rights reserved.</div>
+        <div style={{ marginTop: 6, color: 'var(--muted)' }}>© 2026 Streakle. All rights reserved.</div>
       </footer>
     </div>
   )
