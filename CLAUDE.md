@@ -43,9 +43,22 @@ puzzles every day; signed-in players build streaks.
   the hash and OAuth params from Vercel Analytics URLs), `saveResult.js`, `useStreak.js`,
   `streak.js`, `evaluate.js` (Wordle logic, tested), `a11y.js` (`clickableProps`),
   `AwardIcon.jsx`, `ErrorBoundary.jsx`, `validWords.txt` (~14.8k words).
-- `saveResult` stamps today's date, so every game calls it only on today's board
-  (`isToday`) and maps an Archive pick of today back to the live board; archive
-  replays never save (`archiveReplay.test.jsx`).
+- Saving a day: every game page takes `{ seedDate, isToday, boardKey, selectDate }`
+  from `useBoardDate.js`. Today's board keeps the date it was dealt, so a page
+  open past midnight finishes (and saves) that day's puzzle; picking today in
+  the Archive moves it on; any other Archive pick is a replay that never saves.
+  Games call `saveResult({ game, puzzleDate: seedDate, … })` only when `isToday`;
+  it records today or yesterday only and keeps the day's FIRST result
+  (insert-if-absent), so a replay elsewhere can't flip a win or a loss
+  (`saveResult.test.js`, `archiveReplay.test.jsx`). It writes the row to a
+  localStorage outbox (`streakle-pending-results`) synchronously, before its
+  first await, and drops it once written; guest results, failed writes and
+  writes cut short by a closed page are sent by `sendPendingResults`, which
+  `AuthProvider` runs on every sign-in/load (after `createProfile`, since
+  results reference the profile). All nine games keep the live day's board in
+  localStorage (`streakle-<game>`, never replaced by an older day's), so a
+  reload never refunds a move or wipes a finished board; because the outbox
+  write comes first, "saveResult, then checkpoint the finish" can't lose a day.
 - Tests live next to the code as `*.test.js` (`evaluate.test.js`, `streak.test.js`,
   `mines/engine.test.js`, `weave/engine.test.js`, `scramble/engine.test.js`,
   the pool scoring suites).
@@ -205,7 +218,7 @@ mine writes `completed: false`. `game_results.score` = seconds,
   (`streakle-mines`: rung, attempts, times, phase — never cell state) so a
   third mine ends the day across reloads. Archive replays never touch it and
   never call `saveResult`; picking today in the Archive maps back to the
-  persisted ladder (`puzzleDate = null`).
+  persisted ladder (`useBoardDate`'s live board).
   The board is a delegated-handler WAI-ARIA grid (roving tabindex, arrows,
   Enter digs, F flags; tap/hold/right-click on pointers) — it deliberately
   does NOT use `clickableProps`.
@@ -279,8 +292,8 @@ whose cells all fill in counts as found. Score = active time + hint penalty;
 - `Scramble.jsx` keeps today's found words, hinted cells, hints and clock in
   localStorage (`streakle-scramble`, v2 — the old ladder's v1 is ignored — and bound to
   the board by a pool+words signature, so a same-day engine change resets it);
-  archive replays never touch it or call `saveResult`, and a result is only
-  saved while the board's date is still today. Keyed by date like Weave;
+  archive replays never touch it or call `saveResult`; a board finished just
+  past midnight saves under the day it was dealt. Keyed by date like Weave;
   the clock pauses when hidden and on unmount; honours `streakle-hc`.
 
 ## SEO
