@@ -62,9 +62,18 @@ puzzles every day; signed-in players build streaks.
 - Tests live next to the code as `*.test.js` (`evaluate.test.js`, `streak.test.js`,
   `mines/engine.test.js`, `weave/engine.test.js`, `scramble/engine.test.js`,
   the pool scoring suites).
-- Content banks never repeat for months: `Words` has 144 words, `Link` 71 puzzles;
-  the grids, `Nums`, `Mines`, `Weave` and `Scramble` generate fresh daily.
-  Validate edits with `node scripts/check-words.mjs`, `node scripts/check-link.mjs`,
+- Content banks: `Words` has 144 words (`WORDS[YYYYMMDD % 144]` — some answers
+  return after ~59 days), `Link` 71 puzzles in `src/link/puzzles.js`, scheduled by
+  `src/link/schedule.js`: before `LINK_CUTOVER` (2026-10-25) the shipped
+  `YYYYMMDD % 71` (frozen at 71, so history never changes), from it a fixed
+  rotation — each puzzle returns only every 71 days. To add puzzles, append
+  them and add an `ERAS` entry starting on a cycle boundary no time zone has
+  reached: the new era serves them first, so served dates never change and no
+  gap shrinks. Never edit, reorder or remove a shipped puzzle (`schedule.test.js`
+  fingerprints the first 71). The grids, `Nums`, `Mines`, `Weave` and
+  `Scramble` generate fresh daily.
+  Validate edits with `node scripts/check-words.mjs`, `node scripts/check-link.mjs`
+  (also fails on a puzzle outside the schedule or any repeat within 71 days),
   `node scripts/check-mines.mjs`, `node scripts/check-weave.mjs` and
   `node scripts/check-scramble.mjs`.
 
@@ -80,21 +89,43 @@ puzzles every day; signed-in players build streaks.
   `--absent` (warm grey), `--correct-deep`/`--correct-wash` for solved
   surfaces, `--hc-correct`/`--hc-present` for high-contrast mode, and
   `--link-1..4` for Link's groups — coloured by position (easiest →
-  trickiest), so Link's PUZZLES carry no colours.
+  trickiest), so Link's puzzles carry no colours.
   Two fonts only: `var(--font-display)` Barlow Condensed (titles),
   `var(--font-body)` DM Sans.
 - Push directly to `master` — no PRs unless asked.
 - Verify every change with `npm run build` (and `npm test` for logic).
 - Daily puzzles are date-seeded and must be identical for every user/browser.
 - All three grid games (Faceoff, Gridiron, Knockout) generate their daily grid
-  procedurally from the date seed — no fixed puzzle lists, so they never repeat.
-  Each `getDailyPuzzle` shuffles a criteria pool, enforces variety, and validates
-  every cell has answers AND the board has a full 9-distinct-player solution
-  (impossible criteria pairs self-reject via empty cells). After editing any
-  grid's player/fighter data, run
-  `node scripts/check-faceoff.mjs [Faceoff|Gridiron|Knockout]` — it replays each
-  generator over 2025–2027 and fails if any day falls back to the hardcoded grid
-  (= pool too thin). Keep the in-app generator and the checker's copy in sync.
+  procedurally from the date seed, through one pure engine, `src/grid/engine.js`,
+  and per-game modules `src/<game>/data.js` (answers as first shipped — NEVER
+  edit), `corrections.js` (`BATCHES` of verified fixes, each with a `from`
+  date) and `puzzle.js` (header pool, accept rules, `getDailyPuzzle`, `fitsOn`,
+  and `PLAYERS`/`FIGHTERS` = the answers with every batch applied, which the
+  page searches). Each day shuffles the criteria pool, enforces variety,
+  and validates every cell has answers AND the board has a 9-distinct-answer
+  solution (impossible criteria pairs self-reject via empty cells).
+  Dates before `GRID_CUTOVER` (2026-10-25) keep the shipped seeding
+  (`seed + attempt*997 + pass*31337`, which collided across dates) and the
+  shipped data, so every board players were dealt stays byte-identical
+  (`grid/schedule.test.js` fingerprints all 662). From the cutover each attempt's
+  seed is `mixSeed(date, pass, attempt)`, and all three games skip any grid
+  served in the previous 365 days (`scheduleWithoutRepeats`: a memoised
+  day-by-day schedule replayed from 365 days before the cutover).
+  A date's grid generates from the answer data in effect that day (shipped,
+  then each batch from its `from`). Pages check answers with
+  `fitsOn(boardDate)`: the current data, or whatever the data the board was
+  dealt from accepted — so a correction never makes a dealt board harder.
+  A team header means the franchise: relocated predecessors count for it
+  (`FRANCHISES` in each `puzzle.js`, e.g. STL Rams → LAR, QUE → COL; stints for
+  code-less predecessors like the North Stars are corrections adding the
+  successor). To fix answer data, add a NEW batch to `corrections.js` (never
+  edit `data.js` or a shipped batch), each fix with a source, `from` a day no
+  time zone has reached (2+ days after the push). Then run
+  `node scripts/check-faceoff.mjs [Faceoff|Gridiron|Knockout]` — it imports the
+  real modules (nothing to keep in sync) and fails on any fallback grid,
+  unsolvable board, repeat within 365 days from the cutover (2025–2030), or a
+  cold first board slower than 300 ms; then update the post-cutover pins.
+  Any cutover/era date must be one no time zone has reached when it deploys.
 
 ## Recent work (last session)
 A full code audit + fix pass: bug fixes, route code-splitting, accessibility
