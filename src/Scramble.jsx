@@ -4,6 +4,7 @@ import GameShell from './GameShell'
 import ResultCard from './ResultCard'
 import { saveResult } from './saveResult'
 import { useStreak } from './useStreak'
+import { useBoardDate } from './useBoardDate'
 import { useSeo, PAGE_SEO } from './seo'
 import {
   POOL_SIZE, BOARD_WORDS, MIN_LEN, HINT_SECONDS,
@@ -11,6 +12,7 @@ import {
   scoreSeconds, formatTime, shareLine,
 } from './scramble/engine'
 import { GOLD, INK } from './theme'
+import { slotHoldsLaterDay } from './checkpointSlot'
 
 const DARK_INK = 'var(--bg)'
 // Found letters and hinted letters; light tiles take dark ink for contrast.
@@ -54,7 +56,6 @@ function formatDate(dateStr) {
 }
 
 const plural = (n, word) => `${n} ${word}${n !== 1 ? 's' : ''}`
-const todayStr = () => new Date().toLocaleDateString('en-CA')
 const identity = n => Array.from({ length: n }, (_, i) => i)
 const freshGame = () => ({ found: [], hinted: [], hints: 0, acc: 0 })
 // After a mouse/touch click (detail > 0, unlike keyboard activation), drop
@@ -95,8 +96,13 @@ function readCheckpoint(date, pz, cells) {
   } catch { return null }
 }
 
+// There is one slot, and a tab left open since yesterday keeps the board it
+// was dealt, so a write never replaces a later day's checkpoint (YYYY-MM-DD
+// strings compare as dates) — its next move, or its clock pausing, would
+// wipe today's progress.
 function writeCheckpoint(date, pz, g) {
   try {
+    if (slotHoldsLaterDay(CHECKPOINT_KEY, date)) return
     localStorage.setItem(CHECKPOINT_KEY, JSON.stringify({ v: CHECKPOINT_VERSION, date, sig: boardSig(pz), ...g }))
   } catch { /* storage unavailable */ }
 }
@@ -115,10 +121,9 @@ export default function Scramble() {
   const { streak } = useStreak('scramble')
   useSeo(PAGE_SEO.scramble)
   const [showArchive, setShowArchive] = useState(false)
-  const [puzzleDate, setPuzzleDate] = useState(null)
+  const { seedDate, isToday, boardKey, selectDate } = useBoardDate()
   const [hc, setHc] = useState(readHc)
 
-  const seedDate = puzzleDate ?? todayStr()
   const toggleHc = () => setHc(v => {
     const n = !v
     try { localStorage.setItem(HC_KEY, n ? '1' : '0') } catch { /* storage unavailable */ }
@@ -134,7 +139,7 @@ export default function Scramble() {
   )
 
   return (
-    <GameShell game="scramble" date={formatDate(puzzleDate)} howTo={howTo} onArchive={() => setShowArchive(true)} hc={hc} onToggleHc={toggleHc}>
+    <GameShell game="scramble" date={formatDate(seedDate)} howTo={howTo} onArchive={() => setShowArchive(true)} hc={hc} onToggleHc={toggleHc}>
       <style>{css}</style>
 
 
@@ -143,13 +148,13 @@ export default function Scramble() {
       )}
 
       {/* Keyed by date: a new puzzle is a fresh board, never a stale one. */}
-      <ScrambleBoard key={seedDate} seedDate={seedDate} isToday={puzzleDate === null} palette={hc ? PALETTE_HC : PALETTE} keysBlocked={showArchive} />
+      <ScrambleBoard key={boardKey} seedDate={seedDate} isToday={isToday} palette={hc ? PALETTE_HC : PALETTE} keysBlocked={showArchive} />
 
 
       {showArchive && (
         <Archive
           game="scramble"
-          onSelectDate={(date) => setPuzzleDate(date === todayStr() ? null : date)}
+          onSelectDate={selectDate}
           onClose={() => setShowArchive(false)}
         />
       )}
@@ -212,9 +217,6 @@ function ScrambleBoard({ seedDate, isToday, palette, keysBlocked }) {
     pushTimeout(() => setToast(t => (t?.id === id ? null : t)), ms)
   }
   const persist = (next) => { if (isToday) writeCheckpoint(seedDate, pz, next) }
-  // saveResult stamps the wall-clock date, so a session that runs past
-  // midnight must not write yesterday's board onto today's row.
-  const canSave = () => isToday && todayStr() === seedDate
   const spawnConfetti = () => {
     setConfetti(Array.from({ length: 30 }, (_, i) => ({
       id: i, x: 20 + Math.random() * 60, delay: Math.random() * 700,
@@ -244,8 +246,11 @@ function ScrambleBoard({ seedDate, isToday, palette, keysBlocked }) {
     const landed = [...newlyFound, ...next.found.filter(i => !base.found.includes(i))]
     if (next.found.length === BOARD_WORDS) {
       next = { ...next, acc: stopClock() }
-      // Archive replays never write results — they would land on today's row.
-      if (canSave()) saveResult({ game: 'scramble', completed: true, score: scoreSeconds(next.acc, next.hints), swaps_used: next.hints })
+      // Archive replays never write results: a replay is not a play of that
+      // day, and a replayed yesterday would otherwise still be recorded.
+      // Saved before persist() below, so the result is queued on disk before
+      // the checkpoint records the finish.
+      if (isToday) saveResult({ game: 'scramble', puzzleDate: seedDate, completed: true, score: scoreSeconds(next.acc, next.hints), swaps_used: next.hints })
       spawnConfetti()
       announce(`All six words found in ${formatTime(scoreSeconds(next.acc, next.hints))}.`)
     }
@@ -371,7 +376,7 @@ function ScrambleBoard({ seedDate, isToday, palette, keysBlocked }) {
     }
   }, [pause])
 
-  const shareText = () => buildShareText(pz, g, isToday ? null : seedDate)
+  const shareText = () => buildShareText(pz, g, seedDate)
 
   // ── Render ──
   const popCells = new Set(pop.flatMap(i => cellsOf(pz.placements[i]).map(([r, c]) => cellKey(r, c))))

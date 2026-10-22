@@ -1,15 +1,17 @@
-import { useState, useEffect, useMemo, useRef, useCallback, memo } from 'react'
+import { useState, useEffect, useRef, useCallback, memo } from 'react'
 import Archive from './Archive'
 import GameShell from './GameShell'
 import ResultCard from './ResultCard'
 import { saveResult } from './saveResult'
 import { useStreak } from './useStreak'
+import { useBoardDate } from './useBoardDate'
 import { useSeo, PAGE_SEO } from './seo'
 import {
   RUNGS, MAX_ATTEMPTS, REVEALED, FLAGGED,
   generateBoard, openingState, dig, chord, toggleFlag, isWon, flagCount, formatTime, shareLines,
 } from './mines/engine'
 import { GOLD, CARD, BORDER, INK, MUTED } from './theme'
+import { slotHoldsLaterDay } from './checkpointSlot'
 
 const GREEN = 'var(--success)', RED = 'var(--danger)'
 const DIGIT_COLORS = ['#93C5FD', 'var(--success-text)', 'var(--danger-text)', '#C4B5FD', '#FDBA74', '#5EEAD4', 'var(--ink)', 'var(--gold)']
@@ -101,8 +103,12 @@ function readCheckpoint(seedDate) {
   } catch { return null }
 }
 
+// There is one slot, and a tab left open since yesterday keeps the ladder it
+// was dealt, so a write never replaces a later day's checkpoint (YYYY-MM-DD
+// strings compare as dates) — its next move would wipe today's progress.
 function writeCheckpoint(seedDate, d) {
   try {
+    if (slotHoldsLaterDay(CHECKPOINT_KEY, seedDate)) return
     localStorage.setItem(CHECKPOINT_KEY, JSON.stringify({
       v: 1, date: seedDate, rung: d.rung, hits: d.hits, acc: d.acc, phase: d.phase, hit: d.hit,
     }))
@@ -164,9 +170,7 @@ export default function Mines() {
   const { streak } = useStreak('mines')
   useSeo(PAGE_SEO.mines)
   const [showArchive, setShowArchive] = useState(false)
-  const [puzzleDate, setPuzzleDate] = useState(null)
-  const seedDate = useMemo(() => puzzleDate ?? new Date().toLocaleDateString('en-CA'), [puzzleDate])
-  const isToday = puzzleDate === null
+  const { seedDate, isToday, boardKey, selectDate } = useBoardDate()
 
   // One object for the whole game so every transition is a single setState.
   const [g, setG] = useState(() => bootstrap(seedDate, readCheckpoint(seedDate)))
@@ -209,13 +213,13 @@ export default function Mines() {
 
   // Archive replay: a fresh ladder for that date, never persisted. Coming
   // back to today re-bootstraps from the checkpoint, so a lost day stays lost.
-  const prevSeed = useRef(seedDate)
+  const prevKey = useRef(boardKey)
   useEffect(() => {
-    if (prevSeed.current === seedDate) return
-    prevSeed.current = seedDate
+    if (prevKey.current === boardKey) return
+    prevKey.current = boardKey
     timeouts.current.forEach(clearTimeout)
     timeouts.current = []
-    const next = puzzleDate ? freshGame(puzzleDate) : bootstrap(seedDate, readCheckpoint(seedDate))
+    const next = isToday ? bootstrap(seedDate, readCheckpoint(seedDate)) : freshGame(seedDate)
     setG(next)
     setSegStart(null)
     setNow(0)
@@ -223,7 +227,7 @@ export default function Mines() {
     setConfetti([])
     setLive({ n: 0, text: '' })
     setToast(null)
-  }, [seedDate, puzzleDate])
+  }, [boardKey, isToday, seedDate])
 
   const persist = (d) => { if (isToday) writeCheckpoint(seedDate, d) }
   const announce = (text) => setLive(l => ({ n: l.n + 1, text }))
@@ -259,14 +263,17 @@ export default function Mines() {
     const next = { ...g, acc: accNext, hits: hitsNext, phase: 'exploded', hit: hitIdx }
     setG(next)
     setSegStart(null)
-    persist({ ...next, phase: lost ? 'lost' : 'ready' })
     if (lost) {
-      // Archive replays never write results — they would land on today's row.
-      if (isToday) saveResult({ game: 'mines', completed: false, score: Math.round(sum(accNext) / 1000), swaps_used: sum(hitsNext) })
+      // Archive replays never write results: a replay is not a play of that
+      // day, and a replayed yesterday would otherwise still be recorded.
+      if (isToday) saveResult({ game: 'mines', puzzleDate: seedDate, completed: false, score: Math.round(sum(accNext) / 1000), swaps_used: sum(hitsNext) })
       announce('Mine! Out of attempts. Game over.')
     } else {
       announce(`Mine! ${plural(left, 'attempt')} left. The board resets to its opening.`)
     }
+    // After saveResult: the result is queued on disk before the checkpoint
+    // records the loss.
+    persist({ ...next, phase: lost ? 'lost' : 'ready' })
     pushTimeout(() => {
       setG(cur => lost
         ? { ...cur, phase: 'lost' }
@@ -284,8 +291,10 @@ export default function Mines() {
       const next = { ...g, cells: done, acc: accNext, phase: 'won' }
       setG(next)
       setSegStart(null)
+      // saveResult first: the result is queued on disk before the checkpoint
+      // records the finish.
+      if (isToday) saveResult({ game: 'mines', puzzleDate: seedDate, completed: true, score: Math.round(total / 1000), swaps_used: mistakes })
       persist(next)
-      if (isToday) saveResult({ game: 'mines', completed: true, score: Math.round(total / 1000), swaps_used: mistakes })
       spawnConfetti()
       announce(`All three boards cleared in ${formatTime(total)}.`)
     } else {
@@ -421,7 +430,7 @@ export default function Mines() {
     }
   }
 
-  const shareText = () => buildShareText(g, puzzleDate)
+  const shareText = () => buildShareText(g, seedDate)
 
   // ── Derived render data ──
   const variantOf = (i) => {
@@ -466,7 +475,7 @@ export default function Mines() {
   )
 
   return (
-    <GameShell game="mines" date={formatDate(puzzleDate)} howTo={howTo} onArchive={() => setShowArchive(true)} className="mn-main">
+    <GameShell game="mines" date={formatDate(seedDate)} howTo={howTo} onArchive={() => setShowArchive(true)} className="mn-main">
       <style>{css}</style>
       {confetti.map(c => (
         <div key={c.id} style={{ position: 'fixed', left: `${c.x}%`, top: '28%', width: c.size, height: c.size, background: c.color, borderRadius: c.size > 10 ? '50%' : 2, animation: `mnConfetti 1.3s ${c.delay}ms ease forwards`, pointerEvents: 'none', zIndex: 100 }} />
@@ -572,7 +581,7 @@ export default function Mines() {
       {showArchive && (
         <Archive
           game="mines"
-          onSelectDate={(date) => setPuzzleDate(date === new Date().toLocaleDateString('en-CA') ? null : date)}
+          onSelectDate={selectDate}
           onClose={() => setShowArchive(false)}
         />
       )}

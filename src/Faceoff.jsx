@@ -4,9 +4,11 @@ import GameShell from "./GameShell";
 import ResultCard from './ResultCard';
 import { saveResult } from './saveResult';
 import { useStreak } from './useStreak';
+import { useBoardDate } from './useBoardDate';
 import AwardIcon from './AwardIcon';
 import { clickableProps } from './a11y';
 import { useSeo, PAGE_SEO } from './seo';
+import { slotHoldsLaterDay } from './checkpointSlot';
 
 const TEAMS = {
   ANA:"Ducks",ARI:"Coyotes",BOS:"Bruins",BUF:"Sabres",
@@ -589,8 +591,6 @@ function formatDate(dateStr) {
   return d.toLocaleDateString('en-US', { month:'long', day:'numeric', year:'numeric' });
 }
 
-const todayStr = () => new Date().toLocaleDateString('en-CA')
-
 function isValid(player, criteria) {
   return player.t.includes(criteria) || player.a.includes(criteria);
 }
@@ -598,6 +598,50 @@ function isValid(player, criteria) {
 function getScore(fame) {
   return Math.max(5, Math.round(100 - fame));
 }
+
+const MAX_GUESSES = 9;
+const CHECKPOINT_KEY = 'streakle-faceoff';
+const PLAYER_BY_NAME = new Map(PLAYERS.map(p => [p.n, p]));
+
+// ── Today's checkpoint: each filled cell's player name and the guesses left,
+// so a reload can never refund a guess or revive a finished board. Scores and
+// won/game-over are derived. Archive replays never touch it.
+function readCheckpoint(date, puzzle) {
+  try {
+    const raw = localStorage.getItem(CHECKPOINT_KEY);
+    if (!raw) return null;
+    const cp = JSON.parse(raw);
+    if (!cp || cp.v !== 1 || cp.date !== date) return null;
+    if (!Number.isInteger(cp.left) || cp.left < 0 || cp.left > MAX_GUESSES) return null;
+    if (!cp.cells || typeof cp.cells !== 'object' || Array.isArray(cp.cells)) return null;
+    const entries = Object.entries(cp.cells);
+    if (entries.length > MAX_GUESSES - cp.left) return null; // every filled cell cost a guess
+    const cells = {};
+    const used = new Set();
+    for (const [key, name] of entries) {
+      const m = /^([0-2])-([0-2])$/.exec(key);
+      const player = typeof name === 'string' ? PLAYER_BY_NAME.get(name) : undefined;
+      if (!m || !player || used.has(name)) return null;
+      if (!isValid(player, puzzle.rows[Number(m[1])]) || !isValid(player, puzzle.cols[Number(m[2])])) return null;
+      used.add(name);
+      cells[key] = { player, score: getScore(player.f) };
+    }
+    const won = entries.length === 9;
+    const totalScore = Object.values(cells).reduce((sum, v) => sum + v.score, 0);
+    return { cells, left: cp.left, totalScore, won, gameOver: !won && cp.left === 0 };
+  } catch { return null; }
+}
+
+function writeCheckpoint(date, cells, left) {
+  try {
+    // Never replace a later day's board (see checkpointSlot.js).
+    if (slotHoldsLaterDay(CHECKPOINT_KEY, date)) return;
+    const names = Object.fromEntries(Object.entries(cells).map(([key, v]) => [key, v.player.n]));
+    localStorage.setItem(CHECKPOINT_KEY, JSON.stringify({ v: 1, date, cells: names, left }));
+  } catch { /* storage unavailable */ }
+}
+
+const FRESH_BOARD = { cells: {}, left: MAX_GUESSES, totalScore: 0, won: false, gameOver: false };
 
 const css = `
 @keyframes slideUp{from{transform:translateY(16px);opacity:0}to{transform:translateY(0);opacity:1}}
@@ -613,7 +657,7 @@ export default function FaceoffGame() {
   const { streak } = useStreak('faceoff');
   useSeo(PAGE_SEO.faceoff)
   const [showArchive, setShowArchive] = useState(false)
-  const [puzzleDate, setPuzzleDate] = useState(null)
+  const { seedDate, isToday, boardKey, selectDate } = useBoardDate()
   const howTo = (
     <>
       Fill the 3×3 grid with NHL players. Each player must satisfy <b>both</b> the row and column criteria.<br/><br/>
@@ -624,19 +668,19 @@ export default function FaceoffGame() {
   )
 
   return (
-    <GameShell game="faceoff" date={formatDate(puzzleDate)} howTo={howTo} onArchive={() => setShowArchive(true)}>
+    <GameShell game="faceoff" date={formatDate(seedDate)} howTo={howTo} onArchive={() => setShowArchive(true)}>
       <style>{css}</style>
 
 
 
       {/* Keyed by date: picking a puzzle in the Archive starts a fresh board. */}
-      <FaceoffBoard key={puzzleDate ?? 'today'} puzzleDate={puzzleDate} streak={streak} />
+      <FaceoffBoard key={boardKey} seedDate={seedDate} isToday={isToday} streak={streak} />
 
 
       {showArchive && (
         <Archive
           game="faceoff"
-          onSelectDate={(date) => setPuzzleDate(date === todayStr() ? null : date)}
+          onSelectDate={selectDate}
           onClose={() => setShowArchive(false)}
         />
       )}
@@ -644,21 +688,22 @@ export default function FaceoffGame() {
   );
 }
 
-function FaceoffBoard({ puzzleDate, streak }) {
-  const puzzle = useMemo(() => getDailyPuzzle(puzzleDate), [puzzleDate])
-  // saveResult stamps today's date, so an archive replay must never save.
-  const isToday = puzzleDate === null
-  const [cells, setCells] = useState({});
+// isToday: the live board, not an Archive replay (replays never save).
+function FaceoffBoard({ seedDate, isToday, streak }) {
+  const puzzle = useMemo(() => getDailyPuzzle(seedDate), [seedDate])
+  // Today's board resumes from its checkpoint (read once, on mount).
+  const [initial] = useState(() => (isToday && readCheckpoint(seedDate, puzzle)) || FRESH_BOARD);
+  const [cells, setCells] = useState(initial.cells);
   const [activeCell, setActiveCell] = useState(null);
   const [query, setQuery] = useState('');
   const [suggestions, setSuggestions] = useState([]);
   const [pendingPlayer, setPendingPlayer] = useState(null);
-  const [guessesLeft, setGuessesLeft] = useState(9);
+  const [guessesLeft, setGuessesLeft] = useState(initial.left);
   const [shakeCell, setShakeCell] = useState(null);
-  const [won, setWon] = useState(false);
-  const [gameOver, setGameOver] = useState(false);
+  const [won, setWon] = useState(initial.won);
+  const [gameOver, setGameOver] = useState(initial.gameOver);
   const [confetti, setConfetti] = useState([]);
-  const [totalScore, setTotalScore] = useState(0);
+  const [totalScore, setTotalScore] = useState(initial.totalScore);
   const inputRef = useRef(null);
 
   // Auto-focus input when cell becomes active
@@ -728,20 +773,24 @@ function FaceoffBoard({ puzzleDate, streak }) {
       setQuery('');
       setPendingPlayer(null);
       setSuggestions([]);
-      if (Object.keys(newCells).length === 9) { if (isToday) saveResult({ game: 'faceoff', completed: true, score: totalScore + score }); setWon(true); spawnConfetti(); }
-      else if (newGuesses === 0) { if (isToday) saveResult({ game: 'faceoff', completed: false, score: totalScore }); setGameOver(true); }
+      if (Object.keys(newCells).length === 9) { if (isToday) saveResult({ game: 'faceoff', puzzleDate: seedDate, completed: true, score: totalScore + score }); setWon(true); spawnConfetti(); }
+      else if (newGuesses === 0) { if (isToday) saveResult({ game: 'faceoff', puzzleDate: seedDate, completed: false, score: totalScore }); setGameOver(true); }
+      // After any save above: saveResult queues the result on disk
+      // synchronously, before the checkpoint records the finish.
+      if (isToday) writeCheckpoint(seedDate, newCells, newGuesses);
     } else {
       setShakeCell(key);
       setTimeout(()=>setShakeCell(null), 500);
       setPendingPlayer(null);
       setQuery('');
-      if (newGuesses === 0) { setActiveCell(null); if (isToday) saveResult({ game: 'faceoff', completed: false, score: totalScore }); setGameOver(true); }
+      if (newGuesses === 0) { setActiveCell(null); if (isToday) saveResult({ game: 'faceoff', puzzleDate: seedDate, completed: false, score: totalScore }); setGameOver(true); }
+      if (isToday) writeCheckpoint(seedDate, cells, newGuesses);
     }
   };
 
   const buildShareText = () => {
     const grid = Array.from({length:3},(_,r)=>Array.from({length:3},(_,c)=>cells[`${r}-${c}`]?'✅':'⬜').join('')).join('\n');
-    return `FACEOFF by Streakle 🏒 — ${formatDate(puzzleDate)}\nScore: ${totalScore} | ${Object.keys(cells).length}/9 cells\n${grid}\n\nPlay at: playstreakle.com/faceoff`;
+    return `FACEOFF by Streakle 🏒 — ${formatDate(seedDate)}\nScore: ${totalScore} | ${Object.keys(cells).length}/9 cells\n${grid}\n\nPlay at: playstreakle.com/faceoff`;
   };
 
   return (
@@ -795,7 +844,8 @@ function FaceoffBoard({ puzzleDate, streak }) {
                     borderRadius:8,cursor:filled||gameOver||won?'default':'pointer',
                     display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',
                     padding:6,textAlign:'center',userSelect:'none',
-                    animation:isShaking?'shake 0.45s ease':filled?'cellReveal 0.35s ease':'none',
+                    // Cells restored from the checkpoint appear without the reveal.
+                    animation:isShaking?'shake 0.45s ease':filled&&!initial.cells[key]?'cellReveal 0.35s ease':'none',
                     transition:'background 0.2s,border-color 0.2s',
                   }}>
                     {filled?(

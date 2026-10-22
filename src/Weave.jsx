@@ -4,12 +4,14 @@ import GameShell from './GameShell'
 import ResultCard from './ResultCard'
 import { saveResult } from './saveResult'
 import { useStreak } from './useStreak'
+import { useBoardDate } from './useBoardDate'
 import { useSeo, PAGE_SEO } from './seo'
 import {
   SIZE, MAX_SWAPS, PAR, ACTIVE, HOLE,
   generatePuzzle, colours, swap, isActive, shareGrid,
 } from './weave/engine'
 import { GOLD, INK } from './theme'
+import { slotHoldsLaterDay } from './checkpointSlot'
 
 const WIN = 'var(--success)', RED = 'var(--danger)'
 // Keyed by the engine's colour names (GREEN/YELLOW/GREY). Light tiles take
@@ -55,7 +57,6 @@ function formatDate(dateStr) {
 }
 
 const plural = (n, word) => `${n} ${word}${n !== 1 ? 's' : ''}`
-const todayStr = () => new Date().toLocaleDateString('en-CA')
 const phaseOf = (board, left, solution) => (board === solution ? 'won' : left === 0 ? 'lost' : 'playing')
 
 // Same holes and the same letters as the solution, in any order.
@@ -81,8 +82,12 @@ function readCheckpoint(date, solution) {
   } catch { return null }
 }
 
+// There is one slot, and a tab left open since yesterday keeps the board it
+// was dealt, so a write never replaces a later day's checkpoint (YYYY-MM-DD
+// strings compare as dates) — its next move would wipe today's progress.
 function writeCheckpoint(date, g) {
   try {
+    if (slotHoldsLaterDay(CHECKPOINT_KEY, date)) return
     localStorage.setItem(CHECKPOINT_KEY, JSON.stringify({ v: 1, date, board: g.board, left: g.left }))
   } catch { /* storage unavailable */ }
 }
@@ -110,10 +115,9 @@ export default function Weave() {
   const { streak } = useStreak('weave')
   useSeo(PAGE_SEO.weave)
   const [showArchive, setShowArchive] = useState(false)
-  const [puzzleDate, setPuzzleDate] = useState(null)
+  const { seedDate, isToday, boardKey, selectDate } = useBoardDate()
   const [hc, setHc] = useState(readHc)
 
-  const seedDate = puzzleDate ?? todayStr()
   const toggleHc = () => setHc(v => {
     const n = !v
     try { localStorage.setItem(HC_KEY, n ? '1' : '0') } catch { /* storage unavailable */ }
@@ -133,7 +137,7 @@ export default function Weave() {
   )
 
   return (
-    <GameShell game="weave" date={formatDate(puzzleDate)} howTo={howTo} onArchive={() => setShowArchive(true)} hc={hc} onToggleHc={toggleHc}>
+    <GameShell game="weave" date={formatDate(seedDate)} howTo={howTo} onArchive={() => setShowArchive(true)} hc={hc} onToggleHc={toggleHc}>
       <style>{css}</style>
 
 
@@ -142,13 +146,13 @@ export default function Weave() {
       )}
 
       {/* Keyed by date: a new puzzle is a fresh board, never a stale one. */}
-      <WeaveBoard key={seedDate} seedDate={seedDate} isToday={puzzleDate === null} palette={palette} hc={hc} />
+      <WeaveBoard key={boardKey} seedDate={seedDate} isToday={isToday} palette={palette} hc={hc} />
 
 
       {showArchive && (
         <Archive
           game="weave"
-          onSelectDate={(date) => setPuzzleDate(date === todayStr() ? null : date)}
+          onSelectDate={selectDate}
           onClose={() => setShowArchive(false)}
         />
       )}
@@ -226,12 +230,13 @@ function WeaveBoard({ seedDate, isToday, palette, hc }) {
 
   const finish = (next) => {
     if (next.phase === 'won') {
-      // Archive replays never write results — they would land on today's row.
-      if (isToday) saveResult({ game: 'weave', completed: true, score: next.left, swaps_used: MAX_SWAPS - next.left })
+      // Archive replays never write results: a replay is not a play of that
+      // day, and a replayed yesterday would otherwise still be recorded.
+      if (isToday) saveResult({ game: 'weave', puzzleDate: seedDate, completed: true, score: next.left, swaps_used: MAX_SWAPS - next.left })
       spawnConfetti()
       announce(`Solved in ${plural(MAX_SWAPS - next.left, 'swap')}! ${plural(next.left, 'star')}.`)
     } else {
-      if (isToday) saveResult({ game: 'weave', completed: false, score: 0, swaps_used: MAX_SWAPS })
+      if (isToday) saveResult({ game: 'weave', puzzleDate: seedDate, completed: false, score: 0, swaps_used: MAX_SWAPS })
       announce('Out of swaps. The answer is shown.')
     }
   }
@@ -243,8 +248,12 @@ function WeaveBoard({ seedDate, isToday, palette, hc }) {
     const next = { board: nb, left: left - 1, phase: phaseOf(nb, left - 1, solution) }
     flip.current = { a, b, drop }
     setG(next)
+    const over = next.phase !== 'playing'
+    // finish() saves first: the result is queued on disk before the
+    // checkpoint records the finish.
+    if (over) finish(next)
     if (isToday) writeCheckpoint(seedDate, next)
-    if (next.phase !== 'playing') { finish(next); return }
+    if (over) return
     const after = colours(nb, solution)
     announce(`Swapped. ${capital(cellName(a))} is ${nb[a]}, ${COLOUR_DESC[after[a]]}; ${cellName(b)} is ${nb[b]}, ${COLOUR_DESC[after[b]]}. ${plural(next.left, 'swap')} left.`)
   }
@@ -323,7 +332,7 @@ function WeaveBoard({ seedDate, isToday, palette, hc }) {
     tileEls.current[r * SIZE + c]?.focus()
   }
 
-  const shareText = () => buildShareText(g, solution, isToday ? null : seedDate, hc)
+  const shareText = () => buildShareText(g, solution, seedDate, hc)
 
   // ── Render ──
   const shown = phase === 'lost' ? solution : board

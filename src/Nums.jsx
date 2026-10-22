@@ -4,8 +4,10 @@ import GameShell from "./GameShell";
 import ResultCard, { ShareButton } from './ResultCard';
 import { saveResult } from './saveResult';
 import { useStreak } from './useStreak';
+import { useBoardDate } from './useBoardDate';
 import { clickableProps } from './a11y';
 import { useSeo, PAGE_SEO } from './seo';
+import { slotHoldsLaterDay } from './checkpointSlot';
 
 const isActive = (r, c) => r % 2 === 0 || c % 2 === 0;
 
@@ -62,13 +64,56 @@ function scramble(sol, rng) {
   return g;
 }
 
+const CHECKPOINT_KEY = 'streakle-nums';
+
+// Same 7×7 shape as the day's scramble, the same (hidden) inactive cells, and
+// the same numbers in the active cells, in any order.
+function sameTiles(board, start) {
+  if (!Array.isArray(board) || board.length !== 7) return false;
+  for (let r = 0; r < 7; r++) {
+    if (!Array.isArray(board[r]) || board[r].length !== 7) return false;
+    for (let c = 0; c < 7; c++) {
+      if (!Number.isInteger(board[r][c])) return false;
+      if (!isActive(r,c) && board[r][c] !== start[r][c]) return false;
+    }
+  }
+  const tally = b => {
+    const t = [];
+    for (let r = 0; r < 7; r++) for (let c = 0; c < 7; c++) if (isActive(r,c)) t.push(b[r][c]);
+    return t.sort((x, y) => x - y).join(',');
+  };
+  return tally(board) === tally(start);
+}
+
+// ── Today's checkpoint: the board and swaps left (negative = over budget), so
+// a reload can never refund a swap or unsolve a puzzle. Archive replays never
+// touch it.
+function readCheckpoint(date, start) {
+  try {
+    const raw = localStorage.getItem(CHECKPOINT_KEY);
+    if (!raw) return null;
+    const cp = JSON.parse(raw);
+    if (!cp || cp.v !== 1 || cp.date !== date || !sameTiles(cp.board, start)) return null;
+    if (!Number.isInteger(cp.swaps) || cp.swaps > 20) return null;
+    return { board: cp.board, swaps: cp.swaps };
+  } catch { return null; }
+}
+
+// One slot for every tab. A tab left open since an earlier day keeps the board
+// it was dealt, so its next swap must not overwrite a later day's checkpoint:
+// today's board would reload fresh, refunding swaps or wiping a solve.
+function writeCheckpoint(date, board, swaps) {
+  try {
+    if (slotHoldsLaterDay(CHECKPOINT_KEY, date)) return;
+    localStorage.setItem(CHECKPOINT_KEY, JSON.stringify({ v: 1, date, board, swaps }));
+  } catch { /* storage unavailable */ }
+}
+
 function formatDate(dateStr) {
   let d = new Date();
   if (dateStr) { const [y,m,day] = dateStr.split('-').map(Number); d = new Date(y, m-1, day); }
   return d.toLocaleDateString('en-US', { month:'long', day:'numeric', year:'numeric' });
 }
-
-const todayStr = () => new Date().toLocaleDateString('en-CA')
 
 function buildShareText(swaps, solved, dateStr) {
   const used = 20 - swaps;
@@ -111,7 +156,7 @@ export default function App() {
   const { streak } = useStreak('nums');
   useSeo(PAGE_SEO.nums)
   const [showArchive, setShowArchive] = useState(false)
-  const [puzzleDate, setPuzzleDate] = useState(null)
+  const { seedDate, isToday, boardKey, selectDate } = useBoardDate()
   const howTo = (
     <>
       Rearrange numbers so every <b>row</b> and <b>column</b> contains <b>1–7</b> once each.<br/><br/>
@@ -122,19 +167,19 @@ export default function App() {
   )
 
   return (
-    <GameShell game="nums" date={formatDate(puzzleDate)} howTo={howTo} onArchive={() => setShowArchive(true)}>
+    <GameShell game="nums" date={formatDate(seedDate)} howTo={howTo} onArchive={() => setShowArchive(true)}>
       <style>{css}</style>
 
 
 
       {/* Keyed by date: picking a puzzle in the Archive starts a fresh board. */}
-      <NumsBoard key={puzzleDate ?? 'today'} puzzleDate={puzzleDate} streak={streak} />
+      <NumsBoard key={boardKey} seedDate={seedDate} isToday={isToday} streak={streak} />
 
 
       {showArchive && (
         <Archive
           game="nums"
-          onSelectDate={(date) => setPuzzleDate(date === todayStr() ? null : date)}
+          onSelectDate={selectDate}
           onClose={() => setShowArchive(false)}
         />
       )}
@@ -142,22 +187,22 @@ export default function App() {
   );
 }
 
-function NumsBoard({ puzzleDate, streak }) {
+// isToday: the live board, not an Archive replay (replays never save).
+function NumsBoard({ seedDate, isToday, streak }) {
   const CS = useCellSize(), TOTAL = CS + GAP;
   const pz = useMemo(() => {
-    const seedDate = puzzleDate ?? new Date().toLocaleDateString('en-CA')
     const seed = parseInt(seedDate.replace(/-/g, ''))
     const rng = mulberry32(seed)
     const sol = generateSolution(rng)
     return { sol, cl: computeClues(sol), sc: scramble(sol, rng) }
-  }, [puzzleDate])
-  // saveResult stamps today's date, so an archive replay must never save.
-  const isToday = puzzleDate === null
+  }, [seedDate])
 
-  const [board, setBoard] = useState(() => pz.sc.map(r => [...r]));
+  // Today's board resumes from its checkpoint; a replay always starts fresh.
+  const [initial] = useState(() =>
+    (isToday && readCheckpoint(seedDate, pz.sc)) || { board: pz.sc.map(r => [...r]), swaps: 20 });
+  const [board, setBoard] = useState(initial.board);
   const [sel, setSel] = useState(null);
-  const [swaps, setSwaps] = useState(20);
-  const [solved, setSolved] = useState(false);
+  const [swaps, setSwaps] = useState(initial.swaps);
   const [starsAnim, setStarsAnim] = useState(false);
   const [confetti, setConfetti] = useState([]);
   const [cellAnim, setCellAnim] = useState({});
@@ -176,6 +221,7 @@ function NumsBoard({ puzzleDate, streak }) {
       if (isActive(r,c) && b[r][c]!==pz.sol[r][c]) return false;
     return true;
   };
+  const solved = isSolved(board);
 
   const spawnConfetti = () => {
     const items = Array.from({length:30},(_,i)=>({
@@ -216,10 +262,15 @@ function NumsBoard({ puzzleDate, streak }) {
       if (corrKeys.length) triggerCellAnim(corrKeys,'correctPulse',600);
 
       if (isSolved(nb)) {
-        setSolved(true);
-        if (isToday) saveResult({ game: 'nums', completed: true, swaps_used: 20 - newSwaps });
+        if (isToday) saveResult({ game: 'nums', puzzleDate: seedDate, completed: true, swaps_used: 20 - newSwaps });
         setTimeout(()=>{ spawnConfetti(); setStarsAnim(true); },100);
       }
+      // Checkpoint after the save and in the same step (the swap only lands
+      // here, once its 380 ms flight ends). saveResult queues the result on
+      // disk synchronously, before its first await, so the result is queued
+      // before the checkpoint records the solve: a reload can never restore
+      // a solved board whose result is not queued.
+      if (isToday) writeCheckpoint(seedDate, nb, newSwaps);
     }, 380);
   };
 
@@ -281,7 +332,7 @@ function NumsBoard({ puzzleDate, streak }) {
 
   const handleDragEnd = () => { setDragging(null); setDragOver(null); };
 
-  const shareText = () => buildShareText(swaps, solved, puzzleDate);
+  const shareText = () => buildShareText(swaps, solved, seedDate);
 
   const gSize = 7*TOTAL - GAP;
   const starCount = Math.max(0, swaps);

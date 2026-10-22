@@ -4,9 +4,13 @@ import { readFileSync } from 'node:fs'
 import { act } from 'react'
 import { createRoot } from 'react-dom/client'
 import { AuthContext } from './AuthContext'
+import { generatePuzzle as weavePuzzle, ACTIVE, MAX_SWAPS, PAR, SIZE, HOLE, minSwaps, swap } from './weave/engine'
+import { generateBoard, MAX_ATTEMPTS } from './mines/engine'
+import { generatePuzzle as scramblePuzzle, BOARD_WORDS } from './scramble/engine'
 
-// saveResult stamps today's date, so a replayed archive puzzle must never call
-// it — a past win would mark today done, a past loss would overwrite today's win.
+// An archive replay is not a play of that day, so it must never call
+// saveResult: that records under the board's dealt date (today or yesterday),
+// so a replayed yesterday would otherwise still be recorded.
 const { saveResult } = vi.hoisted(() => ({ saveResult: vi.fn() }))
 vi.mock('./saveResult', () => ({ saveResult }))
 
@@ -25,6 +29,22 @@ vi.mock('./supabase', () => {
   }
 })
 
+// Node 25's own (method-less, without --localstorage-file) localStorage
+// shadows happy-dom's, so give the games a working in-memory one, emptied
+// before each test: a finished board's checkpoint must not leak into the next.
+function memoryStorage() {
+  const data = new Map()
+  return {
+    getItem: (k) => (data.has(k) ? data.get(k) : null),
+    setItem: (k, v) => { data.set(k, String(v)) },
+    removeItem: (k) => { data.delete(k) },
+    clear: () => { data.clear() },
+    key: (i) => [...data.keys()][i] ?? null,
+    get length() { return data.size },
+  }
+}
+vi.stubGlobal('localStorage', memoryStorage())
+
 // happy-dom has no Web Animations; Link's solved-group flight calls el.animate.
 if (!Element.prototype.animate) Element.prototype.animate = () => ({ cancel() {} })
 
@@ -33,6 +53,9 @@ const { default: LinkGame } = await import('./Link.jsx')
 const { default: FaceoffGame } = await import('./Faceoff.jsx')
 const { default: GridironGame } = await import('./Gridiron.jsx')
 const { default: KnockoutGame } = await import('./Knockout.jsx')
+const { default: WeaveGame } = await import('./Weave.jsx')
+const { default: MinesGame } = await import('./Mines.jsx')
+const { default: ScrambleGame } = await import('./Scramble.jsx')
 
 // Each game picks bank[YYYYMMDD % length]; read the banks the way the checkers do.
 const source = (file) => readFileSync(new URL(file, import.meta.url), 'utf8')
@@ -47,28 +70,43 @@ const linkFor = (date) => PUZZLES[seedOf(date) % PUZZLES.length]
 
 const TODAY = '2026-10-21'
 const PAST = '2026-10-18'
+const YESTERDAY = '2026-10-20'
+const NEXT = '2026-10-22'
 const USER = { id: 'u-1', email: 'player@example.com', user_metadata: {} }
 
-let host, root
+// `host` is the page the helpers act on; `pages` is every page still open
+// (a stale-tab test keeps two tabs of one game open at once).
+let host
+let pages = []
 beforeEach(() => {
   vi.useFakeTimers()
   vi.setSystemTime(new Date(2026, 9, 21, 12))
   saveResult.mockClear()
+  localStorage.clear()
 })
 afterEach(() => {
-  act(() => root.unmount())
-  host.remove()
+  for (const page of pages) close(page)
   vi.useRealTimers()
 })
 
 async function mount(Game) {
   host = document.createElement('div')
   document.body.appendChild(host)
-  root = createRoot(host)
+  const root = createRoot(host)
+  const page = { host, root }
+  pages = [...pages, page]
   await act(async () => {
     root.render(<AuthContext.Provider value={{ user: USER, signOut() {} }}><Game /></AuthContext.Provider>)
   })
+  return page
 }
+// Closes a tab (unmounting runs the page's own cleanup, e.g. Scramble's clock pause).
+function close(page) {
+  act(() => page.root.unmount())
+  page.host.remove()
+  pages = pages.filter(p => p !== page)
+}
+const focusPage = (page) => { host = page.host }
 const tick = (ms) => act(async () => { vi.advanceTimersByTime(ms) })
 const click = (el) => act(async () => { el.click() })
 const button = (label) => [...host.querySelectorAll('button')].find(el => el.textContent.trim().startsWith(label))
@@ -113,7 +151,7 @@ describe('Words', () => {
     await mount(WordsGame)
     await typeWord(wordFor(TODAY))
     expect(ended()).toBe(true)
-    expect(saveResult).toHaveBeenCalledWith({ game: 'words', completed: true })
+    expect(saveResult).toHaveBeenCalledWith({ game: 'words', puzzleDate: TODAY, completed: true })
   })
 
   it('never saves a win on an archive day', async () => {
@@ -137,7 +175,29 @@ describe('Words', () => {
     await mount(WordsGame)
     await pickArchiveDay(TODAY)
     await typeWord(wordFor(TODAY))
-    expect(saveResult).toHaveBeenCalledWith({ game: 'words', completed: true })
+    expect(saveResult).toHaveBeenCalledWith({ game: 'words', puzzleDate: TODAY, completed: true })
+  })
+})
+
+describe('Words across midnight', () => {
+  it("keeps the board it was dealt and saves it under that day", async () => {
+    vi.setSystemTime(new Date(2026, 9, 21, 23, 58))
+    await mount(WordsGame)
+    vi.setSystemTime(new Date(2026, 9, 22, 0, 2))
+    await typeWord(wordFor(TODAY))
+    expect(ended()).toBe(true)
+    expect(host.textContent).toContain('October 21, 2026')
+    expect(saveResult).toHaveBeenCalledWith({ game: 'words', puzzleDate: TODAY, completed: true })
+  })
+
+  it("moves on to the new day when today is picked in the Archive", async () => {
+    vi.setSystemTime(new Date(2026, 9, 21, 23, 58))
+    await mount(WordsGame)
+    vi.setSystemTime(new Date(2026, 9, 22, 0, 2))
+    await pickArchiveDay(NEXT)
+    await typeWord(wordFor(NEXT))
+    expect(host.textContent).toContain('October 22, 2026')
+    expect(saveResult).toHaveBeenCalledWith({ game: 'words', puzzleDate: NEXT, completed: true })
   })
 })
 
@@ -145,7 +205,7 @@ describe('Link', () => {
   it("saves a loss on today's board", async () => {
     await mount(LinkGame)
     await loseLink(linkFor(TODAY))
-    expect(saveResult).toHaveBeenCalledWith({ game: 'link', completed: false })
+    expect(saveResult).toHaveBeenCalledWith({ game: 'link', puzzleDate: TODAY, completed: false })
   })
 
   it('never saves a loss on an archive day', async () => {
@@ -168,7 +228,7 @@ describe('Link', () => {
     await mount(LinkGame)
     await pickArchiveDay(TODAY)
     await loseLink(linkFor(TODAY))
-    expect(saveResult).toHaveBeenCalledWith({ game: 'link', completed: false })
+    expect(saveResult).toHaveBeenCalledWith({ game: 'link', puzzleDate: TODAY, completed: false })
   })
 })
 
@@ -203,7 +263,7 @@ for (const g of GRIDS) {
       await playOut()
       expect(ended()).toBe(true)
       expect(saveResult).toHaveBeenCalledTimes(1)
-      expect(saveResult.mock.calls[0][0].game).toBe(g.game)
+      expect(saveResult.mock.calls[0][0]).toMatchObject({ game: g.game, puzzleDate: TODAY })
     })
 
     it('never saves an archive day', async () => {
@@ -230,3 +290,190 @@ for (const g of GRIDS) {
     })
   })
 }
+
+// ── Weave, Mines and Scramble: a daily board with one checkpoint slot per game
+// ('streakle-<game>'), written as today's board is played.
+
+const weaveTile = (i) => host.querySelector(`[data-idx="${i}"]`)
+const weaveBoard = () => Array.from({ length: SIZE * SIZE }, (_, i) => weaveTile(i)?.textContent ?? HOLE).join('')
+const swapsLeft = () => host.textContent.match(/\d+ swaps? left/)?.[0]
+
+async function swapWeave(a, b) {
+  await click(weaveTile(a))
+  await click(weaveTile(b))
+}
+
+// Solves in PAR swaps: each swap puts a right letter in place and cuts the
+// minimum still needed by one.
+async function solveWeave(date) {
+  const { solution } = weavePuzzle(date)
+  for (let n = 0; n < MAX_SWAPS && weaveBoard() !== solution; n++) {
+    const b = weaveBoard()
+    const wrong = ACTIVE.filter(i => b[i] !== solution[i])
+    const need = minSwaps(b, solution) - 1
+    const pair = wrong.flatMap(i => wrong.filter(j => b[j] === solution[i]).map(j => [i, j]))
+      .find(([i, j]) => minSwaps(swap(b, i, j), solution) === need)
+    await swapWeave(...pair)
+  }
+}
+
+// One swap that puts neither letter in place.
+async function wasteWeaveSwap(date) {
+  const { solution } = weavePuzzle(date)
+  const b = weaveBoard()
+  const wrong = ACTIVE.filter(i => b[i] !== solution[i])
+  const pair = wrong.flatMap(i => wrong.map(j => [i, j]))
+    .find(([i, j]) => b[i] !== b[j] && b[j] !== solution[i] && b[i] !== solution[j])
+  await swapWeave(...pair)
+}
+
+const minesCell = (i) => host.querySelector(`[role="gridcell"][data-idx="${i}"]`)
+const minesHidden = (i) => minesCell(i).classList.contains('mn-hidden')
+const minesRung = () => host.querySelector('[role="grid"]').getAttribute('aria-label').split(' board')[0]
+const minesAttempts = () => host.querySelector('.mn-pips')?.getAttribute('aria-label')
+
+async function clearMinesRung(date, rung) {
+  const board = generateBoard(date, rung)
+  for (let i = 0; i < board.cols * board.rows; i++) {
+    if (!board.mine[i] && minesHidden(i)) await click(minesCell(i))
+  }
+}
+
+async function hitMine(date, rung) {
+  const board = generateBoard(date, rung)
+  await click(minesCell(board.mine.findIndex((m, i) => m && minesHidden(i))))
+  await tick(1200) // the blast, then the board resets to its opening
+}
+
+const scrambleFound = () => host.querySelector('[role="img"][aria-label*="words found"]').getAttribute('aria-label')
+const scrambleFoundWords = () => (scrambleFound().match(/found: ([A-Z, ]+)/)?.[1] ?? '').split(', ')
+
+// Taps the word's letters on the rack and enters it. Clicks stay inside this
+// page, unlike typing, which every open Scramble tab would hear.
+async function spellScramble(word) {
+  for (const ch of word) await click(host.querySelector(`.sc-rack button[aria-label="Add ${ch}"]`))
+  await click(button('Enter'))
+}
+
+async function solveScramble(date) {
+  for (const word of scramblePuzzle(date).words) {
+    if (ended()) return
+    if (!scrambleFoundWords().includes(word)) await spellScramble(word)
+  }
+}
+
+// Per game: `finish` plays a board to its end and `result` is what that saves;
+// `move` is one checkpointed move; `state` is what a reload must restore and
+// `fresh` its value on an untouched board.
+const DAILY = [
+  {
+    name: 'Weave', Game: WeaveGame, key: 'streakle-weave',
+    finish: solveWeave,
+    result: (date) => ({ game: 'weave', puzzleDate: date, completed: true, score: MAX_SWAPS - PAR, swaps_used: PAR }),
+    move: wasteWeaveSwap,
+    state: () => `${weaveBoard()} · ${swapsLeft()}`,
+    fresh: (date) => `${weavePuzzle(date).start} · ${MAX_SWAPS} swaps left`,
+  },
+  {
+    // Three mines on Easy end the day.
+    name: 'Mines', Game: MinesGame, key: 'streakle-mines',
+    finish: async (date) => { for (let k = 0; k < MAX_ATTEMPTS; k++) await hitMine(date, 0) },
+    result: (date) => ({ game: 'mines', puzzleDate: date, completed: false, score: 0, swaps_used: MAX_ATTEMPTS }),
+    move: (date) => hitMine(date, 0),
+    state: () => `${minesRung()} · ${minesAttempts()}`,
+    fresh: () => `Easy · ${MAX_ATTEMPTS} attempts left`,
+  },
+  {
+    name: 'Scramble', Game: ScrambleGame, key: 'streakle-scramble',
+    finish: solveScramble,
+    result: (date) => ({ game: 'scramble', puzzleDate: date, completed: true, score: 0, swaps_used: 0 }),
+    move: (date) => spellScramble(scramblePuzzle(date).words[0]),
+    state: () => scrambleFound().split(';')[0],
+    fresh: () => `0 of ${BOARD_WORDS} words found`,
+  },
+]
+
+for (const g of DAILY) {
+  describe(g.name, () => {
+    it("saves today's finish under today's date", async () => {
+      await mount(g.Game)
+      await g.finish(TODAY)
+      expect(ended()).toBe(true)
+      expect(saveResult).toHaveBeenCalledTimes(1)
+      expect(saveResult).toHaveBeenCalledWith(g.result(TODAY))
+    })
+
+    it('never saves or checkpoints an archive replay', async () => {
+      await mount(g.Game)
+      await pickArchiveDay(PAST)
+      await g.finish(PAST)
+      expect(ended()).toBe(true)
+      expect(saveResult).not.toHaveBeenCalled()
+      expect(localStorage.getItem(g.key)).toBeNull()
+    })
+
+    it('keeps a board dealt before midnight and saves it under that day', async () => {
+      vi.setSystemTime(new Date(2026, 9, 21, 23, 58))
+      await mount(g.Game)
+      vi.setSystemTime(new Date(2026, 9, 22, 0, 2))
+      await g.finish(TODAY)
+      expect(ended()).toBe(true)
+      expect(host.textContent).toContain('October 21, 2026')
+      expect(saveResult).toHaveBeenCalledTimes(1)
+      expect(saveResult).toHaveBeenCalledWith(g.result(TODAY))
+    })
+
+    it('moves to a fresh board for the new day when today is picked after midnight', async () => {
+      vi.setSystemTime(new Date(2026, 9, 21, 23, 58))
+      await mount(g.Game)
+      await g.move(TODAY)
+      vi.setSystemTime(new Date(2026, 9, 22, 0, 2))
+      await pickArchiveDay(NEXT)
+      expect(host.textContent).toContain('October 22, 2026')
+      expect(g.state()).toBe(g.fresh(NEXT))
+      await g.finish(NEXT)
+      expect(saveResult).toHaveBeenCalledTimes(1)
+      expect(saveResult).toHaveBeenCalledWith(g.result(NEXT))
+    })
+
+    it("never lets a tab dealt yesterday overwrite today's checkpoint", async () => {
+      vi.setSystemTime(new Date(2026, 9, 20, 23, 58))
+      const stale = await mount(g.Game)
+      // Today, another tab makes a move: that is today's checkpoint.
+      vi.setSystemTime(new Date(2026, 9, 21, 12))
+      const todayTab = await mount(g.Game)
+      await g.move(TODAY)
+      const todayState = g.state()
+      close(todayTab)
+      const saved = localStorage.getItem(g.key)
+      expect(JSON.parse(saved).date).toBe(TODAY)
+      // The stale tab, still on yesterday's board, moves and then closes.
+      focusPage(stale)
+      await g.move(YESTERDAY)
+      expect(localStorage.getItem(g.key)).toBe(saved)
+      close(stale)
+      expect(localStorage.getItem(g.key)).toBe(saved)
+      // Reloading today's board restores today's state.
+      await mount(g.Game)
+      expect(g.state()).toBe(todayState)
+      expect(g.state()).not.toBe(g.fresh(TODAY))
+    })
+  })
+}
+
+describe('Mines across midnight', () => {
+  it('climbs a ladder dealt before midnight and saves the win under that day', async () => {
+    vi.setSystemTime(new Date(2026, 9, 21, 23, 58))
+    await mount(MinesGame)
+    await clearMinesRung(TODAY, 0)
+    vi.setSystemTime(new Date(2026, 9, 22, 0, 2))
+    await click(button('Next: Medium'))
+    await clearMinesRung(TODAY, 1)
+    await click(button('Next: Hard'))
+    await clearMinesRung(TODAY, 2)
+    expect(host.querySelector('.rc-title').textContent).toBe('🎉 All clear!')
+    expect(host.textContent).toContain('October 21, 2026')
+    expect(saveResult).toHaveBeenCalledTimes(1)
+    expect(saveResult.mock.calls[0][0]).toMatchObject({ game: 'mines', puzzleDate: TODAY, completed: true, swaps_used: 0 })
+  })
+})

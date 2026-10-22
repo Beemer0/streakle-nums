@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from './supabase'
 import { AuthContext } from './AuthContext'
+import { sendPendingResults } from './saveResult'
 
 // Create a profile row on first sign in
 async function createProfile(user) {
@@ -34,7 +35,14 @@ export function AuthProvider({ children }) {
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null)
-      if (session?.user) createProfile(session.user)
+      const signedIn = session?.user
+      if (!signedIn) return
+      // Deferred: supabase calls made inside this callback can deadlock the
+      // auth lock. Results reference the profile row, so it goes first.
+      setTimeout(async () => {
+        await createProfile(signedIn)
+        sendPendingResults(signedIn.id)
+      }, 0)
     })
 
     return () => subscription.unsubscribe()

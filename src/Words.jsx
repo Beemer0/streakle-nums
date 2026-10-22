@@ -4,9 +4,11 @@ import GameShell from "./GameShell";
 import ResultCard from './ResultCard';
 import { saveResult } from './saveResult';
 import { useStreak } from './useStreak';
+import { useBoardDate } from './useBoardDate';
 import { evaluate } from './evaluate';
 import validWordsRaw from './validWords.txt?raw';
 import { useSeo, PAGE_SEO } from './seo';
+import { slotHoldsLaterDay } from './checkpointSlot';
 
 const WORDS = [
   { word: "BRINY", def: "Salty like the sea.", fact: "The ocean contains about 35 grams of salt per litre. Ancient sailors called the sea 'the briny deep', and the phrase stuck around for centuries." },
@@ -171,8 +173,6 @@ function formatDate(dateStr) {
   return d.toLocaleDateString('en-US', { month:'long', day:'numeric', year:'numeric' });
 }
 
-const todayStr = () => new Date().toLocaleDateString('en-CA')
-
 const ROWS = 6, COLS = 5;
 const KEYBOARD = [
   ['Q','W','E','R','T','Y','U','I','O','P'],
@@ -181,6 +181,7 @@ const KEYBOARD = [
 ];
 
 const ST = { empty:'empty', correct:'correct', present:'present', absent:'absent' };
+const CHECKPOINT_KEY = 'streakle-words';
 const CLR = { empty:'var(--surface)', active:'var(--surface-gold)', correct:'var(--correct)', present:'var(--present)', absent:'var(--absent)' };
 // Letters on revealed tiles: light on green and grey, dark on amber and on
 // both high-contrast colours, so every letter clears 3:1 against its tile.
@@ -209,11 +210,69 @@ const css = `
 @media (min-width:600px) and (min-height:800px){.wd-board{--wd-tile:60px}.wd-kb{--wd-key:56px}.wd-key{font-size:15px}.wd-key-wide{font-size:12px}}
 `;
 
+// Keyboard colours after a guess: green beats amber beats grey.
+function withKeyStates(prev, guess, result) {
+  const next={...prev};
+  guess.split('').forEach((ch,i)=>{
+    const p=next[ch];
+    if (result[i]===ST.correct) next[ch]=ST.correct;
+    else if (result[i]===ST.present&&p!==ST.correct) next[ch]=ST.present;
+    else if (!p) next[ch]=ST.absent;
+  });
+  return next;
+}
+
+// The whole board follows from the submitted guesses (none = a fresh board).
+function boardFrom(list, word) {
+  const results=list.map(g=>evaluate(g,word));
+  const won=list.length>0&&list[list.length-1]===word;
+  const gameOver=won||list.length>=ROWS;
+  return {
+    guesses:Array.from({length:ROWS},(_,r)=>list[r]??''),
+    current:gameOver?list.length-1:list.length,
+    tileStates:Object.fromEntries(results.flatMap((res,r)=>res.map((st,c)=>[`${r}-${c}`,st]))),
+    keyStates:list.reduce((ks,g,r)=>withKeyStates(ks,g,results[r]),{}),
+    won, gameOver,
+  };
+}
+
+// ── Today's checkpoint: the submitted guesses, so a reload can never refund
+// a guess or revive a finished game. Archive replays never touch it.
+// It names the answer it was played against (a short hash, so the storage
+// panel doesn't spell out today's word): a same-day bank edit that changes
+// the day's word drops the old guesses instead of replaying them onto it.
+function answerSig(word) {
+  let h=0x811c9dc5; // FNV-1a, 32-bit
+  for (const ch of word) h=Math.imul(h^ch.charCodeAt(0),0x01000193)>>>0;
+  return h.toString(36);
+}
+
+function readCheckpoint(date, word) {
+  try {
+    const raw=localStorage.getItem(CHECKPOINT_KEY);
+    if (!raw) return null;
+    const cp=JSON.parse(raw);
+    if (!cp||cp.v!==1||cp.date!==date||cp.sig!==answerSig(word)||!Array.isArray(cp.guesses)) return null;
+    const list=cp.guesses;
+    if (list.length>ROWS||!list.every(g=>typeof g==='string'&&g.length===COLS&&/^[A-Z]+$/.test(g))) return null;
+    if (list.slice(0,-1).includes(word)) return null; // nothing after a winning guess
+    return list;
+  } catch { return null; }
+}
+
+// Never replaces a later day's board in the slot (see checkpointSlot.js).
+function writeCheckpoint(date, word, list) {
+  try {
+    if (slotHoldsLaterDay(CHECKPOINT_KEY, date)) return;
+    localStorage.setItem(CHECKPOINT_KEY, JSON.stringify({ v:1, date, sig:answerSig(word), guesses:list }));
+  } catch { /* storage unavailable */ }
+}
+
 export default function WordsGame() {
   const { streak } = useStreak('words');
   useSeo(PAGE_SEO.words)
   const [showArchive, setShowArchive] = useState(false)
-  const [puzzleDate, setPuzzleDate] = useState(null)
+  const { seedDate, isToday, boardKey, selectDate } = useBoardDate()
   const [hc, setHc] = useState(() => {
     try { return localStorage.getItem('streakle-hc') === '1' } catch { return false }
   });
@@ -235,7 +294,7 @@ export default function WordsGame() {
   )
 
   return (
-    <GameShell game="words" date={formatDate(puzzleDate)} howTo={howTo} onArchive={() => setShowArchive(true)} hc={hc} onToggleHc={toggleHc}>
+    <GameShell game="words" date={formatDate(seedDate)} howTo={howTo} onArchive={() => setShowArchive(true)} hc={hc} onToggleHc={toggleHc}>
       <style>{css}</style>
 
       {streak > 0 && (
@@ -246,13 +305,13 @@ export default function WordsGame() {
 
 
       {/* Keyed by date: picking a puzzle in the Archive starts a fresh board. */}
-      <WordsBoard key={puzzleDate ?? 'today'} puzzleDate={puzzleDate} hc={hc} palette={palette} />
+      <WordsBoard key={boardKey} seedDate={seedDate} isToday={isToday} hc={hc} palette={palette} />
 
 
       {showArchive && (
         <Archive
           game="words"
-          onSelectDate={(date) => setPuzzleDate(date === todayStr() ? null : date)}
+          onSelectDate={selectDate}
           onClose={() => setShowArchive(false)}
         />
       )}
@@ -260,24 +319,28 @@ export default function WordsGame() {
   );
 }
 
-function WordsBoard({ puzzleDate, hc, palette }) {
-  const daily = useMemo(() => getDailyWord(puzzleDate), [puzzleDate])
-  // saveResult stamps today's date, so an archive replay must never save.
-  const isToday = puzzleDate === null
-  const [guesses, setGuesses] = useState(Array(ROWS).fill(''));
-  const [current, setCurrent] = useState(0);
+// isToday: the live board, not an Archive replay (replays never save).
+function WordsBoard({ seedDate, isToday, hc, palette }) {
+  const daily = useMemo(() => getDailyWord(seedDate), [seedDate])
+  // Today's board resumes from its checkpoint, already revealed (no flips, no confetti).
+  const [initial] = useState(() => boardFrom((isToday && readCheckpoint(seedDate, daily.word)) || [], daily.word));
+  const [guesses, setGuesses] = useState(initial.guesses);
+  const [current, setCurrent] = useState(initial.current);
   const [input, setInput] = useState('');
-  const [tileStates, setTileStates] = useState({});
-  const [keyStates, setKeyStates] = useState({});
+  const [tileStates, setTileStates] = useState(initial.tileStates);
+  const [keyStates, setKeyStates] = useState(initial.keyStates);
   const [shakeRow, setShakeRow] = useState(null);
   const [bounceRow, setBounceRow] = useState(null);
-  const [gameOver, setGameOver] = useState(false);
-  const [won, setWon] = useState(false);
+  const [gameOver, setGameOver] = useState(initial.gameOver);
+  const [won, setWon] = useState(initial.won);
   const [message, setMessage] = useState(null);
   const [confetti, setConfetti] = useState([]);
-  const [showFact, setShowFact] = useState(false);
+  const [showFact, setShowFact] = useState(initial.gameOver);
   const [revealingTiles, setRevealingTiles] = useState({});
   const revealingRef = useRef(false);
+  // Set the moment the deciding guess (a win or the sixth) is submitted, well
+  // before gameOver lands after its reveal: from then on no key is taken.
+  const decidedRef = useRef(initial.gameOver);
 
   const showMsg = (msg, dur=1800) => { setMessage(msg); setTimeout(()=>setMessage(null), dur); };
 
@@ -291,7 +354,7 @@ function WordsBoard({ puzzleDate, hc, palette }) {
   };
 
   const submitGuess = useCallback(() => {
-    if (revealingRef.current) return;
+    if (decidedRef.current || revealingRef.current) return;
     if (input.length!==COLS) {
       setShakeRow(current); setTimeout(()=>setShakeRow(null),600);
       showMsg('Not enough letters'); return;
@@ -304,8 +367,24 @@ function WordsBoard({ puzzleDate, hc, palette }) {
     revealingRef.current = true;
     const rowIdx = current;
     const submittedInput = input;
+    const isWin=result.every(s=>s===ST.correct);
+    const isLast=rowIdx+1>=ROWS;
+    // Lock input now, not when gameOver lands after the reveal: a guess typed
+    // in that gap would overwrite this row, rewrite the checkpoint and save again.
+    if (isWin||isLast) decidedRef.current=true;
     setGuesses(prev=>{const n=[...prev];n[rowIdx]=submittedInput;return n;});
     setInput('');
+
+    // Record the guess (and the result, once it decides the game) as it lands,
+    // before the reveal, so a reload mid-animation neither refunds it nor loses
+    // the save. Keep this order: saveResult queues the result on disk
+    // synchronously, before its first await, so the result is queued on disk
+    // before the checkpoint records the finish.
+    if (isToday) {
+      if (isWin) saveResult({ game: 'words', puzzleDate: seedDate, completed: true });
+      else if (isLast) saveResult({ game: 'words', puzzleDate: seedDate, completed: false });
+      writeCheckpoint(seedDate, daily.word, [...guesses.slice(0,rowIdx), submittedInput]);
+    }
 
     result.forEach((st,colIdx)=>{
       setTimeout(()=>{
@@ -319,37 +398,25 @@ function WordsBoard({ puzzleDate, hc, palette }) {
     const totalDelay = (COLS-1)*150+800;
 
     setTimeout(()=>{
-      setKeyStates(prev=>{
-        const next={...prev};
-        submittedInput.split('').forEach((ch,i)=>{
-          const p=next[ch];
-          if (result[i]===ST.correct) next[ch]=ST.correct;
-          else if (result[i]===ST.present&&p!==ST.correct) next[ch]=ST.present;
-          else if (!p) next[ch]=ST.absent;
-        });
-        return next;
-      });
+      setKeyStates(prev=>withKeyStates(prev, submittedInput, result));
       revealingRef.current = false;
-      const isWin=result.every(s=>s===ST.correct);
       if (isWin) {
         setBounceRow(rowIdx); setTimeout(()=>setBounceRow(null),1000);
-        if (isToday) saveResult({ game: 'words', completed: true });
         setTimeout(()=>{setWon(true);setGameOver(true);spawnConfetti();setShowFact(true);},400);
-      } else if (rowIdx+1>=ROWS) {
-        if (isToday) saveResult({ game: 'words', completed: false });
+      } else if (isLast) {
         setTimeout(()=>{setGameOver(true);setShowFact(true);showMsg(daily.word,3000);},200);
       } else {
         setCurrent(c=>c+1);
       }
     }, totalDelay);
-  }, [input, current, daily.word, isToday]);
+  }, [input, current, guesses, daily.word, isToday, seedDate]);
 
   const handleKey = useCallback((key) => {
-    if (gameOver || revealingRef.current) return;
+    if (decidedRef.current || revealingRef.current) return;
     if (key==='ENTER') { submitGuess(); return; }
     if (key==='⌫'||key==='BACKSPACE') { setInput(i=>i.slice(0,-1)); return; }
     if (/^[A-Z]$/.test(key)&&input.length<COLS) setInput(i=>i+key);
-  }, [gameOver, input, submitGuess]);
+  }, [input, submitGuess]);
 
   useEffect(()=>{
     const handler=(e)=>{
@@ -385,7 +452,7 @@ function WordsBoard({ puzzleDate, hc, palette }) {
     const rows=guesses.slice(0,won?current+1:ROWS).filter(g=>g)
       .map((_,i)=>Array.from({length:COLS},(__,j)=>emoji[tileStates[`${i}-${j}`]]||'⬛').join(''));
     const result=won?`${current+1}/${ROWS}`:'X/6';
-    return `WORDS by Streakle 🔥 — ${formatDate(puzzleDate)}\n${result}\n${rows.join('\n')}\n\nPlay at: playstreakle.com/words`;
+    return `WORDS by Streakle 🔥 — ${formatDate(seedDate)}\n${result}\n${rows.join('\n')}\n\nPlay at: playstreakle.com/words`;
   };
 
 

@@ -4,9 +4,11 @@ import GameShell from "./GameShell";
 import ResultCard from './ResultCard';
 import { saveResult } from './saveResult';
 import { useStreak } from './useStreak';
+import { useBoardDate } from './useBoardDate';
 import AwardIcon from './AwardIcon';
 import { clickableProps } from './a11y';
 import { useSeo, PAGE_SEO } from './seo';
+import { slotHoldsLaterDay } from './checkpointSlot';
 
 // ── Categories ───────────────────────────────────────────────────────────────
 
@@ -370,7 +372,60 @@ function formatDate(dateStr) {
   return new Date(y,m-1,d).toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
 }
 
-const todayStr = () => new Date().toLocaleDateString('en-CA');
+// ── Today's checkpoint ───────────────────────────────────────────────────────
+// The filled cells (fighter names) and guesses left, so a reload can never
+// refund a guess or revive a finished grid. Archive replays never touch it.
+
+const CHECKPOINT_KEY = 'streakle-knockout';
+const MAX_GUESSES = 9;
+const CELL_KEY = /^([0-2])-([0-2])$/;
+
+function readCheckpoint(date, { rows, cols }) {
+  try {
+    const raw = localStorage.getItem(CHECKPOINT_KEY);
+    if (!raw) return null;
+    const cp = JSON.parse(raw);
+    if (!cp || cp.v !== 1 || cp.date !== date) return null;
+    if (!Number.isInteger(cp.left) || cp.left < 0 || cp.left > MAX_GUESSES) return null;
+    if (!cp.cells || typeof cp.cells !== 'object' || Array.isArray(cp.cells)) return null;
+    const entries = Object.entries(cp.cells);
+    if (entries.length + cp.left > MAX_GUESSES) return null; // every filled cell spent a guess
+    const cells = {};
+    const used = new Set();
+    for (const [key, name] of entries) {
+      const m = CELL_KEY.exec(key);
+      const fighter = FIGHTERS.find(f => f.n === name);
+      if (!m || !fighter || used.has(name)) return null;
+      if (!matchesHeader(fighter, rows[+m[1]]) || !matchesHeader(fighter, cols[+m[2]])) return null;
+      used.add(name);
+      // restored: already on the board, so it skips the reveal animation.
+      cells[key] = { player: fighter, score: calcScore(fighter), restored: true };
+    }
+    return { cells, left: cp.left };
+  } catch { return null; }
+}
+
+function writeCheckpoint(date, cells, left) {
+  const names = Object.fromEntries(Object.entries(cells).map(([key, c]) => [key, c.player.n]));
+  try {
+    // Never replace a later day's board (see checkpointSlot.js).
+    if (slotHoldsLaterDay(CHECKPOINT_KEY, date)) return;
+    localStorage.setItem(CHECKPOINT_KEY, JSON.stringify({ v: 1, date, cells: names, left }));
+  } catch { /* storage unavailable */ }
+}
+
+// The board a checkpoint describes (none = a fresh one); score and outcome
+// are derived from the cells and guesses left.
+function boardFrom(cp) {
+  const cells = cp ? cp.cells : {};
+  const guessesLeft = cp ? cp.left : MAX_GUESSES;
+  const won = Object.keys(cells).length === 9;
+  return {
+    cells, guessesLeft, won,
+    gameOver: !won && guessesLeft === 0,
+    totalScore: Object.values(cells).reduce((sum, c) => sum + c.score, 0),
+  };
+}
 
 // ── CSS ───────────────────────────────────────────────────────────────────────
 
@@ -390,24 +445,24 @@ export default function KnockoutGame() {
   const { streak } = useStreak('knockout');
   useSeo(PAGE_SEO.knockout)
   const [showArchive, setShowArchive] = useState(false);
-  const [puzzleDate, setPuzzleDate] = useState(todayStr);
-  const puzzle = useMemo(() => getDailyPuzzle(puzzleDate), [puzzleDate]);
-  // saveResult stamps today's date, so an archive replay must never save
-  // (nor a board left open past midnight, which is yesterday's by then).
-  const isToday = puzzleDate === todayStr();
+  // isToday: the live board, not an Archive replay (replays never save).
+  const { seedDate, isToday, boardKey, keyFor, selectDate } = useBoardDate();
+  const puzzle = useMemo(() => getDailyPuzzle(seedDate), [seedDate]);
   const { rows: rowHeaders, cols: colHeaders } = puzzle;
 
-  const [cells, setCells] = useState({});
+  // Today's board resumes from its checkpoint, so a reload refunds nothing.
+  const [initial] = useState(() => boardFrom(isToday ? readCheckpoint(seedDate, puzzle) : null));
+  const [cells, setCells] = useState(initial.cells);
   const [activeCell, setActiveCell] = useState(null);
   const [query, setQuery] = useState('');
   const [suggestions, setSuggestions] = useState([]);
   const [pendingPlayer, setPendingPlayer] = useState(null);
-  const [guessesLeft, setGuessesLeft] = useState(9);
+  const [guessesLeft, setGuessesLeft] = useState(initial.guessesLeft);
   const [shakeCell, setShakeCell] = useState(null);
-  const [won, setWon] = useState(false);
-  const [gameOver, setGameOver] = useState(false);
+  const [won, setWon] = useState(initial.won);
+  const [gameOver, setGameOver] = useState(initial.gameOver);
   const [confetti, setConfetti] = useState([]);
-  const [totalScore, setTotalScore] = useState(0);
+  const [totalScore, setTotalScore] = useState(initial.totalScore);
   const inputRef = useRef(null);
 
   // Auto-focus input when cell becomes active
@@ -458,8 +513,11 @@ export default function KnockoutGame() {
       setGuessesLeft(newGuesses);
       if (newGuesses === 0) {
         setGameOver(true);
-        if (isToday) saveResult({ game: 'knockout', completed: false, score: totalScore });
+        if (isToday) saveResult({ game: 'knockout', puzzleDate: seedDate, completed: false, score: totalScore });
       }
+      // After any save: saveResult queues the result on disk synchronously,
+      // before the checkpoint records the finish.
+      if (isToday) writeCheckpoint(seedDate, cells, newGuesses);
       setQuery('');
       setSuggestions([]);
       setPendingPlayer(null);
@@ -481,7 +539,8 @@ export default function KnockoutGame() {
 
     if (Object.keys(newCells).length === 9) {
       setWon(true);
-      if (isToday) saveResult({ game: 'knockout', completed: true, score: newTotal });
+      if (isToday) saveResult({ game: 'knockout', puzzleDate: seedDate, completed: true, score: newTotal });
+      if (isToday) writeCheckpoint(seedDate, newCells, newGuesses);
       const colors = ['var(--gold)','var(--ink)','var(--success-text)','var(--danger-text)','#93C5FD'];
       setConfetti(Array.from({length:30},(_,i)=>({
         id:i, x:Math.random()*100, size:Math.random()*10+6,
@@ -492,20 +551,26 @@ export default function KnockoutGame() {
 
     if (newGuesses === 0) {
       setGameOver(true);
-      if (isToday) saveResult({ game: 'knockout', completed: false, score: newTotal });
+      if (isToday) saveResult({ game: 'knockout', puzzleDate: seedDate, completed: false, score: newTotal });
     }
+    if (isToday) writeCheckpoint(seedDate, newCells, newGuesses);
   }
 
   function handleSelectDate(date) {
     setShowArchive(false);
     // Already on that board: keep it, as the other games do.
-    if (date === puzzleDate) return;
-    setPuzzleDate(date);
-    setCells({});
-    setGuessesLeft(9);
-    setWon(false);
-    setGameOver(false);
-    setTotalScore(0);
+    const key = keyFor(date);
+    if (key === boardKey) return;
+    selectDate(date);
+    // Back on today's live board (keyFor's 'today-…'): resume its checkpoint.
+    // An Archive replay starts empty.
+    const isLive = key.startsWith('today-');
+    const board = boardFrom(isLive ? readCheckpoint(date, getDailyPuzzle(date)) : null);
+    setCells(board.cells);
+    setGuessesLeft(board.guessesLeft);
+    setWon(board.won);
+    setGameOver(board.gameOver);
+    setTotalScore(board.totalScore);
     setActiveCell(null);
     setQuery('');
     setSuggestions([]);
@@ -515,7 +580,7 @@ export default function KnockoutGame() {
 
   function buildShareText() {
     const grid = Array.from({length:3},(_,r)=>Array.from({length:3},(_,c)=>cells[`${r}-${c}`]?'✅':'⬜').join('')).join('\n');
-    return `KNOCKOUT by Streakle 🥊 — ${formatDate(puzzleDate)}\nScore: ${totalScore} | ${Object.keys(cells).length}/9 cells\n${grid}\n\nPlay at: playstreakle.com/knockout`;
+    return `KNOCKOUT by Streakle 🥊 — ${formatDate(seedDate)}\nScore: ${totalScore} | ${Object.keys(cells).length}/9 cells\n${grid}\n\nPlay at: playstreakle.com/knockout`;
   }
 
   const howTo = (
@@ -528,7 +593,7 @@ export default function KnockoutGame() {
   )
 
   return (
-    <GameShell game="knockout" date={formatDate(puzzleDate)} howTo={howTo} onArchive={() => setShowArchive(true)}>
+    <GameShell game="knockout" date={formatDate(seedDate)} howTo={howTo} onArchive={() => setShowArchive(true)}>
       <style>{css}</style>
 
       {confetti.map(c=>(
@@ -596,7 +661,7 @@ export default function KnockoutGame() {
                     borderRadius:8,cursor:filled||gameOver||won?'default':'pointer',
                     display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',
                     padding:6,textAlign:'center',userSelect:'none',
-                    animation:isShaking?'shake 0.45s ease':filled?'cellReveal 0.35s ease':'none',
+                    animation:isShaking?'shake 0.45s ease':filled&&!filled.restored?'cellReveal 0.35s ease':'none',
                     transition:'background 0.2s,border-color 0.2s',
                   }}>
                     {filled?(
