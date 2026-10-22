@@ -1,7 +1,5 @@
 // @vitest-environment happy-dom
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { readFileSync } from 'node:fs'
-import { URL as FileURL } from 'node:url'
 import { act } from 'react'
 import { createRoot } from 'react-dom/client'
 import { AuthContext } from './AuthContext'
@@ -39,29 +37,48 @@ const memoryStorage = {
 
 const { default: GridironGame } = await import('./Gridiron.jsx')
 
-// The player bank and header labels, read from the source the way the checkers do.
-// (Node's URL: happy-dom's resolves a Windows file:// base to http://localhost.)
-const src = readFileSync(new FileURL('./Gridiron.jsx', import.meta.url), 'utf8')
-const literal = (name, open, close) => {
-  const start = src.indexOf(open, src.indexOf(`const ${name} =`))
-  const end = src.indexOf(`\n${close};`, start)
-  return new Function(`return ${src.slice(start, end + 2)}`)()
-}
-const TEAMS = literal('TEAMS', '{', '}')
-const AWARDS = literal('AWARDS', '{', '}')
-const PLAYERS = literal('PLAYERS', '[', ']')
+// The page's own header labels and answers, so the test can't drift.
+const { TEAMS, AWARDS, PLAYERS: SHIPPED } = await import('./gridiron/data.js')
+const { PLAYERS, fitsOn, getDailyPuzzle, isValid } = await import('./gridiron/puzzle.js')
+const { addDays } = await import('./dateMath.js')
 // The relocated codes never head a grid, so each header label names one key.
 const KEY_BY_LABEL = Object.fromEntries([
   ...Object.entries(TEAMS).filter(([k]) => !['OAK', 'SD', 'STL'].includes(k)),
   ...Object.entries(AWARDS),
 ].map(([k, label]) => [label, k]))
-const fits = (p, crit) => p.t.includes(crit) || p.a.includes(crit)
+// Every test date is a board dealt before the grid cutover: check answers the
+// way the page does there (corrected data, or what the shipped data accepted).
+const fits = fitsOn('2026-10-21')
 
 const KEY = 'streakle-gridiron'
 const TODAY = '2026-10-21'
 const PAST = '2026-10-18'
 const USER = { id: 'u-1', email: 'player@example.com', user_metadata: {} }
 const CELLS = ['0-0', '0-1', '0-2', '1-0', '1-1', '1-2', '2-0', '2-1', '2-2']
+
+// The two answer checks, worked out here from the data rather than through
+// fitsOn, so a broken fitsOn can't also hide the answer the test below needs.
+// Strict (boards from the grid cutover, 2026-10-25): the corrected data alone.
+// Lenient (boards dealt before it): per header, the corrected data or what the
+// shipped data (./gridiron/data.js) said.
+const SHIPPED_BY_NAME = new Map(SHIPPED.map(p => [p.n, p]))
+const strictCell = (puzzle, p, key) => isValid(p, puzzle.rows[key[0]]) && isValid(p, puzzle.cols[key[2]])
+const shippedOrCorrected = (p, h) => isValid(p, h) || (SHIPPED_BY_NAME.has(p.n) && isValid(SHIPPED_BY_NAME.get(p.n), h))
+// The first board from the day after the cutover with a cell and a player only
+// the lenient check accepts there.
+function afterCutoverCase() {
+  for (let date = '2026-10-26'; date < '2027-01-01'; date = addDays(date, 1)) {
+    const puzzle = getDailyPuzzle(date)
+    for (const key of CELLS) {
+      const p = PLAYERS.find(x => !strictCell(puzzle, x, key) &&
+        shippedOrCorrected(x, puzzle.rows[key[0]]) && shippedOrCorrected(x, puzzle.cols[key[2]]))
+      if (p) return { date, key, name: p.n }
+    }
+  }
+  throw new Error('no board from 2026-10-26 to 2026-12-31 has a player only the shipped data accepted')
+}
+const localNoon = (date) => { const [y, m, d] = date.split('-').map(Number); return new Date(y, m - 1, d, 12) }
+const longDate = (date) => localNoon(date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
 
 let host, root
 beforeEach(() => {
@@ -112,10 +129,14 @@ const fresh = () => {
 // wrong player for every cell, one player who fits two cells, and a player
 // placed in a cell whose row he fits but not its column (rowOnly) or the
 // reverse (colOnly), so each half of the fit check must reject him alone.
+// The shown board's header keys, read back from their labels.
+const headersShown = () => ({
+  rows: [0, 1, 2].map(r => KEY_BY_LABEL[grid().children[4 + r * 4].textContent]),
+  cols: [1, 2, 3].map(i => KEY_BY_LABEL[grid().children[i].textContent]),
+})
+
 function readBoard() {
-  const g = grid()
-  const cols = [1, 2, 3].map(i => KEY_BY_LABEL[g.children[i].textContent])
-  const rows = [0, 1, 2].map(r => KEY_BY_LABEL[g.children[4 + r * 4].textContent])
+  const { rows, cols } = headersShown()
   expect([...rows, ...cols].every(Boolean)).toBe(true)
   const options = {}, wrong = {}
   for (const key of CELLS) {
@@ -443,5 +464,29 @@ describe('Gridiron daily checkpoint', () => {
     expect(saveResult).toHaveBeenCalledTimes(1)
     await reload()
     fresh()
+  })
+})
+
+describe('Gridiron answer checks after the grid cutover', () => {
+  it('checks strictly against the corrected data on a board dealt after the cutover', async () => {
+    const { date, key, name } = afterCutoverCase()
+    const puzzle = getDailyPuzzle(date)
+    vi.setSystemTime(localNoon(date))
+    await mount()
+    expect(host.textContent).toContain(longDate(date))
+    expect(headersShown()).toEqual({ rows: puzzle.rows, cols: puzzle.cols })
+
+    // The shipped data's answer is a miss now: it costs a guess, fills nothing.
+    await guess(key, name)
+    expect(cellEl(key).textContent).not.toContain(name)
+    expect(host.textContent).toContain('8 guesses left')
+    expect(scoreShown()).toBe(0)
+    expect(checkpoint()).toEqual({ v: 1, date, cells: {}, left: 8 })
+
+    // A player the corrected data puts there still fills the cell.
+    const right = PLAYERS.find(p => strictCell(puzzle, p, key)).n
+    await guess(key, right)
+    expect(cellEl(key).textContent).toContain(right)
+    expect(checkpoint()).toEqual({ v: 1, date, cells: { [key]: right }, left: 7 })
   })
 })

@@ -56,17 +56,14 @@ const { default: KnockoutGame } = await import('./Knockout.jsx')
 const { default: WeaveGame } = await import('./Weave.jsx')
 const { default: MinesGame } = await import('./Mines.jsx')
 const { default: ScrambleGame } = await import('./Scramble.jsx')
+const { getDailyPuzzle: linkFor } = await import('./link/schedule.js')
+const { PUZZLES: LINK_PUZZLES } = await import('./link/puzzles.js')
 
-// Each game picks bank[YYYYMMDD % length]; read the banks the way the checkers do.
+// Words picks WORDS[YYYYMMDD % length]; read the bank the way the checker does.
 const source = (file) => readFileSync(new URL(file, import.meta.url), 'utf8')
 const seedOf = (date) => parseInt(date.replace(/-/g, ''))
 const WORDS = [...source('./Words.jsx').matchAll(/\{ word: "([A-Z]{5})"/g)].map(m => m[1])
-const linkSrc = source('./Link.jsx')
-const linkOpen = linkSrc.indexOf('[', linkSrc.indexOf('const PUZZLES = ['))
-const linkEnd = linkSrc.indexOf('\n];', linkOpen)
-const PUZZLES = new Function(`return ${linkSrc.slice(linkOpen, linkEnd + 2)}`)()
 const wordFor = (date) => WORDS[seedOf(date) % WORDS.length]
-const linkFor = (date) => PUZZLES[seedOf(date) % PUZZLES.length]
 
 const TODAY = '2026-10-21'
 const PAST = '2026-10-18'
@@ -127,6 +124,9 @@ async function typeWord(word) {
 }
 
 const linkTile = (word) => [...host.querySelectorAll('[role="button"]')].find(el => el.textContent === word)
+// The board's tiles (the top bar's account menu is a role="button" too).
+const linkTiles = () => [...host.querySelectorAll('[role="button"]')].filter(el => !el.closest('.gs-top')).map(el => el.textContent).sort()
+const linkWords = (puzzle) => puzzle.categories.flatMap(c => c.words).sort()
 
 // Four wrong groups (one word from each category), losing all four lives.
 async function loseLink(puzzle) {
@@ -229,6 +229,23 @@ describe('Link', () => {
     await pickArchiveDay(TODAY)
     await loseLink(linkFor(TODAY))
     expect(saveResult).toHaveBeenCalledWith({ game: 'link', puzzleDate: TODAY, completed: false })
+  })
+
+  it('deals from the rotation after the Link cutover, not YYYYMMDD % 71', async () => {
+    const date = '2026-11-01'
+    const rotated = LINK_PUZZLES[46]
+    const oldFormula = LINK_PUZZLES[seedOf(date) % 71] // PUZZLES[44]
+    expect(linkFor(date)).toBe(rotated)
+    expect(linkWords(oldFormula)).not.toEqual(linkWords(rotated))
+
+    vi.setSystemTime(new Date(2026, 10, 1, 12))
+    await mount(LinkGame)
+    expect(host.textContent).toContain('November 1, 2026')
+    expect(linkTiles()).toEqual(linkWords(rotated))
+    // Its groups are the rotation puzzle's: solving them wins today's board.
+    await solveLink(rotated)
+    expect(ended()).toBe(true)
+    expect(saveResult).toHaveBeenCalledWith({ game: 'link', puzzleDate: date, completed: true })
   })
 })
 

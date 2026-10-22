@@ -1,21 +1,21 @@
-// Validates the Link puzzle bank: every puzzle must have 4 categories, 4 words
-// each, all 16 words unique within the puzzle (Connections assigns each word to
-// exactly one category), ASCII-only, and no per-category colour (Link colours
-// a group by its position, easiest to trickiest). Run after editing PUZZLES
-// in src/Link.jsx:  node scripts/check-link.mjs
-import { readFileSync } from 'node:fs'
+// Validates the Link puzzle bank and schedule. Every puzzle must have 4
+// categories, 4 words each, all 16 words unique within the puzzle (Connections
+// assigns each word to exactly one category), ASCII-only, and no per-category
+// colour (Link colours a group by its position, easiest to trickiest). Every
+// puzzle must be in the schedule (an era per batch of new puzzles), and from
+// LINK_CUTOVER none may return within a full shipped cycle (71 days; shipped
+// history included). Run after editing src/link/puzzles.js:  node scripts/check-link.mjs
+import { PUZZLES } from '../src/link/puzzles.js'
+import { dailyPuzzleIndex, LINK_CUTOVER, ERAS } from '../src/link/schedule.js'
+import { addDays, dateDay } from '../src/dateMath.js'
 
-const src = readFileSync(new URL('../src/Link.jsx', import.meta.url), 'utf8')
-const start = src.indexOf('const PUZZLES = [')
-const open = src.indexOf('[', start)
-let depth = 0, end = -1
-for (let i = open; i < src.length; i++) {
-  if (src[i] === '[') depth++
-  else if (src[i] === ']') { depth--; if (depth === 0) { end = i; break } }
-}
-const PUZZLES = new Function(`return ${src.slice(open, end + 1)}`)()
+const MIN_GAP = 71
 
 let bad = 0
+if (ERAS[ERAS.length - 1].count !== PUZZLES.length) {
+  bad++
+  console.log(`${PUZZLES.length - ERAS[ERAS.length - 1].count} puzzle(s) not in the schedule: add an era in src/link/schedule.js`)
+}
 PUZZLES.forEach((p, i) => {
   const errs = []
   if (p.categories.length !== 4) errs.push(`${p.categories.length} categories`)
@@ -31,5 +31,17 @@ PUZZLES.forEach((p, i) => {
   if (nonAscii.length) errs.push(`NON-ASCII: ${nonAscii.join(', ')}`)
   if (errs.length) { bad++; console.log(`PUZZLE ${i}: ${errs.join(' | ')}`) }
 })
-console.log(`\n${PUZZLES.length} puzzles, ${bad} broken`)
-process.exit(bad > 0 ? 1 : 0)
+const lastServed = new Map()
+let minGap = Infinity, repeats = 0
+for (let d = '2025-01-01'; d <= '2030-12-31'; d = addDays(d, 1)) {
+  const i = dailyPuzzleIndex(d)
+  if (d >= LINK_CUTOVER && lastServed.has(i)) {
+    const gap = dateDay(d) - dateDay(lastServed.get(i))
+    minGap = Math.min(minGap, gap)
+    if (gap < MIN_GAP) { repeats++; console.log(`${d}: puzzle ${i} again after ${gap} days`) }
+  }
+  lastServed.set(i, d)
+}
+
+console.log(`\n${PUZZLES.length} puzzles, ${bad} broken; from ${LINK_CUTOVER} to 2030-12-31 the closest repeat is ${minGap} days (${repeats} closer than ${MIN_GAP})`)
+process.exit(bad + repeats > 0 ? 1 : 0)

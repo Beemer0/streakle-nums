@@ -1,6 +1,5 @@
 // @vitest-environment happy-dom
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { readFileSync } from 'node:fs'
 import { act } from 'react'
 import { createRoot } from 'react-dom/client'
 import { AuthContext } from './AuthContext'
@@ -40,14 +39,15 @@ vi.stubGlobal('localStorage', new MemoryStorage())
 
 const { default: KnockoutGame } = await import('./Knockout.jsx')
 
-// The grid logic (fighters, criteria, daily generator) is plain JS between the
-// Categories and CSS banners; evaluate it the way archiveReplay reads banks.
-// (A variable path: Vite rewrites a literal new URL('./x', import.meta.url).)
-const source = (file) => readFileSync(new URL(file, import.meta.url), 'utf8')
-const src = source('./Knockout.jsx')
-const logic = src.slice(src.indexOf('// ── Categories'), src.indexOf('// ── CSS'))
-const { FIGHTERS, getDailyPuzzle, matchesHeader, calcScore } =
-  new Function(`${logic}\nreturn { FIGHTERS, getDailyPuzzle, matchesHeader, calcScore }`)()
+// The page's own fighters and generator, so the test can't drift.
+const { FIGHTERS, getDailyPuzzle, fitsOn, matchesHeader: headerFits } = await import('./knockout/puzzle.js')
+const { FIGHTERS: SHIPPED, PROMOTIONS, WEIGHT_CLASSES, ACHIEVEMENTS } = await import('./knockout/data.js')
+const { addDays } = await import('./dateMath.js')
+// Every test date is a board dealt before the grid cutover: check answers the
+// way the page does there (corrected data, or what the shipped data accepted).
+const matchesHeader = fitsOn('2026-10-21')
+// Knockout.jsx's scoring: rarer fighters score more.
+const calcScore = (fighter) => Math.max(5, Math.min(100, Math.round(115 - fighter.f)))
 
 const KEY = 'streakle-knockout'
 const TODAY = '2026-10-21'
@@ -81,6 +81,36 @@ const misfits = (pz, r, c) => FIGHTERS.filter(f => !fits(f, pz, r, c)).map(f => 
 
 const PZ = getDailyPuzzle(TODAY)
 const ANSWERS = solve(PZ)
+
+// The two answer checks, worked out here from the data rather than through
+// fitsOn, so a broken fitsOn can't also hide the answers the tests below need.
+// Strict (boards from the grid cutover, 2026-10-25): the corrected data alone.
+// Lenient (boards dealt before it): per header, the corrected data or what the
+// shipped data (./knockout/data.js) said.
+const SHIPPED_BY_NAME = new Map(SHIPPED.map(f => [f.n, f]))
+const strictCell = (pz, f, r, c) => headerFits(f, pz.rows[r]) && headerFits(f, pz.cols[c])
+const shippedOrCorrected = (f, h) => headerFits(f, h) || (SHIPPED_BY_NAME.has(f.n) && headerFits(SHIPPED_BY_NAME.get(f.n), h))
+// A cell of `date`'s board and a fighter only the lenient check accepts there.
+function lenientOnly(date) {
+  const pz = getDailyPuzzle(date)
+  for (const [r, c] of CELLS) {
+    const f = FIGHTERS.find(x => !strictCell(pz, x, r, c) &&
+      shippedOrCorrected(x, pz.rows[r]) && shippedOrCorrected(x, pz.cols[c]))
+    if (f) return { r, c, name: f.n }
+  }
+  return null
+}
+// The first board from the day after the cutover that has such a fighter.
+function afterCutoverCase() {
+  for (let date = '2026-10-26'; date < '2027-01-01'; date = addDays(date, 1)) {
+    const found = lenientOnly(date)
+    if (found) return { date, ...found }
+  }
+  throw new Error('no board from 2026-10-26 to 2026-12-31 has a fighter only the shipped data accepted')
+}
+const localNoon = (date) => { const [y, m, d] = date.split('-').map(Number); return new Date(y, m - 1, d, 12) }
+const longDate = (date) => localNoon(date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+const LABEL = { ...PROMOTIONS, ...WEIGHT_CLASSES, ...ACHIEVEMENTS }
 
 let host, root
 beforeEach(() => {
@@ -120,6 +150,14 @@ const checkpoint = () => JSON.parse(stored())
 const cellEl = (r, c) => host.querySelector('.ko-grid').children[5 + r * 4 + c]
 const openCells = () => host.querySelectorAll('.ko-grid [role="button"]').length
 const styled = (name) => [...host.querySelectorAll('div')].filter(el => (el.getAttribute('style') ?? '').includes(name))
+// Each header's label line (its last child), rows then columns.
+const headersShown = () => {
+  const g = host.querySelector('.ko-grid')
+  return {
+    rows: [0, 1, 2].map(r => g.children[4 + r * 4].lastChild.textContent),
+    cols: [1, 2, 3].map(i => g.children[i].lastChild.textContent),
+  }
+}
 
 async function pickArchiveDay(date) {
   await click(host.querySelector('button[aria-label="Archive"]'))
@@ -415,5 +453,55 @@ describe("Knockout: today's checkpoint", () => {
       getItem.mockRestore()
       setItem.mockRestore()
     }
+  })
+})
+
+describe('Knockout answer checks around the grid cutover', () => {
+  const todayCase = lenientOnly(TODAY)
+  const noTodayCase = `no fighter on ${TODAY}'s board fits a cell only under the shipped data`
+
+  it('restores a checkpointed fighter that only the shipped data fits to the cell', async ({ skip }) => {
+    skip(!todayCase, noTodayCase)
+    const { r, c, name } = todayCase
+    localStorage.setItem(KEY, JSON.stringify({ v: 1, date: TODAY, cells: { [`${r}-${c}`]: name }, left: 8 }))
+    await mount()
+    expect(host.textContent).toContain('8 guesses left')
+    expect(host.textContent).toContain(`Score: ${score(name)}`)
+    expect(cellEl(r, c).textContent).toContain(name)
+    expect(openCells()).toBe(8)
+  })
+
+  it("accepts a fighter that only the shipped data fits to the cell on today's board", async ({ skip }) => {
+    skip(!todayCase, noTodayCase)
+    const { r, c, name } = todayCase
+    await mount()
+    await guess(r, c, name)
+    expect(cellEl(r, c).textContent).toContain(name)
+    expect(host.textContent).toContain('8 guesses left')
+    expect(host.textContent).toContain(`Score: ${score(name)}`)
+    expect(checkpoint()).toEqual({ v: 1, date: TODAY, cells: { [`${r}-${c}`]: name }, left: 8 })
+  })
+
+  it('checks strictly against the corrected data on a board dealt after the cutover', async () => {
+    const { date, r, c, name } = afterCutoverCase()
+    const pz = getDailyPuzzle(date)
+    vi.setSystemTime(localNoon(date))
+    await mount()
+    expect(host.textContent).toContain(longDate(date))
+    expect(headersShown()).toEqual({ rows: pz.rows.map(h => LABEL[h]), cols: pz.cols.map(h => LABEL[h]) })
+
+    // The shipped data's answer is a miss now: it costs a guess, fills nothing.
+    await guess(r, c, name)
+    expect(cellEl(r, c).textContent).not.toContain(name)
+    expect(host.textContent).toContain('8 guesses left')
+    expect(host.textContent).toContain('Score: 0')
+    expect(openCells()).toBe(9)
+    expect(checkpoint()).toEqual({ v: 1, date, cells: {}, left: 8 })
+
+    // A fighter the corrected data puts there still fills the cell.
+    const right = FIGHTERS.find(f => strictCell(pz, f, r, c)).n
+    await guess(r, c, right)
+    expect(cellEl(r, c).textContent).toContain(right)
+    expect(checkpoint()).toEqual({ v: 1, date, cells: { [`${r}-${c}`]: right }, left: 7 })
   })
 })

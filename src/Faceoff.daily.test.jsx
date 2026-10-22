@@ -1,7 +1,5 @@
 // @vitest-environment happy-dom
 import { describe, it, expect, vi, beforeEach, afterEach, afterAll } from 'vitest'
-import { readFileSync } from 'node:fs'
-import { URL as NodeURL, fileURLToPath } from 'node:url'
 import { act } from 'react'
 import { createRoot } from 'react-dom/client'
 import { AuthContext } from './AuthContext'
@@ -48,11 +46,10 @@ afterAll(() => {
 
 const { default: FaceoffGame } = await import('./Faceoff.jsx')
 
-// Evaluate the page's own player data and generator, so the test can't drift.
-const src = readFileSync(fileURLToPath(new NodeURL('./Faceoff.jsx', import.meta.url)), 'utf8')
-const { PLAYERS, getDailyPuzzle } = new Function(
-  `${src.slice(src.indexOf('const TEAMS = {'), src.indexOf('function formatDate('))}; return { PLAYERS, getDailyPuzzle }`,
-)()
+// The page's own answers and generator, so the test can't drift.
+const { PLAYERS, getDailyPuzzle, fitsOn, isValid } = await import('./faceoff/puzzle.js')
+const { PLAYERS: SHIPPED, TEAMS, AWARDS } = await import('./faceoff/data.js')
+const { addDays } = await import('./dateMath.js')
 
 const KEY = 'streakle-faceoff'
 const TODAY = '2026-10-21'
@@ -60,7 +57,9 @@ const YESTERDAY = '2026-10-20'
 const PAST = '2026-10-18'
 const USER = { id: 'u-1', email: 'player@example.com', user_metadata: {} }
 
-const fits = (p, crit) => p.t.includes(crit) || p.a.includes(crit)
+// Every test date is a board dealt before the grid cutover: check answers the
+// way the page does there (corrected data, or what the shipped data accepted).
+const fits = fitsOn('2026-10-21')
 const fitsCell = (puzzle, p, r, c) => fits(p, puzzle.rows[r]) && fits(p, puzzle.cols[c])
 const scoreOf = (name) => Math.max(5, Math.round(100 - PLAYERS.find(p => p.n === name).f))
 
@@ -85,6 +84,37 @@ const wrongFor = (date, r, c) => PLAYERS.find(p => !fitsCell(getDailyPuzzle(date
 
 const SOL = solve(TODAY)
 const WRONG = wrongFor(TODAY, 2, 2)
+
+// The two answer checks, worked out here from the data rather than through
+// fitsOn, so a broken fitsOn can't also hide the answers the tests below need.
+// Strict (boards from the grid cutover, 2026-10-25): the corrected data alone.
+// Lenient (boards dealt before it): per header, the corrected data or what the
+// shipped data (./faceoff/data.js) said.
+const SHIPPED_BY_NAME = new Map(SHIPPED.map(p => [p.n, p]))
+const strictCell = (puzzle, p, r, c) => isValid(p, puzzle.rows[r]) && isValid(p, puzzle.cols[c])
+const shippedOrCorrected = (p, h) => isValid(p, h) || (SHIPPED_BY_NAME.has(p.n) && isValid(SHIPPED_BY_NAME.get(p.n), h))
+// A cell of `date`'s board and a player only the lenient check accepts there.
+function lenientOnly(date) {
+  const puzzle = getDailyPuzzle(date)
+  for (let k = 0; k < 9; k++) {
+    const [r, c] = [Math.floor(k / 3), k % 3]
+    const p = PLAYERS.find(x => !strictCell(puzzle, x, r, c) &&
+      shippedOrCorrected(x, puzzle.rows[r]) && shippedOrCorrected(x, puzzle.cols[c]))
+    if (p) return { r, c, name: p.n }
+  }
+  return null
+}
+// The first board from the day after the cutover that has such a player.
+function afterCutoverCase() {
+  for (let date = '2026-10-26'; date < '2027-01-01'; date = addDays(date, 1)) {
+    const found = lenientOnly(date)
+    if (found) return { date, ...found }
+  }
+  throw new Error('no board from 2026-10-26 to 2026-12-31 has a player only the shipped data accepted')
+}
+const localNoon = (date) => { const [y, m, d] = date.split('-').map(Number); return new Date(y, m - 1, d, 12) }
+const longDate = (date) => localNoon(date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+const headerLabel = (key) => AWARDS[key] || TEAMS[key] || key
 
 let host, root
 beforeEach(() => {
@@ -128,6 +158,14 @@ const openCells = () => host.querySelectorAll('.faceoff-grid [role="button"]').l
 const scoreShown = () => Number([...host.querySelectorAll('div')].find(d => /^Score: \d+$/.test(d.textContent)).textContent.slice(7))
 const confettiShown = () => [...host.querySelectorAll('div')].some(d => d.style.animation.startsWith('confetti'))
 const stored = () => JSON.parse(localStorage.getItem(KEY))
+// Each header's label line (its last child), rows then columns.
+const headersShown = () => {
+  const g = host.querySelector('.faceoff-grid')
+  return {
+    rows: [0, 1, 2].map(r => g.children[4 + r * 4].lastChild.textContent),
+    cols: [1, 2, 3].map(i => g.children[i].lastChild.textContent),
+  }
+}
 
 async function guess(r, c, name) {
   await click(cell(r, c))
@@ -407,5 +445,43 @@ describe('Faceoff daily checkpoint', () => {
       get.mockRestore()
       set.mockRestore()
     }
+  })
+})
+
+describe('Faceoff answer checks around the grid cutover', () => {
+  it('restores a checkpointed player that only the shipped data fits to his cell', async ({ skip }) => {
+    const found = lenientOnly(TODAY)
+    skip(!found, `no player on ${TODAY}'s board fits a cell only under the shipped data`)
+    const { r, c, name } = found
+    localStorage.setItem(KEY, JSON.stringify({ v: 1, date: TODAY, cells: { [`${r}-${c}`]: name }, left: 8 }))
+    await mount()
+    expect(host.textContent).toContain('8 guesses left')
+    expect(cell(r, c).textContent).toBe(`+${scoreOf(name)}${name}`)
+    expect(scoreShown()).toBe(scoreOf(name))
+    expect(openCells()).toBe(8)
+  })
+
+  it('checks strictly against the corrected data on a board dealt after the cutover', async () => {
+    const { date, r, c, name } = afterCutoverCase()
+    const puzzle = getDailyPuzzle(date)
+    vi.setSystemTime(localNoon(date))
+    await mount()
+    expect(host.textContent).toContain(longDate(date))
+    expect(headersShown()).toEqual({ rows: puzzle.rows.map(headerLabel), cols: puzzle.cols.map(headerLabel) })
+
+    // The shipped data's answer is a miss now: it shakes and costs a guess.
+    await guess(r, c, name)
+    expect(cell(r, c).style.animation).toMatch(/^shake/)
+    expect(cell(r, c).textContent).not.toContain(name)
+    expect(host.textContent).toContain('8 guesses left')
+    expect(scoreShown()).toBe(0)
+    expect(stored()).toEqual({ v: 1, date, cells: {}, left: 8 })
+
+    // A player the corrected data puts there still fills the cell.
+    await tick(600)
+    const right = PLAYERS.find(p => strictCell(puzzle, p, r, c)).n
+    await guess(r, c, right)
+    expect(cell(r, c).textContent).toBe(`+${scoreOf(right)}${right}`)
+    expect(stored()).toEqual({ v: 1, date, cells: { [`${r}-${c}`]: right }, left: 7 })
   })
 })

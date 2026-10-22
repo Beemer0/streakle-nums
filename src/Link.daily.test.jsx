@@ -1,6 +1,5 @@
 // @vitest-environment happy-dom
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { readFileSync } from 'node:fs'
 import { act } from 'react'
 import { createRoot } from 'react-dom/client'
 import { AuthContext } from './AuthContext'
@@ -36,15 +35,8 @@ const setStorage = (desc) => Object.defineProperty(globalThis, 'localStorage', {
 setStorage({ value: storage, writable: true })
 
 const { default: LinkGame } = await import('./Link.jsx')
-
-// Link picks PUZZLES[YYYYMMDD % length]; read the bank the way the checker does.
-// (A variable, not a literal: Vite rewrites new URL('<literal>', import.meta.url).)
-const source = (file) => readFileSync(new URL(file, import.meta.url), 'utf8')
-const linkSrc = source('./Link.jsx')
-const linkOpen = linkSrc.indexOf('[', linkSrc.indexOf('const PUZZLES = ['))
-const linkEnd = linkSrc.indexOf('\n];', linkOpen)
-const PUZZLES = new Function(`return ${linkSrc.slice(linkOpen, linkEnd + 2)}`)()
-const linkFor = (date) => PUZZLES[parseInt(date.replace(/-/g, '')) % PUZZLES.length]
+const { getDailyPuzzle: linkFor } = await import('./link/schedule.js')
+const { PUZZLES } = await import('./link/puzzles.js')
 // The puzzle a checkpoint is bound to: every group's label and words, in order.
 const sigOf = (p) => p.categories.map(c => `${c.label}:${c.words.join(',')}`).join('|')
 
@@ -427,9 +419,9 @@ describe('Link checkpoint validation', () => {
     expect(stored()).toEqual({ v: 1, date: TODAY, sig: sigOf(today), solved: [], lives: 3, history: [false] })
   })
 
-  // A puzzle added to the bank mid-day shifts today's pick (YYYYMMDD % length):
-  // the checkpoint was written against the bank one puzzle shorter.
-  const stale = PUZZLES[parseInt(TODAY.replace(/-/g, '')) % (PUZZLES.length - 1)]
+  // A puzzle edit deployed mid-day (a word fixed, a group reworded) changes
+  // today's puzzle: the checkpoint was written against another one.
+  const stale = PUZZLES[(PUZZLES.indexOf(linkFor(TODAY)) + 1) % PUZZLES.length]
   it.each([
     ['mid-game', { solved: [0], lives: 3, history: [true, false] }],
     ['lost', { solved: [], lives: 0, history: [false, false, false, false] }],
