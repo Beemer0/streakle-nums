@@ -3,7 +3,8 @@ import { TopBar, ShellFooter } from './GameShell'
 /**
  * GameShell's frame for the pages that aren't games (sign-in, privacy, pool
  * history): the same top bar, title and footer, with the page's content in a
- * column below. The footer sits outside <main>, as the page's contentinfo.
+ * column below. The top bar and the footer sit outside <main>, as the page's
+ * banner and contentinfo landmarks (as in GameShell).
  *
  * @param {object} props
  * @param {string} [props.title] - the page's <h1>; leave it out while a page shouldn't name itself yet
@@ -16,8 +17,8 @@ import { TopBar, ShellFooter } from './GameShell'
 export default function PageShell({ title, subtitle, date, width = 640, showAccount = true, children }) {
   return (
     <div className="gs gs-page">
+      <TopBar showAccount={showAccount} />
       <main className="gs-main">
-        <TopBar showAccount={showAccount} />
         {title && (
           <div className="gs-head">
             <div className="gs-brand">

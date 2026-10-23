@@ -35,18 +35,19 @@ const member = { id: 'u-1', email: 'u-1@example.com', user_metadata: {} }
 describe('PageShell', () => {
   it('frames a page like a game: back link, title, subtitle, date, content, footer', async () => {
     await render(null, { title: 'POOL HISTORY', subtitle: 'Your private pools', date: 'May 16, 2026' })
-    expect(host.querySelector('main a.gs-back').getAttribute('href')).toBe('/')
+    expect(host.querySelector('header.gs-top a.gs-back').getAttribute('href')).toBe('/')
     expect(host.querySelector('h1.gs-title').textContent).toBe('POOL HISTORY')
     expect(host.querySelector('.gs-by').textContent).toBe('Your private pools')
     expect(host.querySelector('.gs-date').textContent).toBe('May 16, 2026')
     expect(host.querySelector('main').textContent).toContain('The page')
   })
 
-  it('keeps the footer out of <main>', async () => {
+  it('keeps the top bar and the footer out of <main>', async () => {
     await render(null, { title: 'PRIVACY POLICY' })
     const footer = host.querySelector('footer.gs-foot')
     expect(footer.querySelector('a').getAttribute('href')).toBe('/privacy')
     expect(host.querySelector('main').contains(footer)).toBe(false)
+    expect(host.querySelector('main').contains(host.querySelector('header.gs-top'))).toBe(false)
   })
 
   it('names nothing without a title', async () => {

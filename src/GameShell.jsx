@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useId, useState } from 'react'
 import { useAuth } from './AuthContext'
 import UserMenu from './UserMenu'
 import { GAME_BY_KEY } from './games'
@@ -52,7 +52,8 @@ export function ShellFooter() {
 /**
  * The frame every daily game sits in: a top bar (back link + account), the
  * title with How to play / Archive, the puzzle date, the how-to panel, the
- * game itself and the footer.
+ * game itself and the footer. The top bar and the footer sit outside <main>,
+ * as the page's banner and contentinfo landmarks.
  *
  * @param {object} props
  * @param {string} props.game - key in GAMES (title and accent come from there)
@@ -61,51 +62,54 @@ export function ShellFooter() {
  * @param {() => void} props.onArchive - opens the archive
  * @param {boolean} [props.hc] - high-contrast colours are on
  * @param {() => void} [props.onToggleHc] - adds a high-contrast switch to the how-to panel
- * @param {string} [props.className] - extra class on <main>
+ * @param {string} [props.className] - extra class on the page wrapper (top bar, <main> and footer)
  * @param {boolean} [props.isLoading] - the game's code is still loading: actions off
  * @param {import('react').ReactNode} props.children - the game
  */
 export default function GameShell({ game, date, howTo, onArchive, hc = false, onToggleHc, className = '', isLoading = false, children }) {
   const [isHowOpen, setIsHowOpen] = useState(false)
+  const howId = useId()
   const { title, color, accent } = GAME_BY_KEY[game]
 
   return (
-    <main className={`gs ${className}`.trim()} style={{ '--game': accent, '--game-deep': color }}>
+    <div className={`gs ${className}`.trim()} style={{ '--game': accent, '--game-deep': color }}>
       <TopBar />
 
-      <div className="gs-head">
-        <div className="gs-brand">
-          <h1 className="gs-title">{title}</h1>
-          <div className="gs-by">by Streakle</div>
+      <main className="gs-main">
+        <div className="gs-head">
+          <div className="gs-brand">
+            <h1 className="gs-title">{title}</h1>
+            <div className="gs-by">by Streakle</div>
+          </div>
+          <div className="gs-actions">
+            <button type="button" className="gs-btn" aria-label="How to play" aria-expanded={isHowOpen} aria-controls={isHowOpen ? howId : undefined} disabled={isLoading} onClick={() => setIsHowOpen(open => !open)}>
+              <HelpIcon /><span className="gs-btn-label">How to play</span>
+            </button>
+            <button type="button" className="gs-btn" aria-label="Archive" aria-haspopup="dialog" disabled={isLoading} onClick={onArchive}>
+              <CalendarIcon /><span className="gs-btn-label">Archive</span>
+            </button>
+          </div>
         </div>
-        <div className="gs-actions">
-          <button type="button" className="gs-btn" aria-label="How to play" aria-expanded={isHowOpen} disabled={isLoading} onClick={() => setIsHowOpen(open => !open)}>
-            <HelpIcon /><span className="gs-btn-label">How to play</span>
-          </button>
-          <button type="button" className="gs-btn" aria-label="Archive" disabled={isLoading} onClick={onArchive}>
-            <CalendarIcon /><span className="gs-btn-label">Archive</span>
-          </button>
-        </div>
-      </div>
-      <div className="gs-date">{date}</div>
+        <div className="gs-date">{date}</div>
 
-      {isHowOpen && (
-        <section className="gs-how" aria-label="How to play">
-          <b className="gs-how-title">How to play</b>
-          {howTo}
-          {onToggleHc && (
-            <div className="gs-hc">
-              <span>High contrast colours</span>
-              <button type="button" className="gs-switch" role="switch" aria-checked={hc} aria-label="High contrast colours" onClick={onToggleHc} />
-            </div>
-          )}
-        </section>
-      )}
+        {isHowOpen && (
+          <section id={howId} className="gs-how" aria-label="How to play">
+            <b className="gs-how-title">How to play</b>
+            {howTo}
+            {onToggleHc && (
+              <div className="gs-hc">
+                <span>High contrast colours</span>
+                <button type="button" className="gs-switch" role="switch" aria-checked={hc} aria-label="High contrast colours" onClick={onToggleHc} />
+              </div>
+            )}
+          </section>
+        )}
 
-      {children}
+        {children}
+      </main>
 
       <ShellFooter />
-    </main>
+    </div>
   )
 }
 

@@ -154,11 +154,27 @@ a:focus-visible,
 @keyframes loadingPulse { 0%,100% { opacity: 0.35; } 50% { opacity: 0.15; } }
 
 /* ── Reduced motion ──────────────────────────────────────────────────────── */
+/* Animations jump straight to their end state, delays included: a staggered
+   delay would still pop rows in one by one, and a confetti piece would sit
+   still on screen until its delay ran out. The loading wordmark keeps its
+   delay on purpose, so a fast load never flashes it (GameShell.css does the
+   same for its loading placeholder). */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
+    animation-delay: 0s !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
+  .loading-wordmark { animation-delay: 0.3s !important; }
+}
+/* Visually hidden, still read by screen readers (live regions, labels). */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
 }

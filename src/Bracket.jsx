@@ -6,8 +6,16 @@ import { useSeo, PAGE_SEO } from './seo'
 import { score, STAGE_LABELS, STAGE_POINTS } from './bracket/scoring'
 import { flagUrl } from './bracket/flags'
 import { clickableProps } from './a11y'
+import { useDialogFocus } from './useDialogFocus'
 import { GOLD, CARD, BORDER, INK, MUTED } from './theme'
 
+// Strips a real <button> back to the text around it, so toggles and team
+// links keep their look while getting a button's role, focus and keys.
+const plainBtn = {
+  background: 'none', border: 'none', padding: 0, margin: 0, color: 'inherit',
+  fontFamily: 'inherit', fontSize: 'inherit', fontWeight: 'inherit', lineHeight: 'inherit',
+  letterSpacing: 'inherit', textAlign: 'inherit', cursor: 'pointer',
+}
 
 // The viewer's local timezone abbreviation (e.g. "EDT"), shown so everyone knows
 // kickoff times are in their own local time. Computed once; won't flip mid-session.
@@ -269,7 +277,7 @@ export default function Bracket() {
     <PageShell title="BRACKET" subtitle="World Cup 2026 · Final results" width={560}>
       <style>{css}</style>
       <div className="bk-page">
-        <button onClick={() => setShowRules(true)} style={{ background: 'none', border: `1px solid ${BORDER}`, borderRadius: 6, color: GOLD, cursor: 'pointer', fontSize: 12, padding: '3px 12px', marginTop: 10 }}>
+        <button type="button" onClick={() => setShowRules(true)} style={{ background: 'none', border: `1px solid ${BORDER}`, borderRadius: 6, color: GOLD, cursor: 'pointer', fontSize: 12, padding: '3px 12px', marginTop: 10 }}>
           📖 Rules
         </button>
         {children}
@@ -344,7 +352,7 @@ export default function Bracket() {
 
       <div style={{ display: 'flex', gap: 8, marginTop: 14, marginBottom: 18 }}>
         {tabs.map(([key, label]) => (
-          <button key={key} onClick={() => setView(key)} style={{
+          <button key={key} type="button" aria-pressed={view === key} onClick={() => setView(key)} style={{
             background: view === key ? GOLD : 'none',
             border: `1px solid ${view === key ? GOLD : BORDER}`,
             borderRadius: 20, color: view === key ? 'var(--bg)' : GOLD,
@@ -366,51 +374,57 @@ export default function Bracket() {
         <div style={{ width: '100%' }}>
           <div style={{ textAlign: 'center', fontSize: 12, color: MUTED, marginBottom: 14 }}>
             You got <b style={{ color: GOLD }}>{myCorrect}</b> of <b style={{ color: GOLD }}>{myScored}</b> scored picks right · tap a day, then a match to see everyone's picks
-            {TZ_ABBR && <div style={{ fontSize: 11, color: 'var(--faint)', marginTop: 3 }}>Kickoff times shown in {TZ_ABBR} (your local time)</div>}
+            {TZ_ABBR && <div style={{ fontSize: 11, color: MUTED, marginTop: 3 }}>Kickoff times shown in {TZ_ABBR} (your local time)</div>}
           </div>
-          {pickDays.map(({ day, dayMatches, isPast, scored, correct }) => {
+          {pickDays.map(({ day, dayMatches, isPast, scored, correct }, i) => {
             const collapsed = isPast && !openPastDays.has(day)
             const isCurrent = day === currentDayLabel
             const nMatch = `${dayMatches.length} match${dayMatches.length !== 1 ? 'es' : ''}`
             const stats = scored > 0 ? `${nMatch} · ${correct}/${scored} correct` : nMatch
-
-            if (collapsed) {
-              return (
-                <div key={day} {...clickableProps(() => togglePastDay(day))} aria-expanded={false} style={{
-                  display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer',
-                  marginBottom: 8, paddingBottom: 4, borderBottom: `1px solid ${BORDER}`,
-                }}>
-                  <span style={{ flex: 1, minWidth: 0, fontFamily: 'var(--font-display)', fontSize: 15, fontWeight: 800, letterSpacing: 1, color: MUTED, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{day}</span>
-                  <span style={{ fontSize: 11, color: MUTED, flexShrink: 0 }}>{stats}</span>
-                  <span style={{ fontSize: 13, color: MUTED, flexShrink: 0 }}>▾</span>
-                </div>
-              )
-            }
+            const dayId = `bk-day-${i}`
 
             return (
-              <div key={day} ref={isCurrent ? currentDayRef : null} style={{ marginBottom: 22, ...(isCurrent ? { borderLeft: `2px solid ${GOLD}`, paddingLeft: 8 } : null) }}>
+              <div key={day} ref={isCurrent ? currentDayRef : null} style={collapsed ? undefined : { marginBottom: 22, ...(isCurrent ? { borderLeft: `2px solid ${GOLD}`, paddingLeft: 8 } : null) }}>
                 {isPast ? (
-                  <div {...clickableProps(() => togglePastDay(day))} aria-expanded={true} style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontFamily: 'var(--font-display)', fontSize: 17, fontWeight: 800, letterSpacing: 1, color: INK, marginBottom: 8, borderBottom: `1px solid ${BORDER}`, paddingBottom: 4 }}>
-                    <span style={{ flex: 1, minWidth: 0 }}>{day}</span>
-                    <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, fontWeight: 400, color: MUTED, flexShrink: 0 }}>{stats}</span>
-                    <span style={{ fontSize: 13, color: MUTED, flexShrink: 0 }}>▴</span>
-                  </div>
+                  // One button in both states, so it keeps keyboard focus (and
+                  // announces the new state) when the day opens or closes.
+                  <h2 style={{ margin: '0 0 8px', fontSize: 'inherit', fontWeight: 'inherit' }}>
+                    <button
+                      type="button" aria-expanded={!collapsed} aria-controls={collapsed ? undefined : dayId}
+                      onClick={() => togglePastDay(day)}
+                      style={{ ...plainBtn, display: 'flex', alignItems: 'center', gap: 8, width: '100%', paddingBottom: 4, borderBottom: `1px solid ${BORDER}` }}
+                    >
+                      <span style={{
+                        flex: 1, minWidth: 0, fontFamily: 'var(--font-display)', fontWeight: 800, letterSpacing: 1,
+                        ...(collapsed
+                          ? { fontSize: 15, color: MUTED, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }
+                          : { fontSize: 17, color: INK }),
+                      }}>{day}</span>
+                      {' '}
+                      <span style={{ fontFamily: 'var(--font-body)', fontSize: 11, fontWeight: 400, color: MUTED, flexShrink: 0 }}>{stats}</span>
+                      <span aria-hidden="true" style={{ fontSize: 13, color: MUTED, flexShrink: 0 }}>{collapsed ? '▾' : '▴'}</span>
+                    </button>
+                  </h2>
                 ) : (
-                  <div style={{ fontFamily: 'var(--font-display)', fontSize: 17, fontWeight: 800, letterSpacing: 1, color: INK, marginBottom: 8, borderBottom: `1px solid ${BORDER}`, paddingBottom: 4 }}>
+                  <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 17, fontWeight: 800, letterSpacing: 1, color: INK, margin: '0 0 8px', borderBottom: `1px solid ${BORDER}`, paddingBottom: 4 }}>
                     {day}
+                  </h2>
+                )}
+                {!collapsed && (
+                  <div id={dayId}>
+                    {dayMatches.map(m => (
+                      <MatchRow
+                        key={m.id} m={m} myPick={myPicks[m.id]} lockedIn={myLocked.has(m.id)} now={now} onPick={noop}
+                        expanded={openMatch === m.id}
+                        onToggle={() => toggleMatch(m)}
+                        roster={roster}
+                        meId={user.id}
+                        matchPreds={openMatch === m.id ? preds.filter(p => p.match_id === m.id) : null}
+                        onTeam={onTeam}
+                      />
+                    ))}
                   </div>
                 )}
-                {dayMatches.map(m => (
-                  <MatchRow
-                    key={m.id} m={m} myPick={myPicks[m.id]} lockedIn={myLocked.has(m.id)} now={now} onPick={noop}
-                    expanded={openMatch === m.id}
-                    onToggle={() => toggleMatch(m)}
-                    roster={roster}
-                    meId={user.id}
-                    matchPreds={openMatch === m.id ? preds.filter(p => p.match_id === m.id) : null}
-                    onTeam={onTeam}
-                  />
-                ))}
               </div>
             )
           })}
@@ -423,40 +437,61 @@ export default function Bracket() {
             const hist = historyFor(s.user_id)
             const expandable = hist.length > 0
             const open = openStanding === s.user_id
+            const name = s.display_name ?? 'Player'
+            const panelId = `bk-history-${i}`
+            // The summary line. Spans only, since it can sit inside a <button>;
+            // screen readers get "Rank 1: Ana (you), 69 correct 113 points".
+            const summary = (
+              <span style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <span className="sr-only">Rank {s.rank}: </span>
+                <span aria-hidden="true" style={{ width: 24, fontSize: 15, fontWeight: 800, color: s.rank === 1 ? GOLD : MUTED, textAlign: 'center' }}>
+                  {s.rank === 1 ? '👑' : s.rank}
+                </span>
+                {s.avatar_url
+                  ? <img src={s.avatar_url} alt="" width={28} height={28} style={{ borderRadius: '50%', flexShrink: 0 }} referrerPolicy="no-referrer" />
+                  : <span aria-hidden="true" style={{ width: 28, height: 28, borderRadius: '50%', background: 'var(--bg)', border: `1px solid ${BORDER}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, color: GOLD, flexShrink: 0 }}>
+                      {(s.display_name ?? '?')[0]?.toUpperCase()}
+                    </span>}
+                <span style={{ flex: 1, minWidth: 0 }}>
+                  <span style={{ display: 'block', fontSize: 14, fontWeight: 700, color: INK, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {name}{s.user_id === user.id && <span style={{ color: MUTED, fontWeight: 600 }}> (you)</span>}
+                  </span>
+                  <span className="sr-only">, </span>
+                  <span style={{ display: 'block', fontSize: 11, color: MUTED }}>{s.correct} correct</span>
+                </span>
+                {' '}
+                <span style={{ fontSize: 20, fontWeight: 800, color: s.rank === 1 ? GOLD : INK }}>{s.total}<span className="sr-only"> points</span></span>
+                {expandable && (
+                  <span aria-hidden="true" style={{ color: MUTED, fontSize: 13, marginLeft: 2, flexShrink: 0 }}>{open ? '▴' : '▾'}</span>
+                )}
+              </span>
+            )
             return (
               <div key={s.user_id} style={{
                 background: CARD, border: `1px solid ${s.user_id === user.id ? GOLD : BORDER}`,
-                borderRadius: 10, padding: '10px 16px', marginBottom: 6,
+                borderRadius: 10, marginBottom: 6,
                 animation: `fadeIn 0.4s ${i * 60}ms both ease`,
-                cursor: expandable ? 'pointer' : 'default',
-              }}
-                {...(expandable ? { ...clickableProps(() => setOpenStanding(c => c === s.user_id ? null : s.user_id)), 'aria-expanded': open } : {})}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <div style={{ width: 24, fontSize: 15, fontWeight: 800, color: s.rank === 1 ? GOLD : MUTED, textAlign: 'center' }}>
-                    {s.rank === 1 ? '👑' : s.rank}
+              }}>
+                {expandable ? (
+                  <button
+                    type="button" aria-expanded={open} aria-controls={open ? panelId : undefined}
+                    onClick={() => setOpenStanding(c => c === s.user_id ? null : s.user_id)}
+                    style={{ ...plainBtn, display: 'block', width: '100%', padding: '10px 16px', borderRadius: 10 }}
+                  >
+                    {summary}
+                  </button>
+                ) : (
+                  <div style={{ padding: '10px 16px' }}>{summary}</div>
+                )}
+                {open && (
+                  <div id={panelId} role="region" aria-label={`${name}'s pick history`} style={{ margin: '0 16px', padding: '10px 0', borderTop: `1px solid ${BORDER}` }}>
+                    <HistoryPanel history={hist} />
                   </div>
-                  {s.avatar_url
-                    ? <img src={s.avatar_url} alt="" width={28} height={28} style={{ borderRadius: '50%', flexShrink: 0 }} referrerPolicy="no-referrer" />
-                    : <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'var(--bg)', border: `1px solid ${BORDER}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, color: GOLD, flexShrink: 0 }}>
-                        {(s.display_name ?? '?')[0]?.toUpperCase()}
-                      </div>}
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 14, fontWeight: 700, color: INK, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                      {s.display_name ?? 'Player'}{s.user_id === user.id && <span style={{ color: MUTED, fontWeight: 600 }}> (you)</span>}
-                    </div>
-                    <div style={{ fontSize: 11, color: MUTED }}>{s.correct} correct</div>
-                  </div>
-                  <div style={{ fontSize: 20, fontWeight: 800, color: s.rank === 1 ? GOLD : INK }}>{s.total}</div>
-                  {expandable && (
-                    <div style={{ color: MUTED, fontSize: 13, marginLeft: 2, flexShrink: 0 }}>{open ? '▴' : '▾'}</div>
-                  )}
-                </div>
-                {open && <HistoryPanel history={hist} />}
+                )}
               </div>
             )
           })}
-          <div style={{ textAlign: 'center', fontSize: 11, color: 'var(--faint)', marginTop: 14, lineHeight: 1.7 }}>
+          <div style={{ textAlign: 'center', fontSize: 11, color: MUTED, marginTop: 14, lineHeight: 1.7 }}>
             Group 1 · R32 2 · R16 3 · QF 5 · SF 8 · 3rd place 5 · Final 12 points per correct pick.
             {archive?.archived_at && <><br />Final standings, frozen {new Date(archive.archived_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}.</>}
           </div>
@@ -467,7 +502,7 @@ export default function Bracket() {
         <div style={{ width: '100%' }}>
           <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginBottom: 16 }}>
             {[['groups', 'Groups'], ['bracket', 'Bracket']].map(([k, l]) => (
-              <button key={k} onClick={() => setTourTab(k)} style={{
+              <button key={k} type="button" aria-pressed={tourTab === k} onClick={() => setTourTab(k)} style={{
                 background: tourTab === k ? 'rgba(var(--gold-rgb),0.14)' : 'none',
                 border: `1px solid ${tourTab === k ? 'rgba(var(--gold-rgb),0.35)' : BORDER}`,
                 borderRadius: 20, color: tourTab === k ? GOLD : MUTED,
@@ -483,7 +518,7 @@ export default function Bracket() {
                   {groupTables.map(([code, teams]) => (
                     <GroupTable key={code} code={code} teams={teams} qualifyingThirds={qualifyingThirds} onTeam={onTeam} />
                   ))}
-                  <div style={{ textAlign: 'center', fontSize: 11, color: 'var(--faint)', marginTop: 6, lineHeight: 1.8 }}>
+                  <div style={{ textAlign: 'center', fontSize: 11, color: MUTED, marginTop: 6, lineHeight: 1.8 }}>
                     <span style={{ color: GOLD }}>■</span> top 2 advance · <span style={{ color: '#8a7a3a' }}>■</span> in the 8 best 3rd-place spots
                   </div>
                 </>
@@ -494,6 +529,11 @@ export default function Bracket() {
       )}
     </>
   )
+}
+
+// A team name that opens its World Cup history dialog (nothing for a TBD slot).
+function teamLinkProps(code, onTeam) {
+  return code ? { ...clickableProps(() => onTeam(code)), 'aria-haspopup': 'dialog' } : {}
 }
 
 function GroupTable({ code, teams, qualifyingThirds, onTeam }) {
@@ -512,7 +552,7 @@ function GroupTable({ code, teams, qualifyingThirds, onTeam }) {
           const gd = t.gf - t.ga
           return (
             <div key={t.team} style={{ display: 'grid', gridTemplateColumns: cols, gap: 6, padding: '7px 12px', fontSize: 13, alignItems: 'center', borderLeft: `2px solid ${accent}`, background: advance || thirdQ ? 'rgba(var(--gold-rgb),0.05)' : 'transparent' }}>
-              <span {...clickableProps(() => onTeam(t.team))} style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0, cursor: 'pointer' }}>
+              <span {...teamLinkProps(t.team, onTeam)} style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0, cursor: 'pointer' }}>
                 <Flag code={t.team} size={14} />
                 <span style={{ color: advance || thirdQ ? INK : 'var(--text-2)', fontWeight: advance || thirdQ ? 500 : 400, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.team}</span>
               </span>
@@ -544,7 +584,7 @@ function BracketView({ matches, onTeam }) {
   return (
     <>
       {!anyTeams && <div style={{ textAlign: 'center', fontSize: 11, color: MUTED, marginBottom: 6 }}>Teams fill in as the group stage finishes.</div>}
-      {TZ_ABBR && <div style={{ textAlign: 'center', fontSize: 11, color: 'var(--faint)', marginBottom: 14 }}>Times shown in {TZ_ABBR} (your local time)</div>}
+      {TZ_ABBR && <div style={{ textAlign: 'center', fontSize: 11, color: MUTED, marginBottom: 14 }}>Times shown in {TZ_ABBR} (your local time)</div>}
       {stages.map(([key, label]) => (
         <div key={key} style={{ marginBottom: 18 }}>
           <div style={{ fontFamily: 'var(--font-display)', fontSize: 13, fontWeight: 700, letterSpacing: 1.5, color: GOLD, textTransform: 'uppercase', marginBottom: 8 }}>{label}</div>
@@ -562,15 +602,15 @@ function KoRow({ m, onTeam }) {
   return (
     <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 10, padding: '8px 14px', marginBottom: 6 }}>
       <div style={{ fontSize: 10, color: MUTED, textAlign: 'center', marginBottom: 5, letterSpacing: 0.3 }}>
-        {when}{m.venue && <span style={{ color: 'var(--faint)' }}> · {m.venue}, {m.city}</span>}
+        {when}{m.venue && <span> · {m.venue}, {m.city}</span>}
       </div>
       <div style={{ display: 'flex', alignItems: 'center' }}>
-        <span {...(m.team_a ? clickableProps(() => onTeam(m.team_a)) : {})} style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 6, minWidth: 0, fontSize: 13, color: aWin ? 'var(--success-text)' : 'var(--text-2)', fontWeight: aWin ? 700 : 400, cursor: m.team_a ? 'pointer' : 'default' }}>
+        <span {...teamLinkProps(m.team_a, onTeam)} style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 6, minWidth: 0, fontSize: 13, color: aWin ? 'var(--success-text)' : 'var(--text-2)', fontWeight: aWin ? 700 : 400, cursor: m.team_a ? 'pointer' : 'default' }}>
           {m.team_a && <Flag code={m.team_a} size={14} />}
           <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.team_a ?? 'TBD'}</span>
         </span>
         <span style={{ flexShrink: 0, padding: '0 10px', fontSize: scoreStr ? 13 : 11, fontWeight: scoreStr ? 700 : 400, color: scoreStr ? INK : MUTED }}>{scoreStr ?? 'vs'}</span>
-        <span {...(m.team_b ? clickableProps(() => onTeam(m.team_b)) : {})} style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 6, minWidth: 0, justifyContent: 'flex-end', fontSize: 13, color: bWin ? 'var(--success-text)' : 'var(--text-2)', fontWeight: bWin ? 700 : 400, cursor: m.team_b ? 'pointer' : 'default' }}>
+        <span {...teamLinkProps(m.team_b, onTeam)} style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 6, minWidth: 0, justifyContent: 'flex-end', fontSize: 13, color: bWin ? 'var(--success-text)' : 'var(--text-2)', fontWeight: bWin ? 700 : 400, cursor: m.team_b ? 'pointer' : 'default' }}>
           <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.team_b ?? 'TBD'}</span>
           {m.team_b && <Flag code={m.team_b} size={14} />}
         </span>
@@ -590,15 +630,17 @@ function MatchRow({ m, myPick, lockedIn, now, onPick, expanded, onToggle, roster
     : [['a', m.team_a ?? 'TBD'], ['b', m.team_b ?? 'TBD']]
   const pts = STAGE_POINTS[m.stage] ?? 0
 
+  const panelId = `bk-picks-${m.id}`
+
   let status = null
   if (m.excluded) {
     status = <span style={{ color: MUTED }}>Not scored</span>
   } else if (m.result && myPick) {
     status = myPick === m.result
-      ? <span style={{ color: 'var(--success-text)', fontWeight: 700 }}>✓ +{pts}</span>
-      : <span style={{ color: 'var(--danger-text)', fontWeight: 700 }}>✗</span>
+      ? <span style={{ color: 'var(--success-text)', fontWeight: 700 }}><span aria-hidden="true">✓ </span>+{pts}<span className="sr-only"> point{pts !== 1 ? 's' : ''}, correct</span></span>
+      : <span style={{ color: 'var(--danger-text)', fontWeight: 700 }}><span aria-hidden="true">✗</span><span className="sr-only">Wrong</span></span>
   } else if (m.result) {
-    status = <span style={{ color: MUTED }}>—</span>
+    status = <span style={{ color: MUTED }}><span aria-hidden="true">—</span><span className="sr-only">No pick</span></span>
   } else if (kicked) {
     status = <span style={{ color: MUTED }}>Locked</span>
   } else if (lockedIn) {
@@ -607,10 +649,12 @@ function MatchRow({ m, myPick, lockedIn, now, onPick, expanded, onToggle, roster
     status = <span style={{ color: MUTED }}>TBD</span>
   }
 
+  // The "picks ▾" button below is the toggle for keyboards and screen
+  // readers; a click anywhere else on the card does the same for pointers.
   return (
     <div
       style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 10, padding: '8px 12px', marginBottom: 6, cursor: expandable ? 'pointer' : 'default' }}
-      {...(expandable ? { ...clickableProps(onToggle), 'aria-expanded': expanded } : {})}
+      onClick={expandable ? onToggle : undefined}
     >
       <div className="bk-row">
         <div className="bk-time">
@@ -624,7 +668,9 @@ function MatchRow({ m, myPick, lockedIn, now, onPick, expanded, onToggle, roster
             return (
               <button
                 key={key}
+                type="button"
                 className="bk-btn"
+                aria-pressed={active}
                 onClick={() => onPick(m, key)}
                 disabled={locked}
                 style={{
@@ -651,31 +697,50 @@ function MatchRow({ m, myPick, lockedIn, now, onPick, expanded, onToggle, roster
         <div className="bk-status">
           {status}
           {expandable && (
-            <div style={{ fontSize: 10, fontWeight: 600, color: MUTED, marginTop: 2 }}>
-              {expanded ? 'picks ▴' : 'picks ▾'}
-            </div>
+            <button
+              type="button" aria-expanded={expanded} aria-controls={expanded ? panelId : undefined}
+              onClick={(e) => { e.stopPropagation(); onToggle() }}
+              style={{ ...plainBtn, display: 'block', marginLeft: 'auto', fontSize: 10, fontWeight: 600, color: MUTED, marginTop: 2 }}
+            >
+              <span className="sr-only">Everyone's </span>picks<span aria-hidden="true"> {expanded ? '▴' : '▾'}</span>
+              <span className="sr-only"> for {m.team_a ?? 'TBD'} v {m.team_b ?? 'TBD'}</span>
+            </button>
           )}
         </div>
       </div>
       {m.score_a != null && m.score_b != null && (
         <div style={{ textAlign: 'center', fontSize: 11, color: MUTED, marginTop: 5, letterSpacing: 0.3 }}>
           {isLive && <span style={{ color: 'var(--danger)', fontWeight: 700, marginRight: 6 }}><span style={{ animation: 'blink 1.2s infinite' }}>●</span> LIVE</span>}
-          <span {...clickableProps((e) => { e.stopPropagation(); onTeam(m.team_a) })} style={{ color: m.result === 'a' ? 'var(--success-text)' : 'var(--text-2)', fontWeight: m.result === 'a' ? 700 : 400, cursor: 'pointer' }}>{m.team_a}</span>
+          <button type="button" aria-haspopup="dialog" onClick={(e) => { e.stopPropagation(); onTeam(m.team_a) }} style={{ ...plainBtn, color: m.result === 'a' ? 'var(--success-text)' : 'var(--text-2)', fontWeight: m.result === 'a' ? 700 : 400 }}>{m.team_a}</button>
           {' '}<span style={{ color: INK, fontWeight: 700 }}>{m.score_a}–{m.score_b}</span>{' '}
-          <span {...clickableProps((e) => { e.stopPropagation(); onTeam(m.team_b) })} style={{ color: m.result === 'b' ? 'var(--success-text)' : 'var(--text-2)', fontWeight: m.result === 'b' ? 700 : 400, cursor: 'pointer' }}>{m.team_b}</span>
+          <button type="button" aria-haspopup="dialog" onClick={(e) => { e.stopPropagation(); onTeam(m.team_b) }} style={{ ...plainBtn, color: m.result === 'b' ? 'var(--success-text)' : 'var(--text-2)', fontWeight: m.result === 'b' ? 700 : 400 }}>{m.team_b}</button>
         </div>
       )}
       {m.venue && (
-        <div style={{ textAlign: 'center', fontSize: 10, color: 'var(--faint)', marginTop: 3, letterSpacing: 0.3 }}>
+        <div style={{ textAlign: 'center', fontSize: 10, color: MUTED, marginTop: 3, letterSpacing: 0.3 }}>
           {m.venue}, {m.city}
         </div>
       )}
-      {expanded && <PicksPanel m={m} roster={roster} matchPreds={matchPreds} meId={meId} />}
+      {expanded && <PicksPanel id={panelId} m={m} roster={roster} matchPreds={matchPreds} meId={meId} />}
     </div>
   )
 }
 
-function PicksPanel({ m, roster, matchPreds, meId }) {
+// A pick's hit/miss, beyond its green/red: a ✓/✗ for the eye, words for
+// screen readers.
+function Graded({ hit }) {
+  return (
+    <>
+      <span aria-hidden="true">{hit ? '✓' : '✗'}</span>
+      <span className="sr-only">{hit ? ', correct' : ', wrong'}</span>
+    </>
+  )
+}
+
+// role="list" goes with it on each <ul>: Safari drops list semantics from unstyled lists.
+const plainList = { listStyle: 'none', margin: 0, padding: 0 }
+
+function PicksPanel({ id, m, roster, matchPreds, meId }) {
   const byUser = new Map((matchPreds ?? []).map(p => [p.user_id, p.pick]))
   // Viewer pinned first, then roster (joined) order. No correct-first sorting —
   // rows reshuffling when a result lands is worse than colours doing the work.
@@ -688,27 +753,35 @@ function PicksPanel({ m, roster, matchPreds, meId }) {
     const label = pick === 'draw' ? 'Draw' : pick === 'a' ? m.team_a : m.team_b
     return (
       <span style={{ display: 'flex', alignItems: 'center', gap: 5, color, fontWeight: 700, fontSize: 13, flexShrink: 0 }}>
+        <span className="sr-only"> picked </span>
         {pick !== 'draw' && <Flag code={pick === 'a' ? m.team_a : m.team_b} size={14} />}
         {label ?? '—'}
+        {m.result && <Graded hit={pick === m.result} />}
       </span>
     )
   }
 
+  // Clicks in here mustn't reach the card's toggle.
   return (
-    <div style={{ borderTop: `1px solid ${BORDER}`, marginTop: 8, paddingTop: 8 }} onClick={e => e.stopPropagation()}>
-      {members.map(mem => (
-        <div key={mem.user_id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0' }}>
-          {mem.avatar_url
-            ? <img src={mem.avatar_url} alt="" width={22} height={22} style={{ borderRadius: '50%', flexShrink: 0 }} referrerPolicy="no-referrer" />
-            : <div style={{ width: 22, height: 22, borderRadius: '50%', background: 'var(--bg)', border: `1px solid ${BORDER}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: GOLD, flexShrink: 0 }}>
-                {(mem.display_name ?? '?')[0]?.toUpperCase()}
-              </div>}
-          <div style={{ flex: 1, minWidth: 0, fontSize: 13, color: INK, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-            {mem.display_name ?? 'Player'}{mem.user_id === meId && <span style={{ color: MUTED, fontWeight: 600 }}> (you)</span>}
-          </div>
-          {pickCell(byUser.get(mem.user_id))}
-        </div>
-      ))}
+    <div
+      id={id} role="region" aria-label={`Everyone's picks: ${m.team_a ?? 'TBD'} v ${m.team_b ?? 'TBD'}`}
+      style={{ borderTop: `1px solid ${BORDER}`, marginTop: 8, paddingTop: 8 }} onClick={e => e.stopPropagation()}
+    >
+      <ul role="list" style={plainList}>
+        {members.map(mem => (
+          <li key={mem.user_id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0' }}>
+            {mem.avatar_url
+              ? <img src={mem.avatar_url} alt="" width={22} height={22} style={{ borderRadius: '50%', flexShrink: 0 }} referrerPolicy="no-referrer" />
+              : <div aria-hidden="true" style={{ width: 22, height: 22, borderRadius: '50%', background: 'var(--bg)', border: `1px solid ${BORDER}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: GOLD, flexShrink: 0 }}>
+                  {(mem.display_name ?? '?')[0]?.toUpperCase()}
+                </div>}
+            <div style={{ flex: 1, minWidth: 0, fontSize: 13, color: INK, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {mem.display_name ?? 'Player'}{mem.user_id === meId && <span style={{ color: MUTED, fontWeight: 600 }}> (you)</span>}
+            </div>
+            {pickCell(byUser.get(mem.user_id))}
+          </li>
+        ))}
+      </ul>
     </div>
   )
 }
@@ -716,44 +789,54 @@ function PicksPanel({ m, roster, matchPreds, meId }) {
 function HistoryPanel({ history }) {
   const newest = [...history].reverse()
   return (
-    <div style={{ borderTop: `1px solid ${BORDER}`, marginTop: 10, paddingTop: 10 }} onClick={e => e.stopPropagation()}>
-      <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1, color: GOLD, textTransform: 'uppercase', marginBottom: 6 }}>Form</div>
-      <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginBottom: 14 }}>
-        {history.map((h, i) => (
-          <span key={i} title={`${h.m.team_a} v ${h.m.team_b}`} style={{
-            width: 16, height: 16, borderRadius: 3,
-            background: h.correct ? 'rgba(var(--success-text-rgb),0.85)' : 'rgba(var(--danger-text-rgb),0.85)',
-          }} />
-        ))}
+    <>
+      {/* The form strip is a glance view of the list below, so screen readers skip it. */}
+      <div aria-hidden="true">
+        <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1, color: GOLD, textTransform: 'uppercase', marginBottom: 6 }}>Form</div>
+        <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginBottom: 14 }}>
+          {history.map((h, i) => (
+            <span key={i} title={`${h.m.team_a} v ${h.m.team_b}: ${h.correct ? 'correct' : 'wrong'}`} style={{
+              width: 16, height: 16, borderRadius: 3,
+              background: h.correct ? 'rgba(var(--success-text-rgb),0.85)' : 'rgba(var(--danger-text-rgb),0.85)',
+            }} />
+          ))}
+        </div>
       </div>
       <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1, color: GOLD, textTransform: 'uppercase', marginBottom: 4 }}>Pick history</div>
-      {newest.map((h, i) => {
-        const pickLabel = h.pick === 'draw' ? 'Draw' : h.pick === 'a' ? h.m.team_a : h.m.team_b
-        return (
-          <div key={h.m.id} style={{ display: 'flex', alignItems: 'center', padding: '6px 0', borderBottom: i < newest.length - 1 ? '1px solid rgba(44,40,32,0.6)' : 'none' }}>
-            <span style={{ flex: 1, minWidth: 0, fontSize: 13, color: INK, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-              {h.m.team_a ?? 'TBD'} <span style={{ color: MUTED }}>v</span> {h.m.team_b ?? 'TBD'}
-            </span>
-            <span style={{ fontSize: 12, color: MUTED, margin: '0 10px', flexShrink: 0, display: 'flex', alignItems: 'center', gap: 4 }}>
-              {h.pick !== 'draw' && <Flag code={h.pick === 'a' ? h.m.team_a : h.m.team_b} size={13} />}
-              {pickLabel}
-            </span>
-            <span style={{ fontSize: 12, fontWeight: 700, color: h.correct ? 'var(--success-text)' : 'var(--danger-text)', flexShrink: 0, minWidth: 30, textAlign: 'right' }}>
-              {h.correct ? `+${h.pts}` : '✗'}
-            </span>
-          </div>
-        )
-      })}
-    </div>
+      <ul role="list" style={plainList}>
+        {newest.map((h, i) => {
+          const pickLabel = h.pick === 'draw' ? 'Draw' : h.pick === 'a' ? h.m.team_a : h.m.team_b
+          return (
+            <li key={h.m.id} style={{ display: 'flex', alignItems: 'center', padding: '6px 0', borderBottom: i < newest.length - 1 ? '1px solid rgba(44,40,32,0.6)' : 'none' }}>
+              <span style={{ flex: 1, minWidth: 0, fontSize: 13, color: INK, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {h.m.team_a ?? 'TBD'} <span style={{ color: MUTED }}>v</span> {h.m.team_b ?? 'TBD'}
+              </span>
+              <span style={{ fontSize: 12, color: MUTED, margin: '0 10px', flexShrink: 0, display: 'flex', alignItems: 'center', gap: 4 }}>
+                <span className="sr-only"> picked </span>
+                {h.pick !== 'draw' && <Flag code={h.pick === 'a' ? h.m.team_a : h.m.team_b} size={13} />}
+                {pickLabel}
+              </span>
+              <span style={{ fontSize: 12, fontWeight: 700, color: h.correct ? 'var(--success-text)' : 'var(--danger-text)', flexShrink: 0, minWidth: 30, textAlign: 'right' }}>
+                {h.correct
+                  ? <><span aria-hidden="true">+{h.pts}</span><span className="sr-only">, correct, {h.pts} point{h.pts !== 1 ? 's' : ''}</span></>
+                  : <><span aria-hidden="true">✗</span><span className="sr-only">, wrong</span></>}
+              </span>
+            </li>
+          )
+        })}
+      </ul>
+    </>
   )
 }
 
 function TeamHistoryModal({ team, matches, onClose }) {
+  const panelRef = useRef(null)
   useEffect(() => {
     const onKey = (e) => { if (e.key === 'Escape') onClose() }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [onClose])
+  useDialogFocus(panelRef)
 
   const hist = useMemo(() =>
     matches.filter(m => m.team_a === team || m.team_b === team)
@@ -770,12 +853,12 @@ function TeamHistoryModal({ team, matches, onClose }) {
   }
 
   return (
-    <div onClick={onClose} role="dialog" aria-modal="true" aria-label={`${team} match history`} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, animation: 'fadeIn 0.2s ease' }}>
-      <div onClick={e => e.stopPropagation()} style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 14, padding: '20px 22px 18px', maxWidth: 380, width: '100%', maxHeight: '85vh', overflowY: 'auto', boxSizing: 'border-box', animation: 'slideUp 0.25s ease' }}>
+    <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, animation: 'fadeIn 0.2s ease' }}>
+      <div ref={panelRef} role="dialog" aria-modal="true" aria-label={`${team} match history`} onClick={e => e.stopPropagation()} style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 14, padding: '20px 22px 18px', maxWidth: 380, width: '100%', maxHeight: '85vh', overflowY: 'auto', boxSizing: 'border-box', animation: 'slideUp 0.25s ease' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
           <Flag code={team} size={22} />
           <div style={{ fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 800, letterSpacing: 1.5, color: INK, flex: 1 }}>{team}</div>
-          <button onClick={onClose} aria-label="Close" style={{ background: 'none', border: 'none', color: MUTED, cursor: 'pointer', fontSize: 18, padding: 4, lineHeight: 1 }}>✕</button>
+          <button type="button" onClick={onClose} aria-label="Close" style={{ background: 'none', border: 'none', color: MUTED, cursor: 'pointer', fontSize: 18, padding: 4, lineHeight: 1 }}>✕</button>
         </div>
         <div style={{ fontSize: 11, color: MUTED, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 12 }}>
           World Cup record · <b style={{ color: INK }}>{w}W {d}D {l}L</b>
@@ -819,29 +902,31 @@ function TeamHistoryRow({ m, team }) {
         {pill && <span style={{ flexShrink: 0, width: 16, textAlign: 'center', fontSize: 11, fontWeight: 800, color: pill.c }}>{pill.t}</span>}
       </div>
       {m.venue && (
-        <div style={{ fontSize: 10, color: 'var(--faint)', marginTop: 2, paddingLeft: 66 }}>{m.venue}, {m.city}</div>
+        <div style={{ fontSize: 10, color: MUTED, marginTop: 2, paddingLeft: 66 }}>{m.venue}, {m.city}</div>
       )}
     </div>
   )
 }
 
 function RulesModal({ onClose }) {
+  const panelRef = useRef(null)
   useEffect(() => {
     const onKey = (e) => { if (e.key === 'Escape') onClose() }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [onClose])
+  useDialogFocus(panelRef)
 
   const sectionTitle = { fontSize: 11, fontWeight: 700, letterSpacing: 1.5, color: GOLD, textTransform: 'uppercase', marginTop: 18, marginBottom: 6 }
   const body = { fontSize: 13, color: 'var(--ink-2)', lineHeight: 1.65, margin: 0 }
   const stages = ['group', 'r32', 'r16', 'qf', 'sf', '3p', 'final']
 
   return (
-    <div onClick={onClose} role="dialog" aria-modal="true" aria-label="Pool rules" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, animation: 'fadeIn 0.2s ease' }}>
-      <div onClick={e => e.stopPropagation()} style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 14, padding: '20px 22px 18px', maxWidth: 380, width: '100%', maxHeight: '85vh', overflowY: 'auto', boxSizing: 'border-box', animation: 'slideUp 0.25s ease' }}>
+    <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, animation: 'fadeIn 0.2s ease' }}>
+      <div ref={panelRef} role="dialog" aria-modal="true" aria-label="Pool rules" onClick={e => e.stopPropagation()} style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 14, padding: '20px 22px 18px', maxWidth: 380, width: '100%', maxHeight: '85vh', overflowY: 'auto', boxSizing: 'border-box', animation: 'slideUp 0.25s ease' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 2 }}>
           <div style={{ fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 800, letterSpacing: 2, color: INK }}>POOL RULES</div>
-          <button onClick={onClose} aria-label="Close" style={{ background: 'none', border: 'none', color: MUTED, cursor: 'pointer', fontSize: 18, padding: 4, lineHeight: 1 }}>✕</button>
+          <button type="button" onClick={onClose} aria-label="Close" style={{ background: 'none', border: 'none', color: MUTED, cursor: 'pointer', fontSize: 18, padding: 4, lineHeight: 1 }}>✕</button>
         </div>
 
         <div style={sectionTitle}>How it works</div>

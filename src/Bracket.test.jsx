@@ -102,7 +102,7 @@ describe('archived World Cup pool', () => {
     expect(text()).toContain('You got 2 of 2 scored picks right')
     expect(text()).not.toMatch(/Lock in/)
     // Every day is in the past, so days start collapsed; open the first one.
-    const day = [...host.querySelectorAll('[role="button"][aria-expanded="false"]')].find(el => /\d+ match/.test(el.textContent))
+    const day = [...host.querySelectorAll('button[aria-expanded="false"]')].find(el => /\d+ match/.test(el.textContent))
     await act(async () => { day.click() })
     const pickButtons = [...host.querySelectorAll('button.bk-btn')]
     expect(pickButtons.length).toBeGreaterThan(0)
@@ -137,8 +137,9 @@ describe('archived World Cup pool', () => {
 
   it('sits in the site frame: top bar, title and footer', async () => {
     await render({ id: 'u-bo', user_metadata: {} })
-    expect(host.querySelector('main header.gs-top a.gs-back').getAttribute('href')).toBe('/')
+    expect(host.querySelector('header.gs-top a.gs-back').getAttribute('href')).toBe('/')
     expect(host.querySelector('header.gs-top [aria-label="Account menu"]')).not.toBeNull()
+    expect(host.querySelector('main').contains(host.querySelector('header.gs-top'))).toBe(false) // banner
     expect([...host.querySelectorAll('h1')].map(h => [h.className, h.textContent])).toEqual([['gs-title', 'BRACKET']])
     expect(host.querySelector('.gs-by').textContent).toBe('World Cup 2026 · Final results')
     const footer = host.querySelector('footer.gs-foot')

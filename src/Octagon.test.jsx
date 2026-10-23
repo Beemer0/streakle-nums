@@ -91,8 +91,9 @@ afterEach(() => { act(() => root.unmount()); host.remove() })
 describe('Octagon pick\'em', () => {
   it('sits in the site frame: top bar, title and footer', async () => {
     await render({ id: 'u-bo', user_metadata: {} })
-    expect(host.querySelector('main header.gs-top a.gs-back').getAttribute('href')).toBe('/')
+    expect(host.querySelector('header.gs-top a.gs-back').getAttribute('href')).toBe('/')
     expect(host.querySelector('header.gs-top [aria-label="Account menu"]')).not.toBeNull()
+    expect(host.querySelector('main').contains(host.querySelector('header.gs-top'))).toBe(false) // banner
     expect([...host.querySelectorAll('h1')].map(h => [h.className, h.textContent])).toEqual([['gs-title', 'OCTAGON']])
     expect(host.querySelector('.gs-by').textContent).toBe('UFC Pick\'em · by Streakle')
     const footer = host.querySelector('footer.gs-foot')

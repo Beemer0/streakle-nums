@@ -189,17 +189,19 @@
 }
 .gs-foot a:hover { color: var(--gold); }
 
-/* ── Non-game pages (PageShell) ─────────────────────────────────────────── */
-/* The brand gold stands in for a game's colour in the top stripe. */
-.gs-page {
-  --game: var(--gold);
-  --game-deep: rgba(var(--gold-rgb), 0.4);
-}
+/* ── <main>: the page's content, between the top bar and the footer ─────── */
 .gs-main {
   width: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
+}
+
+/* ── Non-game pages (PageShell) ─────────────────────────────────────────── */
+/* The brand gold stands in for a game's colour in the top stripe. */
+.gs-page {
+  --game: var(--gold);
+  --game-deep: rgba(var(--gold-rgb), 0.4);
 }
 .gs-body {
   width: 100%;
@@ -217,6 +219,11 @@
   border: 1px solid var(--border);
   opacity: 0;
   animation: gsFadeIn 0.3s 0.15s ease forwards, gsShimmer 1.4s 0.15s ease-in-out infinite;
+}
+/* Reduced motion zeroes animation delays (index.css); this one waits a beat on
+   purpose, so a fast load never flashes the placeholder. */
+@media (prefers-reduced-motion: reduce) {
+  .gs-skeleton { animation-delay: 0.15s !important; }
 }
 @keyframes gsFadeIn { to { opacity: 1; } }
 @keyframes gsShimmer {

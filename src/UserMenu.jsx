@@ -1,15 +1,20 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useId } from 'react'
 import { useAuth } from './AuthContext'
-import { clickableProps } from './a11y'
 import { usePoolMemberships } from './usePoolMemberships'
 
 // Pinned to the page's top-right corner by default; `isInline` lets a header
 // (GameShell's top bar) place it in its own layout instead.
+// A disclosure, not an ARIA menu: the avatar button shows and hides a panel of
+// ordinary links and buttons that Tab moves through.
 export default function UserMenu({ isInline = false }) {
   const { user, signOut } = useAuth()
   const { poolIds } = usePoolMemberships()
   const [open, setOpen] = useState(false)
+  // The avatar URL that failed to load, so a refused image falls back to the
+  // initial (and a different user's avatar gets its own try).
+  const [failedAvatar, setFailedAvatar] = useState(null)
   const triggerRef = useRef(null)
+  const panelId = useId()
 
   // Escape closes the menu and hands focus back to the avatar, so a keyboard
   // user on a menu item isn't dropped to the top of the page.
@@ -27,26 +32,35 @@ export default function UserMenu({ isInline = false }) {
   if (!user) return null
 
   const avatar = user.user_metadata?.avatar_url
+  const showAvatar = avatar && failedAvatar !== avatar
   const name = user.user_metadata?.full_name || user.email
 
+  // Focus moving to something outside (Tab past Sign out, Shift+Tab before the
+  // avatar) closes the panel; clicks on the page close it through the backdrop.
+  const handleBlur = (e) => {
+    if (e.relatedTarget && !e.currentTarget.contains(e.relatedTarget)) setOpen(false)
+  }
+
   return (
-    <div style={isInline ? { position: 'relative', zIndex: 50 } : { position: 'absolute', right: 16, top: 20, zIndex: 50 }}>
-      <div ref={triggerRef} {...clickableProps(() => setOpen(!open))} aria-haspopup="menu" aria-expanded={open} aria-label="Account menu" style={{
-        width: 36, height: 36, borderRadius: '50%',
-        background: 'var(--surface)', border: '2px solid var(--border)',
-        cursor: 'pointer', overflow: 'hidden',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-      }}>
-        {avatar
-          ? <img src={avatar} alt="" width={36} height={36} style={{ borderRadius: '50%' }} />
-          : <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--gold)' }}>
+    <div onBlur={handleBlur} style={isInline ? { position: 'relative', zIndex: 50 } : { position: 'absolute', right: 16, top: 20, zIndex: 50 }}>
+      <button ref={triggerRef} type="button" onClick={() => setOpen(o => !o)}
+        aria-expanded={open} aria-controls={open ? panelId : undefined} aria-label="Account menu" style={{
+          width: 36, height: 36, borderRadius: '50%', padding: 0,
+          background: 'var(--surface)', border: '2px solid var(--border)',
+          cursor: 'pointer', overflow: 'hidden',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>
+        {showAvatar
+          ? <img src={avatar} alt="" width={36} height={36} referrerPolicy="no-referrer"
+              onError={() => setFailedAvatar(avatar)} style={{ borderRadius: '50%' }} />
+          : <span aria-hidden="true" style={{ fontSize: 14, fontWeight: 700, color: 'var(--gold)' }}>
               {name?.[0]?.toUpperCase()}
             </span>
         }
-      </div>
+      </button>
 
       {open && (
-        <div style={{
+        <div id={panelId} style={{
           position: 'absolute', right: 0, top: 44,
           background: 'var(--surface)', border: '1px solid var(--border)',
           borderRadius: 10, padding: 12, minWidth: 200,
@@ -70,7 +84,7 @@ export default function UserMenu({ isInline = false }) {
             </div>
           )}
           <div style={{ borderTop: '1px solid var(--border)', paddingTop: 10 }}>
-            <button onClick={signOut} style={{
+            <button type="button" onClick={signOut} style={{
               width: '100%', background: 'none', border: '1px solid rgba(var(--danger-text-rgb),0.25)',
               borderRadius: 6, color: 'var(--danger-text)', cursor: 'pointer',
               fontSize: 13, fontWeight: 600, padding: '8px',

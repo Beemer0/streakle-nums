@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useAuth } from './AuthContext'
 import { supabase } from './supabase'
+import { useDialogFocus } from './useDialogFocus'
 import { calcStreak } from './streak'
 import { GAME_BY_KEY } from './games'
 import GameIcon from './GameIcon'
@@ -45,6 +46,19 @@ function isLocked(dateStr, user) {
   cutoff.setDate(cutoff.getDate() - FREE_DAYS + 1)
   cutoff.setHours(0, 0, 0, 0)
   return new Date(dateStr + 'T00:00:00') < cutoff
+}
+
+// What a screen reader hears for a day button: the date the grid's column
+// and the calendar's month heading show sighted players, then the day's state.
+function dayLabel(dateStr, { win, loss, open, locked }) {
+  const date = new Date(dateStr + 'T00:00:00')
+    .toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
+  const status = win ? 'completed'
+    : loss ? 'attempted'
+    : open ? 'not played'
+    : locked ? 'sign in to unlock'
+    : null
+  return status ? `${date}, ${status}` : date
 }
 
 function getCalendarDays(year, month) {
@@ -122,24 +136,16 @@ export default function Archive({ game, onSelectDate, onClose }) {
   }, [onClose])
 
   // ── Focus: move into the dialog on open, trap Tab, restore on close ───────
+  useDialogFocus(panelRef)
+
+  // An arrow disables itself on reaching the first or the current month, and
+  // a disabled button drops focus out of the dialog: hand it to the other one.
+  const monthBarRef = useRef(null)
   useEffect(() => {
-    const prevFocus = document.activeElement
-    const panel = panelRef.current
-    panel?.querySelector('button')?.focus()
-    const onKeyDown = (e) => {
-      if (e.key !== 'Tab' || !panel) return
-      const items = [...panel.querySelectorAll('button:not(:disabled), a[href], [tabindex]:not([tabindex="-1"])')]
-      if (!items.length) return
-      const first = items[0], last = items[items.length - 1]
-      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus() }
-      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus() }
-    }
-    panel?.addEventListener('keydown', onKeyDown)
-    return () => {
-      panel?.removeEventListener('keydown', onKeyDown)
-      if (prevFocus instanceof HTMLElement) prevFocus.focus()
-    }
-  }, [])
+    const active = document.activeElement
+    if (panelRef.current?.contains(active) && !active.disabled) return
+    monthBarRef.current?.querySelector('button:not(:disabled)')?.focus()
+  }, [viewYear, viewMonth])
 
   // ── Month navigation ─────────────────────────────────────────────────────
   const canGoBack    = !(viewYear === launch.getFullYear() && viewMonth === launch.getMonth())
@@ -221,17 +227,19 @@ export default function Archive({ game, onSelectDate, onClose }) {
 
         {/* ── Calendar ── */}
         <div className="ar-cal">
-          <div className="ar-monthbar">
+          <div className="ar-monthbar" ref={monthBarRef}>
             <button type="button" className="ar-btn" aria-label="Previous month" onClick={prevMonth} disabled={!canGoBack}>
               <PrevIcon />
             </button>
-            <span className="ar-month">{monthName}</span>
+            {/* Polite live region: the arrows keep focus, so the new month is read out. */}
+            <span className="ar-month" aria-live="polite">{monthName}</span>
             <button type="button" className="ar-btn" aria-label="Next month" onClick={nextMonth} disabled={!canGoForward}>
               <NextIcon />
             </button>
           </div>
 
-          <div className="ar-dow">
+          {/* Each day's label names its weekday, so screen readers skip this row. */}
+          <div className="ar-dow" aria-hidden="true">
             {['Su','Mo','Tu','We','Th','Fr','Sa'].map(d => <div key={d}>{d}</div>)}
           </div>
 
@@ -266,6 +274,8 @@ export default function Archive({ game, onSelectDate, onClose }) {
                     className={classes}
                     onClick={() => handleSelect(dateStr)}
                     disabled={!open}
+                    aria-label={dayLabel(dateStr, { win, loss, open, locked: avail && locked })}
+                    aria-current={dateStr === todayStr ? 'date' : undefined}
                     title={locked ? 'Sign in to unlock' : dateStr}
                     style={{ animationDelay: `${(i % 7) * 0.025}s` }}
                   >

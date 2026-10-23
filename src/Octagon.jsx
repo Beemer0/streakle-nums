@@ -1,11 +1,11 @@
-import { useState, useEffect, useMemo, useCallback, useSyncExternalStore } from 'react'
+import { useState, useEffect, useMemo, useCallback, useSyncExternalStore, useRef, useId } from 'react'
 import { useAuth } from './AuthContext'
 import { supabase } from './supabase'
 import PageShell from './PageShell'
 import { useSeo, PAGE_SEO } from './seo'
 import { scoreEvent, eventRanking, deriveBelt, formRanking, METHOD_LABELS, POINTS } from './octagon/scoring'
 import { fetchResults, parsePasted, matchFights } from './octagon/wiki'
-import { clickableProps } from './a11y'
+import { useDialogFocus } from './useDialogFocus'
 import { refreshPoolMemberships } from './usePoolMemberships'
 import { GOLD, CARD, BORDER, INK, MUTED } from './theme'
 
@@ -27,6 +27,7 @@ const css = `
 .oc-fighters{display:flex;gap:8px}
 .oc-fbtn{flex:1 1 0;min-width:0}
 .oc-chips{display:flex;gap:6px;flex-wrap:wrap}
+.oc-field:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 @media(max-width:520px){
   .oc-fbtn{font-size:13px !important;padding:10px 4px !important}
   .oc-chip{font-size:11px !important;padding:5px 10px !important}
@@ -49,6 +50,7 @@ function boutLabel(f) {
 // 30s-bucket clock (same as Bracket) so the event-start lock flips without a
 // reload; the lock that matters is server-side (RLS checks starts_at > now()).
 const NOW_BUCKET_MS = 30000
+const FLASH_MS = 2500
 const subscribeClock = (cb) => {
   const t = setInterval(cb, 5000)
   return () => clearInterval(t)
@@ -74,13 +76,15 @@ export default function Octagon() {
   const [view, setView] = useState('event')
   const [code, setCode] = useState('')
   const [joinState, setJoinState] = useState('idle') // idle | busy | bad
-  const [flash, setFlash] = useState(null)
+  const [flash, setFlash] = useState(null) // { text, n }
+  const flashSeq = useRef(0)
   const [showRules, setShowRules] = useState(false)
   const [showLineage, setShowLineage] = useState(false)
   const [selEvent, setSelEvent] = useState(null)
   const [openFight, setOpenFight] = useState(null)
   const [confirmKey, setConfirmKey] = useState(null) // two-tap confirm for deletes
   const now = useNow()
+  const joinErrId = useId()
 
   const me = user && Array.isArray(roster) ? roster.find(r => r.user_id === user.id) : null
   const isMember = !!me
@@ -116,7 +120,14 @@ export default function Octagon() {
     return () => clearInterval(t)
   }, [user])
 
-  const showFlash = (msg) => { setFlash(msg); setTimeout(() => setFlash(null), 2500) }
+  // Each flash gets its own toast node (keyed by n) inside an always-mounted
+  // alert region, so screen readers hear it (the same text twice included),
+  // and an older flash's timer never clears a newer one early.
+  const showFlash = (text) => {
+    const n = ++flashSeq.current
+    setFlash({ text, n })
+    setTimeout(() => setFlash(cur => (cur?.n === n ? null : cur)), FLASH_MS)
+  }
 
   const handleJoin = async (e) => {
     e.preventDefault()
@@ -336,14 +347,16 @@ export default function Octagon() {
     <PageShell title="OCTAGON" subtitle="UFC Pick'em · by Streakle" width={560}>
       <style>{css}</style>
       <div className="oc-page">
-        <button onClick={() => setShowRules(true)} style={{ background: 'none', border: `1px solid ${BORDER}`, borderRadius: 6, color: GOLD, cursor: 'pointer', fontSize: 12, padding: '3px 12px', marginTop: 10 }}>
+        <button type="button" onClick={() => setShowRules(true)} style={{ background: 'none', border: `1px solid ${BORDER}`, borderRadius: 6, color: GOLD, cursor: 'pointer', fontSize: 12, padding: '3px 12px', marginTop: 10 }}>
           📖 Rules
         </button>
-        {flash && (
-          <div style={{ position: 'fixed', top: 80, left: '50%', transform: 'translateX(-50%)', background: CARD, border: `1px solid ${BORDER}`, borderRadius: 8, padding: '8px 20px', fontSize: 14, fontWeight: 600, color: RED, zIndex: 50, animation: 'slideUp 0.3s ease', whiteSpace: 'nowrap' }}>
-            {flash}
-          </div>
-        )}
+        <div role="alert" aria-atomic="true">
+          {flash && (
+            <div key={flash.n} style={{ position: 'fixed', top: 80, left: '50%', transform: 'translateX(-50%)', background: CARD, border: `1px solid ${BORDER}`, borderRadius: 8, padding: '8px 20px', fontSize: 14, fontWeight: 600, color: RED, zIndex: 50, animation: 'slideUp 0.3s ease', whiteSpace: 'normal', width: 'max-content', maxWidth: 'calc(100vw - 32px)', boxSizing: 'border-box', textAlign: 'center' }}>
+              {flash.text}
+            </div>
+          )}
+        </div>
         {children}
       </div>
       {showRules && <RulesModal onClose={() => setShowRules(false)} />}
@@ -386,10 +399,14 @@ export default function Octagon() {
           value={code}
           onChange={e => { setCode(e.target.value); if (joinState === 'bad') setJoinState('idle') }}
           placeholder="Invite code"
+          aria-label="Invite code"
+          aria-invalid={joinState === 'bad'}
+          aria-describedby={joinState === 'bad' ? joinErrId : undefined}
           autoFocus
-          style={{ width: '100%', boxSizing: 'border-box', background: 'var(--bg)', border: `2px solid ${joinState === 'bad' ? 'var(--danger)' : BORDER}`, borderRadius: 8, color: 'var(--ink)', fontSize: 15, padding: '10px 14px', outline: 'none', textAlign: 'center', letterSpacing: 1, marginBottom: 8 }}
+          className="oc-field"
+          style={{ width: '100%', boxSizing: 'border-box', background: 'var(--bg)', border: `2px solid ${joinState === 'bad' ? 'var(--danger)' : BORDER}`, borderRadius: 8, color: 'var(--ink)', fontSize: 15, padding: '10px 14px', textAlign: 'center', letterSpacing: 1, marginBottom: 8 }}
         />
-        {joinState === 'bad' && <div style={{ fontSize: 12, color: RED, marginBottom: 8 }}>Wrong code — try again</div>}
+        {joinState === 'bad' && <div id={joinErrId} role="alert" style={{ fontSize: 12, color: RED, marginBottom: 8 }}>Wrong code — try again</div>}
         <button type="submit" disabled={!code.trim() || joinState === 'busy'} style={{ width: '100%', background: code.trim() ? GOLD : CARD, border: 'none', borderRadius: 8, padding: '11px 24px', fontSize: 14, fontWeight: 700, color: code.trim() ? 'var(--bg)' : 'var(--faint)', cursor: code.trim() ? 'pointer' : 'default', transition: 'background 0.2s' }}>
           {joinState === 'busy' ? 'Joining…' : 'Join'}
         </button>
@@ -409,9 +426,9 @@ export default function Octagon() {
 
   return page(
     <>
-      <div style={{ display: 'flex', gap: 8, marginTop: 14, marginBottom: 18 }}>
+      <div role="group" aria-label="View" style={{ display: 'flex', gap: 8, marginTop: 14, marginBottom: 18 }}>
         {tabs.map(([key, label]) => (
-          <button key={key} onClick={() => setView(key)} style={{
+          <button key={key} type="button" aria-pressed={view === key} onClick={() => setView(key)} style={{
             background: view === key ? GOLD : 'none',
             border: `1px solid ${view === key ? GOLD : BORDER}`,
             borderRadius: 20, color: view === key ? 'var(--bg)' : GOLD,
@@ -431,9 +448,9 @@ export default function Octagon() {
       )}
 
       {events.length > 1 && view !== 'board' && (
-        <div className="oc-chips" style={{ justifyContent: 'center', marginBottom: 14 }}>
+        <div role="group" aria-label="Events" className="oc-chips" style={{ justifyContent: 'center', marginBottom: 14 }}>
           {events.map(ev => (
-            <button key={ev.id} onClick={() => setSelEvent(ev.id)} className="oc-chip" style={{
+            <button key={ev.id} type="button" aria-pressed={effEvent?.id === ev.id} onClick={() => setSelEvent(ev.id)} className="oc-chip" style={{
               background: effEvent?.id === ev.id ? 'rgba(var(--gold-rgb),0.15)' : 'none',
               border: `1px solid ${effEvent?.id === ev.id ? GOLD : BORDER}`,
               borderRadius: 16, color: effEvent?.id === ev.id ? GOLD : MUTED,
@@ -458,7 +475,7 @@ export default function Octagon() {
                 : <>Picks lock at the event start · You've picked <b style={{ color: GOLD }}>{pickedCount}</b> of <b style={{ color: GOLD }}>{pickable.length}</b> fights</>}
             </div>
             {!started && myLock == null && pickable.length > 0 && (
-              <div style={{ fontSize: 11, color: 'var(--faint)', marginTop: 3 }}>Don't forget your ★ Lock of the Night (one pick, double points)</div>
+              <div style={{ fontSize: 11, color: MUTED, marginTop: 3 }}>Don't forget your ★ Lock of the Night (one pick, double points)</div>
             )}
           </div>
 
@@ -520,6 +537,8 @@ export default function Octagon() {
 // ── Fight card ──────────────────────────────────────────────────────────────
 
 function FightCard({ fight: f, mine, started, expanded, onToggle, onWinner, onMethod, onRound, onLock, roster, meId, picks, liveScores }) {
+  const uid = useId()
+  const panelId = `${uid}-picks`
   const graded = !!f.winner && !f.scratched
   const isFinish = mine?.method === 'ko' || mine?.method === 'sub'
   const interactive = started && !f.scratched
@@ -531,7 +550,9 @@ function FightCard({ fight: f, mine, started, expanded, onToggle, onWinner, onMe
     return (
       <button
         key={side}
+        type="button"
         className="oc-fbtn"
+        aria-pressed={selected}
         onClick={() => onWinner(f, side)}
         disabled={started || f.scratched}
         style={{
@@ -554,7 +575,7 @@ function FightCard({ fight: f, mine, started, expanded, onToggle, onWinner, onMe
   }
 
   const chip = (label, active, onClick, key) => (
-    <button key={key ?? label} onClick={onClick} className="oc-chip" style={{
+    <button key={key ?? label} type="button" aria-pressed={active} onClick={onClick} className="oc-chip" style={{
       background: active ? 'rgba(var(--gold-rgb),0.18)' : 'none',
       border: `1px solid ${active ? GOLD : BORDER}`, borderRadius: 14,
       color: active ? GOLD : MUTED, cursor: 'pointer', fontSize: 12, fontWeight: 700, padding: '5px 12px',
@@ -578,10 +599,14 @@ function FightCard({ fight: f, mine, started, expanded, onToggle, onWinner, onMe
     )
   }
 
+  // Once the event starts, tapping anywhere on the card shows everyone's
+  // picks (a pointer convenience); the ▾ button is the real disclosure
+  // control, so the card itself is never a role=button around other buttons.
   return (
     <div
-      {...(interactive ? clickableProps(onToggle) : {})}
-      aria-expanded={interactive ? expanded : undefined}
+      role="group"
+      aria-label={`${boutLabel(f)}: ${f.fighter_a} vs ${f.fighter_b}`}
+      onClick={interactive ? onToggle : undefined}
       style={{
         background: CARD, border: `1px solid ${BORDER}`, borderRadius: 12,
         padding: '12px 14px', marginBottom: 10, cursor: interactive ? 'pointer' : 'default',
@@ -593,8 +618,23 @@ function FightCard({ fight: f, mine, started, expanded, onToggle, onWinner, onMe
           {f.weight_class}{f.weight_class ? ' · ' : ''}{f.rounds} rounds
         </span>
         {f.scratched && <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: 1, color: RED, flexShrink: 0 }}>SCRATCHED</span>}
-        {mine?.is_lock && !f.scratched && <span title="Lock of the Night" style={{ fontSize: 12, color: GOLD, flexShrink: 0 }}>★ ×2</span>}
-        {interactive && <span style={{ fontSize: 12, color: MUTED, flexShrink: 0 }}>{expanded ? '▴' : '▾'}</span>}
+        {mine?.is_lock && !f.scratched && (
+          <span title="Lock of the Night" style={{ fontSize: 12, color: GOLD, flexShrink: 0 }}>
+            <span aria-hidden="true">★ ×2</span><span className="sr-only">Lock of the Night</span>
+          </span>
+        )}
+        {interactive && (
+          <button
+            type="button"
+            aria-label={`Everyone's picks: ${f.fighter_a} vs ${f.fighter_b}`}
+            aria-expanded={expanded}
+            aria-controls={expanded ? panelId : undefined}
+            onClick={e => { e.stopPropagation(); onToggle() }}
+            style={{ background: 'none', border: 'none', color: MUTED, cursor: 'pointer', fontSize: 12, lineHeight: 1, padding: '6px 9px', margin: '-6px -9px', flexShrink: 0 }}
+          >
+            {expanded ? '▴' : '▾'}
+          </button>
+        )}
       </div>
 
       <div className="oc-fighters">
@@ -612,31 +652,31 @@ function FightCard({ fight: f, mine, started, expanded, onToggle, onWinner, onMe
 
       {!started && !f.scratched && mine && (
         <div onClick={e => e.stopPropagation()} style={{ marginTop: 10 }}>
-          <div className="oc-chips" style={{ alignItems: 'center' }}>
-            <span style={{ fontSize: 11, color: MUTED, marginRight: 2 }}>Method +{POINTS.method}</span>
+          <div role="group" aria-labelledby={`${uid}-method`} className="oc-chips" style={{ alignItems: 'center' }}>
+            <span id={`${uid}-method`} style={{ fontSize: 11, color: MUTED, marginRight: 2 }}>Method +{POINTS.method}</span>
             {['ko', 'sub', 'dec'].map(m => chip(METHOD_LABELS[m], mine.method === m, () => onMethod(f, m), m))}
           </div>
           {isFinish && (
-            <div className="oc-chips" style={{ alignItems: 'center', marginTop: 6 }}>
-              <span style={{ fontSize: 11, color: MUTED, marginRight: 2 }}>Round +{POINTS.round}</span>
+            <div role="group" aria-labelledby={`${uid}-round`} className="oc-chips" style={{ alignItems: 'center', marginTop: 6 }}>
+              <span id={`${uid}-round`} style={{ fontSize: 11, color: MUTED, marginRight: 2 }}>Round +{POINTS.round}</span>
               {Array.from({ length: f.rounds }, (_, i) => i + 1).map(r =>
                 chip(`R${r}`, mine.round === r, () => onRound(f, r), `r${r}`))}
             </div>
           )}
           <div style={{ marginTop: 8 }}>
-            <button onClick={() => onLock(f)} style={{
+            <button type="button" aria-pressed={!!mine.is_lock} onClick={() => onLock(f)} style={{
               background: mine.is_lock ? 'rgba(var(--gold-rgb),0.18)' : 'none',
               border: `1px solid ${mine.is_lock ? GOLD : BORDER}`, borderRadius: 14,
               color: mine.is_lock ? GOLD : MUTED, cursor: 'pointer', fontSize: 12, fontWeight: 700, padding: '5px 12px',
             }}>
-              ★ Lock of the Night ×2{mine.is_lock ? ' — on' : ''}
+              <span aria-hidden="true">★ </span>Lock of the Night ×2<span aria-hidden="true">{mine.is_lock ? ' — on' : ''}</span>
             </button>
           </div>
         </div>
       )}
 
       {!started && !f.scratched && !mine && (
-        <div style={{ fontSize: 11, color: 'var(--faint)', marginTop: 8 }}>
+        <div style={{ fontSize: 11, color: MUTED, marginTop: 8 }}>
           Tap a fighter to pick · winner {POINTS.winner} pts, bonuses after
         </div>
       )}
@@ -646,13 +686,26 @@ function FightCard({ fight: f, mine, started, expanded, onToggle, onWinner, onMe
       )}
 
       {interactive && expanded && (
-        <FightPicksPanel fight={f} roster={roster} meId={meId} picks={picks} liveScores={liveScores} />
+        <FightPicksPanel id={panelId} fight={f} roster={roster} meId={meId} picks={picks} liveScores={liveScores} />
       )}
     </div>
   )
 }
 
-function FightPicksPanel({ fight: f, roster, meId, picks, liveScores }) {
+// Screen-reader words for a graded layer; the visible cue is a ✓/✗ glyph,
+// so colour is never the only sign of a hit or a miss.
+const heard = (hit) => <span className="sr-only">{hit ? ', correct' : ', wrong'}</span>
+
+// The admin grades a fight one field at a time (winner, then method, then
+// round) and members poll in between, so a bonus layer only gets a verdict
+// once nothing still to be entered could change it: a missed winner (draws
+// and no contests included) sinks every bonus; otherwise the method needs
+// the fight's method, and the round needs a decision or a finish's round.
+const methodDecided = (f, winnerHit) => !winnerHit || f.method != null
+const roundDecided = (f, winnerHit) => !winnerHit || f.method === 'dec'
+  || ((f.method === 'ko' || f.method === 'sub') && f.end_round != null)
+
+function FightPicksPanel({ id, fight: f, roster, meId, picks, liveScores }) {
   const byUser = new Map(picks.filter(p => p.fight_id === f.id).map(p => [p.user_id, p]))
   const members = (roster ?? []).slice().sort((a, b) =>
     a.user_id === meId ? -1 : b.user_id === meId ? 1 : 0)
@@ -662,23 +715,34 @@ function FightPicksPanel({ fight: f, roster, meId, picks, liveScores }) {
     if (!p) return <span style={{ color: MUTED, fontSize: 12 }}>No pick</span>
     const r = liveScores[p.user_id]?.byFight?.[f.id]
     const winCol = graded ? (r?.winnerHit ? GREEN : RED) : INK
+    const bonus = (hit) => ({ color: graded && hit ? GREEN : MUTED, fontWeight: 600, fontSize: 12 })
     return (
       <span style={{ fontSize: 13, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0 }}>
-        {p.is_lock && <span style={{ color: GOLD }}>★</span>}
-        <span style={{ color: winCol }}>{p.winner === 'a' ? f.fighter_a : f.fighter_b}</span>
+        {p.is_lock && (
+          <span style={{ color: GOLD }}><span aria-hidden="true">★</span><span className="sr-only">Lock of the Night:</span></span>
+        )}
+        <span style={{ color: winCol }}>
+          {graded && <span aria-hidden="true">{r?.winnerHit ? '✓ ' : '✗ '}</span>}
+          {p.winner === 'a' ? f.fighter_a : f.fighter_b}
+          {graded && heard(r?.winnerHit)}
+        </span>
         {p.method && (
-          <span style={{ color: graded ? (r?.methodHit ? GREEN : MUTED) : MUTED, fontWeight: 600, fontSize: 12 }}>
+          <span style={bonus(r?.methodHit)}>
             {METHOD_LABELS[p.method]}
+            {graded && r?.methodHit && <span aria-hidden="true"> ✓</span>}
+            {graded && methodDecided(f, r?.winnerHit) && heard(r?.methodHit)}
           </span>
         )}
         {p.round != null && (
-          <span style={{ color: graded ? (r?.roundHit ? GREEN : MUTED) : MUTED, fontWeight: 600, fontSize: 12 }}>
-            R{p.round}
+          <span style={bonus(r?.roundHit)}>
+            <span aria-hidden="true">R{p.round}</span><span className="sr-only">Round {p.round}</span>
+            {graded && r?.roundHit && <span aria-hidden="true"> ✓</span>}
+            {graded && roundDecided(f, r?.winnerHit) && heard(r?.roundHit)}
           </span>
         )}
         {graded && r && (
           <span style={{ color: r.points > 0 ? GOLD : MUTED, fontWeight: 800, fontSize: 12, minWidth: 28, textAlign: 'right' }}>
-            {r.points > 0 ? `+${r.points}` : '0'}
+            {r.points > 0 ? `+${r.points}` : '0'}<span className="sr-only"> points</span>
           </span>
         )}
       </span>
@@ -686,16 +750,18 @@ function FightPicksPanel({ fight: f, roster, meId, picks, liveScores }) {
   }
 
   return (
-    <div style={{ borderTop: `1px solid ${BORDER}`, marginTop: 10, paddingTop: 8 }} onClick={e => e.stopPropagation()}>
-      {members.map(mem => (
-        <div key={mem.user_id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0' }}>
-          <Avatar member={mem} />
-          <div style={{ flex: 1, minWidth: 0, fontSize: 13, color: INK, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-            {mem.display_name ?? 'Player'}{mem.user_id === meId && <span style={{ color: MUTED, fontWeight: 600 }}> (you)</span>}
-          </div>
-          {summary(byUser.get(mem.user_id))}
-        </div>
-      ))}
+    <div id={id} role="region" aria-label={`Everyone's picks: ${f.fighter_a} vs ${f.fighter_b}`} style={{ borderTop: `1px solid ${BORDER}`, marginTop: 10, paddingTop: 8 }} onClick={e => e.stopPropagation()}>
+      <ul role="list" style={{ listStyle: 'none', margin: 0, padding: 0 }}>
+        {members.map(mem => (
+          <li key={mem.user_id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0' }}>
+            <Avatar member={mem} />
+            <div style={{ flex: 1, minWidth: 0, fontSize: 13, color: INK, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {mem.display_name ?? 'Player'}{mem.user_id === meId && <span style={{ color: MUTED, fontWeight: 600 }}> (you)</span>}
+            </div>
+            {summary(byUser.get(mem.user_id))}
+          </li>
+        ))}
+      </ul>
     </div>
   )
 }
@@ -703,7 +769,7 @@ function FightPicksPanel({ fight: f, roster, meId, picks, liveScores }) {
 function Avatar({ member: mem, size = 22 }) {
   return mem?.avatar_url
     ? <img src={mem.avatar_url} alt="" width={size} height={size} style={{ borderRadius: '50%', flexShrink: 0 }} referrerPolicy="no-referrer" />
-    : <div style={{ width: size, height: size, borderRadius: '50%', background: 'var(--bg)', border: `1px solid ${BORDER}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: GOLD, flexShrink: 0 }}>
+    : <div aria-hidden="true" style={{ width: size, height: size, borderRadius: '50%', background: 'var(--bg)', border: `1px solid ${BORDER}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: GOLD, flexShrink: 0 }}>
         {(mem?.display_name ?? '?')[0]?.toUpperCase()}
       </div>
 }
@@ -765,6 +831,8 @@ function StandingsTable({ title, rows, rosterById, meId, empty }) {
 }
 
 function LineageModal({ belt, rosterById, onClose }) {
+  const panelRef = useRef(null)
+  useDialogFocus(panelRef)
   useEffect(() => {
     const onKey = (e) => { if (e.key === 'Escape') onClose() }
     window.addEventListener('keydown', onKey)
@@ -779,11 +847,11 @@ function LineageModal({ belt, rosterById, onClose }) {
   }
 
   return (
-    <div onClick={onClose} role="dialog" aria-modal="true" aria-label="Belt lineage" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, animation: 'fadeIn 0.2s ease' }}>
-      <div onClick={e => e.stopPropagation()} style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 14, padding: '20px 22px 18px', maxWidth: 380, width: '100%', maxHeight: '85vh', overflowY: 'auto', boxSizing: 'border-box', animation: 'slideUp 0.25s ease' }}>
+    <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, animation: 'fadeIn 0.2s ease' }}>
+      <div ref={panelRef} role="dialog" aria-modal="true" aria-label="Belt lineage" onClick={e => e.stopPropagation()} style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 14, padding: '20px 22px 18px', maxWidth: 380, width: '100%', maxHeight: '85vh', overflowY: 'auto', boxSizing: 'border-box', animation: 'slideUp 0.25s ease' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
           <div style={{ fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 800, letterSpacing: 2, color: INK }}>BELT LINEAGE</div>
-          <button onClick={onClose} aria-label="Close" style={{ background: 'none', border: 'none', color: MUTED, cursor: 'pointer', fontSize: 18, padding: 4, lineHeight: 1 }}>✕</button>
+          <button type="button" onClick={onClose} aria-label="Close" style={{ background: 'none', border: 'none', color: MUTED, cursor: 'pointer', fontSize: 18, padding: 4, lineHeight: 1 }}>✕</button>
         </div>
         {belt.lineage.length === 0
           ? <div style={{ fontSize: 13, color: MUTED }}>No graded events yet.</div>
@@ -793,7 +861,7 @@ function LineageModal({ belt, rosterById, onClose }) {
                 {rosterById.get(l.user_id)?.display_name ?? 'Player'}
               </b>{' '}
               <span style={{ color: MUTED }}>{HOW[l.how]}</span>
-              <div style={{ fontSize: 11, color: 'var(--faint)', marginTop: 1 }}>{l.name}</div>
+              <div style={{ fontSize: 11, color: MUTED, marginTop: 1 }}>{l.name}</div>
             </div>
           ))}
       </div>
@@ -804,6 +872,8 @@ function LineageModal({ belt, rosterById, onClose }) {
 // ── Rules ───────────────────────────────────────────────────────────────────
 
 function RulesModal({ onClose }) {
+  const panelRef = useRef(null)
+  useDialogFocus(panelRef)
   useEffect(() => {
     const onKey = (e) => { if (e.key === 'Escape') onClose() }
     window.addEventListener('keydown', onKey)
@@ -821,11 +891,11 @@ function RulesModal({ onClose }) {
   ]
 
   return (
-    <div onClick={onClose} role="dialog" aria-modal="true" aria-label="Pool rules" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, animation: 'fadeIn 0.2s ease' }}>
-      <div onClick={e => e.stopPropagation()} style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 14, padding: '20px 22px 18px', maxWidth: 380, width: '100%', maxHeight: '85vh', overflowY: 'auto', boxSizing: 'border-box', animation: 'slideUp 0.25s ease' }}>
+    <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, animation: 'fadeIn 0.2s ease' }}>
+      <div ref={panelRef} role="dialog" aria-modal="true" aria-label="Pool rules" onClick={e => e.stopPropagation()} style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 14, padding: '20px 22px 18px', maxWidth: 380, width: '100%', maxHeight: '85vh', overflowY: 'auto', boxSizing: 'border-box', animation: 'slideUp 0.25s ease' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 2 }}>
           <div style={{ fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 800, letterSpacing: 2, color: INK }}>POOL RULES</div>
-          <button onClick={onClose} aria-label="Close" style={{ background: 'none', border: 'none', color: MUTED, cursor: 'pointer', fontSize: 18, padding: 4, lineHeight: 1 }}>✕</button>
+          <button type="button" onClick={onClose} aria-label="Close" style={{ background: 'none', border: 'none', color: MUTED, cursor: 'pointer', fontSize: 18, padding: 4, lineHeight: 1 }}>✕</button>
         </div>
 
         <div style={sectionTitle}>How it works</div>
@@ -888,23 +958,31 @@ function AdminPanel({ events, effEvent, fights, now, onSaveEvent, onDeleteEvent,
 
   const evFights = effEvent ? fights.filter(f => f.event_id === effEvent.id) : []
 
-  const input = (value, onChange, placeholder, extra = {}) => (
+  // `label` is the field's accessible name (the placeholder vanishes on input).
+  const input = (value, onChange, label, placeholder, extra = {}) => (
     <input
       value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder}
+      aria-label={label} className="oc-field"
       {...extra}
-      style={{ width: '100%', boxSizing: 'border-box', background: 'var(--bg)', border: `1px solid ${BORDER}`, borderRadius: 8, color: 'var(--ink)', fontSize: 13, padding: '8px 12px', outline: 'none', marginBottom: 6, ...extra.style }}
+      style={{ width: '100%', boxSizing: 'border-box', background: 'var(--bg)', border: `1px solid ${BORDER}`, borderRadius: 8, color: 'var(--ink)', fontSize: 13, padding: '8px 12px', marginBottom: 6, ...extra.style }}
     />
   )
 
-  const smallBtn = (label, onClick, danger = false, active = false, key) => (
-    <button key={key ?? label} onClick={onClick} style={{
-      background: active ? 'rgba(var(--gold-rgb),0.18)' : 'none',
-      border: `1px solid ${danger ? '#7a2c2c' : active ? GOLD : BORDER}`, borderRadius: 8,
-      color: danger ? RED : active ? GOLD : MUTED, cursor: 'pointer', fontSize: 12, fontWeight: 700, padding: '5px 10px',
-    }}>
-      {label}
-    </button>
-  )
+  // `active` styles a primary action gold; `pressed` makes the button a
+  // toggle (gold when on, announced as pressed / not pressed); `label` names
+  // it when its text is a symbol or needs context.
+  const smallBtn = (text, onClick, { danger = false, active = false, pressed, expanded, label, key } = {}) => {
+    const on = active || pressed === true
+    return (
+      <button key={key ?? text} type="button" onClick={onClick} aria-pressed={pressed} aria-expanded={expanded} aria-label={label} style={{
+        background: on ? 'rgba(var(--gold-rgb),0.18)' : 'none',
+        border: `1px solid ${danger ? '#7a2c2c' : on ? GOLD : BORDER}`, borderRadius: 8,
+        color: danger ? RED : on ? GOLD : MUTED, cursor: 'pointer', fontSize: 12, fontWeight: 700, padding: '5px 10px',
+      }}>
+        {text}
+      </button>
+    )
+  }
 
   const submitEvent = async () => {
     if (!evForm.name.trim() || !evForm.when) { showFlash('Event needs a name and a start time'); return }
@@ -967,24 +1045,27 @@ function AdminPanel({ events, effEvent, fights, now, onSaveEvent, onDeleteEvent,
         <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1.5, color: GOLD, textTransform: 'uppercase', marginBottom: 8 }}>
           {editingId ? 'Edit event' : 'New event'}
         </div>
-        {input(evForm.name, v => setEvForm(f => ({ ...f, name: v })), 'Event name — e.g. UFC 324: Topuria vs Pimblett')}
-        {input(evForm.when, v => setEvForm(f => ({ ...f, when: v })), '', { type: 'datetime-local' })}
-        {input(evForm.slug, v => setEvForm(f => ({ ...f, slug: v })), 'Wikipedia slug for auto-grading — e.g. UFC_324')}
+        {input(evForm.name, v => setEvForm(f => ({ ...f, name: v })), 'Event name', 'Event name — e.g. UFC 324: Topuria vs Pimblett')}
+        {input(evForm.when, v => setEvForm(f => ({ ...f, when: v })), 'Event start time', '', { type: 'datetime-local' })}
+        {input(evForm.slug, v => setEvForm(f => ({ ...f, slug: v })), 'Wikipedia slug', 'Wikipedia slug for auto-grading — e.g. UFC_324')}
         <div style={{ display: 'flex', gap: 6 }}>
-          {smallBtn(editingId ? 'Save changes' : 'Create event', submitEvent, false, true)}
+          {smallBtn(editingId ? 'Save changes' : 'Create event', submitEvent, { active: true })}
           {editingId && smallBtn('Cancel', () => { setEditingId(null); setEvForm(emptyEvForm) })}
         </div>
         {events.length > 0 && (
           <div style={{ marginTop: 12, borderTop: `1px solid ${BORDER}`, paddingTop: 8 }}>
-            {events.map(ev => (
-              <div key={ev.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0', fontSize: 13 }}>
-                <span style={{ flex: 1, minWidth: 0, color: INK, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                  {ev.name} <span style={{ color: MUTED, fontSize: 11 }}>· {fmtShort(ev.starts_at)}</span>
-                </span>
-                {smallBtn('Edit', () => { setEditingId(ev.id); setEvForm({ name: ev.name, when: toLocalInput(ev.starts_at), slug: ev.wiki_slug ?? '' }) }, false, false, `e${ev.id}`)}
-                {smallBtn(confirmKey === `delev${ev.id}` ? 'Sure?' : '✕', () => confirmTap(`delev${ev.id}`, () => onDeleteEvent(ev)), true, false, `d${ev.id}`)}
-              </div>
-            ))}
+            {events.map(ev => {
+              const sure = confirmKey === `delev${ev.id}`
+              return (
+                <div key={ev.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0', fontSize: 13 }}>
+                  <span style={{ flex: 1, minWidth: 0, color: INK, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {ev.name} <span style={{ color: MUTED, fontSize: 11 }}>· {fmtShort(ev.starts_at)}</span>
+                  </span>
+                  {smallBtn('Edit', () => { setEditingId(ev.id); setEvForm({ name: ev.name, when: toLocalInput(ev.starts_at), slug: ev.wiki_slug ?? '' }) }, { key: `e${ev.id}`, label: `Edit ${ev.name}` })}
+                  {smallBtn(sure ? 'Sure?' : '✕', () => confirmTap(`delev${ev.id}`, () => onDeleteEvent(ev)), { danger: true, key: `d${ev.id}`, label: `${sure ? 'Sure? ' : ''}Delete ${ev.name}` })}
+                </div>
+              )
+            })}
           </div>
         )}
       </div>
@@ -997,19 +1078,19 @@ function AdminPanel({ events, effEvent, fights, now, onSaveEvent, onDeleteEvent,
               Add fight · {effEvent.name}
             </div>
             <div style={{ display: 'flex', gap: 6 }}>
-              {input(fightForm.a, v => setFightForm(f => ({ ...f, a: v })), 'Fighter A')}
-              {input(fightForm.b, v => setFightForm(f => ({ ...f, b: v })), 'Fighter B')}
+              {input(fightForm.a, v => setFightForm(f => ({ ...f, a: v })), 'Fighter A', 'Fighter A')}
+              {input(fightForm.b, v => setFightForm(f => ({ ...f, b: v })), 'Fighter B', 'Fighter B')}
             </div>
-            {input(fightForm.wc, v => setFightForm(f => ({ ...f, wc: v })), 'Weight class — e.g. Lightweight')}
+            {input(fightForm.wc, v => setFightForm(f => ({ ...f, wc: v })), 'Weight class', 'Weight class — e.g. Lightweight')}
             <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap', marginBottom: 8 }}>
               <span style={{ fontSize: 11, color: MUTED }}>Rounds</span>
-              {[3, 5].map(r => smallBtn(`${r}`, () => setFightForm(f => ({ ...f, rounds: r })), false, fightForm.rounds === r, `rd${r}`))}
+              {[3, 5].map(r => smallBtn(`${r}`, () => setFightForm(f => ({ ...f, rounds: r })), { pressed: fightForm.rounds === r, key: `rd${r}`, label: `${r} rounds` }))}
               <span style={{ fontSize: 11, color: MUTED, marginLeft: 8 }}>Favorite</span>
-              {smallBtn('None', () => setFightForm(f => ({ ...f, favorite: '' })), false, fightForm.favorite === '')}
-              {smallBtn(fightForm.a.trim() || 'A', () => setFightForm(f => ({ ...f, favorite: 'a' })), false, fightForm.favorite === 'a', 'fava')}
-              {smallBtn(fightForm.b.trim() || 'B', () => setFightForm(f => ({ ...f, favorite: 'b' })), false, fightForm.favorite === 'b', 'favb')}
+              {smallBtn('None', () => setFightForm(f => ({ ...f, favorite: '' })), { pressed: fightForm.favorite === '', label: 'Favorite: None' })}
+              {smallBtn(fightForm.a.trim() || 'A', () => setFightForm(f => ({ ...f, favorite: 'a' })), { pressed: fightForm.favorite === 'a', key: 'fava', label: `Favorite: ${fightForm.a.trim() || 'A'}` })}
+              {smallBtn(fightForm.b.trim() || 'B', () => setFightForm(f => ({ ...f, favorite: 'b' })), { pressed: fightForm.favorite === 'b', key: 'favb', label: `Favorite: ${fightForm.b.trim() || 'B'}` })}
             </div>
-            {smallBtn('Add fight', submitFight, false, true)}
+            {smallBtn('Add fight', submitFight, { active: true })}
           </div>
 
           {/* Grading */}
@@ -1029,19 +1110,21 @@ function AdminPanel({ events, effEvent, fights, now, onSaveEvent, onDeleteEvent,
               </div>
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                 {effEvent.wiki_slug
-                  ? smallBtn(propBusy ? 'Fetching…' : `Propose from Wikipedia (${effEvent.wiki_slug})`, propose, false, true)
+                  ? smallBtn(propBusy ? 'Fetching…' : `Propose from Wikipedia (${effEvent.wiki_slug})`, propose, { active: true })
                   : <span style={{ fontSize: 12, color: MUTED }}>Set the event's Wikipedia slug to enable auto-proposals.</span>}
-                {smallBtn(pasteOpen ? 'Hide paste box' : 'Paste the results table', () => setPasteOpen(o => !o))}
+                {smallBtn(pasteOpen ? 'Hide paste box' : 'Paste the results table', () => setPasteOpen(o => !o), { expanded: pasteOpen })}
               </div>
               {pasteOpen && (
                 <div style={{ marginTop: 8 }}>
                   <textarea
                     value={pasteText} onChange={e => setPasteText(e.target.value)}
+                    aria-label="Pasted results table"
                     placeholder={'Copy the Results table off the Wikipedia event page and paste it here (one bout per line).'}
                     rows={5}
-                    style={{ width: '100%', boxSizing: 'border-box', background: 'var(--bg)', border: `1px solid ${BORDER}`, borderRadius: 8, color: 'var(--ink)', fontSize: 12, padding: '8px 12px', outline: 'none', resize: 'vertical', marginBottom: 6 }}
+                    className="oc-field"
+                    style={{ width: '100%', boxSizing: 'border-box', background: 'var(--bg)', border: `1px solid ${BORDER}`, borderRadius: 8, color: 'var(--ink)', fontSize: 12, padding: '8px 12px', resize: 'vertical', marginBottom: 6 }}
                   />
-                  {smallBtn('Parse pasted table', proposeFromPaste, false, true)}
+                  {smallBtn('Parse pasted table', proposeFromPaste, { active: true })}
                 </div>
               )}
               {proposals && proposals.length > 0 && (
@@ -1056,12 +1139,12 @@ function AdminPanel({ events, effEvent, fights, now, onSaveEvent, onDeleteEvent,
                           <b style={{ color: INK }}>{proposalLabel(p)}</b>
                           {p.fuzzy && <span style={{ color: '#f4c152' }}> · name match is fuzzy — double-check</span>}
                         </span>
-                        {p.winner && smallBtn(f.winner ? 'Re-apply' : 'Apply', () => applyProposal(p), false, false, `ap${p.fight_id}`)}
+                        {p.winner && smallBtn(f.winner ? 'Re-apply' : 'Apply', () => applyProposal(p), { key: `ap${p.fight_id}`, label: `${f.winner ? 'Re-apply' : 'Apply'}: ${f.fighter_a} vs ${f.fighter_b}` })}
                       </div>
                     )
                   })}
                   <div style={{ marginTop: 6 }}>
-                    {smallBtn('Apply all', () => proposals.forEach(applyProposal), false, true)}
+                    {smallBtn('Apply all', () => proposals.forEach(applyProposal), { active: true })}
                   </div>
                 </div>
               )}
@@ -1076,6 +1159,7 @@ function AdminPanel({ events, effEvent, fights, now, onSaveEvent, onDeleteEvent,
 function AdminFightRow({ fight: f, onUpdate, onDelete, confirmKey, confirmTap, smallBtn }) {
   const graded = !!f.winner
   const isFinish = f.method === 'ko' || f.method === 'sub'
+  const sure = confirmKey === `delf${f.id}`
 
   const setWinner = (w) => {
     if (f.winner === w) { onUpdate(f, { winner: null, method: null, end_round: null }); return }
@@ -1092,28 +1176,29 @@ function AdminFightRow({ fight: f, onUpdate, onDelete, confirmKey, confirmTap, s
           {f.fighter_a} vs {f.fighter_b}
           {f.favorite && <span style={{ color: MUTED, fontWeight: 400, fontSize: 11 }}> · fav: {f.favorite === 'a' ? f.fighter_a : f.fighter_b}</span>}
         </span>
-        {smallBtn(f.scratched ? 'Unscratch' : 'Scratch', () => onUpdate(f, { scratched: !f.scratched }), false, f.scratched, 'scr')}
-        {smallBtn(confirmKey === `delf${f.id}` ? 'Sure?' : '✕', () => confirmTap(`delf${f.id}`, () => onDelete(f)), true, false, 'del')}
+        {/* One stable name, pressed while scratched (a toggle's name never flips). */}
+        {smallBtn('Scratch', () => onUpdate(f, { scratched: !f.scratched }), { pressed: !!f.scratched, key: 'scr' })}
+        {smallBtn(sure ? 'Sure?' : '✕', () => confirmTap(`delf${f.id}`, () => onDelete(f)), { danger: true, key: 'del', label: `${sure ? 'Sure? ' : ''}Delete ${f.fighter_a} vs ${f.fighter_b}` })}
       </div>
       {!f.scratched && (
         <div className="oc-chips" style={{ alignItems: 'center' }}>
           <span style={{ fontSize: 11, color: MUTED }}>Winner</span>
-          {smallBtn(f.fighter_a, () => setWinner('a'), false, f.winner === 'a', 'wa')}
-          {smallBtn(f.fighter_b, () => setWinner('b'), false, f.winner === 'b', 'wb')}
-          {smallBtn('Draw', () => setWinner('draw'), false, f.winner === 'draw', 'wd')}
-          {smallBtn('NC', () => setWinner('nc'), false, f.winner === 'nc', 'wn')}
+          {smallBtn(f.fighter_a, () => setWinner('a'), { pressed: f.winner === 'a', key: 'wa', label: `Winner: ${f.fighter_a}` })}
+          {smallBtn(f.fighter_b, () => setWinner('b'), { pressed: f.winner === 'b', key: 'wb', label: `Winner: ${f.fighter_b}` })}
+          {smallBtn('Draw', () => setWinner('draw'), { pressed: f.winner === 'draw', key: 'wd' })}
+          {smallBtn('NC', () => setWinner('nc'), { pressed: f.winner === 'nc', key: 'wn', label: 'NC (no contest)' })}
         </div>
       )}
       {(f.winner === 'a' || f.winner === 'b') && (
         <div className="oc-chips" style={{ alignItems: 'center', marginTop: 6 }}>
           <span style={{ fontSize: 11, color: MUTED }}>Method</span>
           {['ko', 'sub', 'dec'].map(m =>
-            smallBtn(METHOD_LABELS[m], () => onUpdate(f, { method: f.method === m ? null : m, end_round: m === 'dec' ? null : f.end_round }), false, f.method === m, `m${m}`))}
+            smallBtn(METHOD_LABELS[m], () => onUpdate(f, { method: f.method === m ? null : m, end_round: m === 'dec' ? null : f.end_round }), { pressed: f.method === m, key: `m${m}`, label: `Method: ${METHOD_LABELS[m]}` }))}
           {isFinish && (
             <>
               <span style={{ fontSize: 11, color: MUTED, marginLeft: 6 }}>Round</span>
               {Array.from({ length: f.rounds }, (_, i) => i + 1).map(r =>
-                smallBtn(`${r}`, () => onUpdate(f, { end_round: f.end_round === r ? null : r }), false, f.end_round === r, `er${r}`))}
+                smallBtn(`${r}`, () => onUpdate(f, { end_round: f.end_round === r ? null : r }), { pressed: f.end_round === r, key: `er${r}`, label: `Ended in round ${r}` }))}
             </>
           )}
         </div>

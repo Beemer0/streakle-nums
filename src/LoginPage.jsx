@@ -39,7 +39,7 @@ export default function LoginPage() {
           display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12,
           opacity: loading ? 0.7 : 1,
         }}>
-          <svg width="18" height="18" viewBox="0 0 18 18">
+          <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true" focusable="false">
             <path fill="#4285F4" d="M16.51 8H8.98v3h4.3c-.18 1-.74 1.48-1.6 2.04v2.01h2.6a7.8 7.8 0 0 0 2.38-5.88c0-.57-.05-.66-.15-1.18z"/>
             <path fill="#34A853" d="M8.98 17c2.16 0 3.97-.72 5.3-1.94l-2.6-2.01c-.72.48-1.63.77-2.7.77-2.08 0-3.84-1.4-4.47-3.29H1.87v2.08A8 8 0 0 0 8.98 17z"/>
             <path fill="#FBBC05" d="M4.51 10.53c-.16-.48-.25-.99-.25-1.53s.09-1.05.25-1.53V5.39H1.87A8 8 0 0 0 .98 9c0 1.29.31 2.51.89 3.61l2.64-2.08z"/>
@@ -47,9 +47,11 @@ export default function LoginPage() {
           </svg>
           {loading ? 'Signing in...' : 'Continue with Google'}
         </button>
-        <div style={{ marginTop: 24, fontSize: 12, color: 'var(--faint)' }}>
+        {/* --muted reads at 4.88:1 on the card. Gold and --muted are only
+            1.56:1 apart, so the link carries an underline too, not colour alone. */}
+        <div style={{ marginTop: 24, fontSize: 12, color: 'var(--muted)' }}>
           By signing in you agree to our{' '}
-          <a href="/privacy" style={{ color: 'var(--gold)', textDecoration: 'none' }}>Privacy Policy</a>
+          <a href="/privacy" style={{ color: 'var(--gold)', textDecoration: 'underline', textUnderlineOffset: 2 }}>Privacy Policy</a>
         </div>
       </div>
     </PageShell>

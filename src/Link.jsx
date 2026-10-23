@@ -9,6 +9,7 @@ import { clickableProps } from './a11y';
 import { useSeo, PAGE_SEO } from './seo';
 import { slotHoldsLaterDay } from './checkpointSlot';
 import { getDailyPuzzle } from './link/schedule';
+import { useAnnouncer } from './useAnnouncer';
 
 function formatDate(dateStr) {
   let d = new Date();
@@ -34,6 +35,22 @@ const TILE_GAP = 8;
 const COLS = 4;
 const LIVES = 4;
 const CHECKPOINT_KEY = 'streakle-link';
+
+// Screen-reader wording for what's left, e.g. "2 lives left".
+const livesLeftText = (n) => n === 0 ? 'no lives left' : `${n} ${n === 1 ? 'life' : 'lives'} left`;
+
+// A found group's message waits this long after the focus move that comes
+// with it: screen readers cut off a live message that arrives together with a
+// focus change, but queue one that arrives once the focus speech has begun.
+const ANNOUNCE_AFTER_FOCUS_MS = 200;
+
+// Focus the player can no longer use: on <body>, or on a control that was
+// removed or disabled. Anywhere else (a header button, the open Archive) the
+// player put it there, so it stays.
+function focusDropped() {
+  const el = document.activeElement;
+  return !el || el === document.body || !el.isConnected || el.disabled;
+}
 
 // ── Today's checkpoint: the solved groups (in solve order), lives left and
 // each guess's outcome (true = a group found), so a reload can never refund a
@@ -104,7 +121,7 @@ function FlyingTile({ word, fromX, fromY, toX, toY, delay, color }) {
   }, [fromX, fromY, toX, toY, delay]);
 
   return (
-    <div ref={ref} style={{
+    <div ref={ref} aria-hidden="true" style={{
       position: 'absolute', left: 0, top: 0,
       transform: `translate(${fromX}px,${fromY}px)`,
       width: '23%', height: 56,
@@ -182,6 +199,13 @@ function LinkBoard({ seedDate, isToday, streak }) {
   const solvedRef = useRef(null);
   const wordRefs = useRef({});
   const solvedRef2 = useRef([]);
+  const resultRef = useRef(null);
+  const refocusBoard = useRef(false);
+  // A found group's message, said a beat after its focus move (effect below).
+  const [landedNote, setLandedNote] = useState(null);
+  const [announceNow, liveRegion] = useAnnouncer();
+  // Every message replaces a found group's that is still waiting.
+  const announce = (text) => { setLandedNote(null); announceNow(text); };
 
   useEffect(() => { solvedRef2.current = solved; }, [solved]);
 
@@ -190,11 +214,61 @@ function LinkBoard({ seedDate, isToday, streak }) {
   // No guesses: the game is over, a group is flying in, or the last life is
   // gone and the game-over card is on its way (a tap then would cost a fifth).
   const inert = gameOver || won || animating || lives <= 0;
+  const ended = won || gameOver;
+  const firstWord = remaining[0];
+
+  // A found group takes its tiles and leaves Submit disabled, so focus would
+  // drop to <body>: put it on the first word left (unless the player has
+  // already moved it somewhere else).
+  useEffect(() => {
+    if (!refocusBoard.current) return;
+    refocusBoard.current = false;
+    if (focusDropped()) wordRefs.current[firstWord]?.focus();
+  }, [solved, firstWord]);
+
+  // Finishing unmounts the board's controls; move focus to the result (not
+  // when a finished day is restored on load, nor away from wherever the
+  // player went while the last group flew in or the game-over card was due).
+  const wasEnded = useRef(ended);
+  useEffect(() => {
+    if (ended && !wasEnded.current && focusDropped()) resultRef.current?.focus();
+    wasEnded.current = ended;
+  }, [ended]);
+
+  // Say which group landed a beat after the effects above moved focus.
+  useEffect(() => {
+    if (!landedNote) return;
+    const id = setTimeout(() => announceNow(landedNote), ANNOUNCE_AFTER_FOCUS_MS);
+    return () => clearTimeout(id);
+  }, [landedNote, announceNow]);
 
   const toggleWord = (word) => {
     if (inert) return;
-    if (selected.includes(word)) setSelected(s => s.filter(w => w !== word));
-    else if (selected.length < 4) setSelected(s => [...s, word]);
+    if (selected.includes(word)) {
+      setSelected(s => s.filter(w => w !== word));
+      announce(`${word} deselected, ${selected.length - 1} of 4`);
+    } else if (selected.length < 4) {
+      setSelected(s => [...s, word]);
+      const count = selected.length + 1;
+      announce(`${word} selected, ${count} of 4${count === 4 ? ', ready to submit' : ''}`);
+    } else {
+      announce('4 already selected. Deselect one first.');
+    }
+  };
+
+  const clearSelection = () => {
+    if (selected.length) announce('Selection cleared');
+    setSelected([]);
+  };
+
+  // A found group has landed: once focus has moved (to the first word left,
+  // or to the result card at the end), say which group, and what's left.
+  const groupLanded = (cat, nextSolved) => {
+    const left = puzzle.categories.length - nextSolved.length;
+    setLandedNote(left === 0
+      ? `Solved: ${cat.label}. Puzzle complete!`
+      : `Solved: ${cat.label}. ${left} ${left === 1 ? 'group' : 'groups'} left.`);
+    refocusBoard.current = left > 0;
   };
 
   const showMsg = (msg, dur = 1800) => { setMessage(msg); setTimeout(() => setMessage(null), dur); };
@@ -241,6 +315,7 @@ function LinkBoard({ seedDate, isToday, streak }) {
         });
         setGuessHistory(h => [...h, { correct: true }]);
         setSelected([]);
+        groupLanded(cat, nextSolved);
         return;
       }
 
@@ -273,6 +348,7 @@ function LinkBoard({ seedDate, isToday, streak }) {
           else showMsg(`✅ ${cat.label}!`);
           return ns;
         });
+        groupLanded(cat, nextSolved);
       }, 700 + 3 * 60 + 100);
     } else {
       const bestMatch = puzzle.categories
@@ -289,6 +365,7 @@ function LinkBoard({ seedDate, isToday, streak }) {
 
       if (bestMatch === 3) { setOneAway(true); showMsg("One away! 👀", 2000); }
       else { setOneAway(false); showMsg("Not quite! Try again."); }
+      announce(`${bestMatch === 3 ? 'One away' : 'Not quite'}, ${livesLeftText(newLives)}.`);
 
       if (newLives === 0) { if (isToday) saveResult({ game: 'link', puzzleDate: seedDate, completed: false }); setTimeout(() => setGameOver(true), 600); }
       checkpoint({ solved, lives: newLives, guessHistory: [...guessHistory, { correct: false }] });
@@ -303,11 +380,12 @@ function LinkBoard({ seedDate, isToday, streak }) {
 
   return (
     <>
+      {liveRegion}
       {confetti.map(c => (
         <div key={c.id} style={{ position: 'fixed', left: `${c.x}%`, top: '30%', width: c.size, height: c.size, background: c.color, borderRadius: c.size > 10 ? '50%' : 2, animation: `confetti 1.3s ${c.delay}ms ease forwards`, pointerEvents: 'none', zIndex: 100 }} />
       ))}
 
-      <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
+      <div role="img" aria-label={`${lives} of ${LIVES} lives left`} style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
         {Array.from({ length: 4 }, (_, i) => (
           <div key={i} style={{ width: 14, height: 14, borderRadius: '50%', background: i < lives ? 'var(--gold)' : 'var(--border-strong)', transition: 'background 0.3s' }} />
         ))}
@@ -335,13 +413,13 @@ function LinkBoard({ seedDate, isToday, streak }) {
           ))}
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: `repeat(${COLS}, 1fr)`, gap: TILE_GAP, marginBottom: 16 }}>
+        <div role="group" aria-label="Words" style={{ display: 'grid', gridTemplateColumns: `repeat(${COLS}, 1fr)`, gap: TILE_GAP, marginBottom: 16 }}>
           {remaining.map(word => {
             const isSel = selected.includes(word);
             const isShaking = shakeWords.includes(word);
             const isHidden = hiddenWords.includes(word);
             return (
-              <div key={word} ref={el => wordRefs.current[word] = el} {...clickableProps(() => toggleWord(word), inert)} style={{
+              <div key={word} ref={el => wordRefs.current[word] = el} {...clickableProps(() => toggleWord(word), inert)} aria-pressed={inert ? undefined : isSel} style={{
                 aspectRatio: '5/3', background: isSel ? 'var(--gold)' : 'var(--surface)',
                 border: `2px solid ${isSel ? 'var(--gold)' : 'var(--border)'}`,
                 borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -367,7 +445,7 @@ function LinkBoard({ seedDate, isToday, streak }) {
 
       {!gameOver && !won && (
         <div style={{ display: 'flex', gap: 10, marginBottom: 16 }}>
-          <button onClick={() => setSelected([])} disabled={animating} style={{ background: 'none', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--gold)', cursor: 'pointer', fontSize: 14, padding: '8px 20px', fontWeight: 600 }}>
+          <button onClick={clearSelection} disabled={animating} style={{ background: 'none', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--gold)', cursor: 'pointer', fontSize: 14, padding: '8px 20px', fontWeight: 600 }}>
             Deselect
           </button>
           <button onClick={handleSubmit} disabled={selected.length !== 4 || animating} style={{
@@ -383,13 +461,13 @@ function LinkBoard({ seedDate, isToday, streak }) {
       )}
 
       {won && (
-        <ResultCard game="link" outcome="won" title="🎉 Solved!" shareText={buildShareText}>
+        <ResultCard ref={resultRef} game="link" outcome="won" title="🎉 Solved!" shareText={buildShareText}>
           <div className="rc-detail">{guessHistory.length} guess{guessHistory.length !== 1 ? 'es' : ''} · {lives} {lives === 1 ? 'life' : 'lives'} remaining</div>
         </ResultCard>
       )}
 
       {gameOver && !won && (
-        <ResultCard game="link" outcome="lost" title="Game over!" shareText={buildShareText}>
+        <ResultCard ref={resultRef} game="link" outcome="lost" title="Game over!" shareText={buildShareText}>
           <div className="rc-detail" style={{ marginBottom: 10 }}>The categories were:</div>
           {puzzle.categories.map((cat, i) => !solved.includes(i) && (
             <div key={i} style={{ background: TIER[i], borderRadius: 8, padding: '8px 16px', marginBottom: 6, textAlign: 'center' }}>

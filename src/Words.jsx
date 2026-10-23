@@ -9,6 +9,7 @@ import { evaluate } from './evaluate';
 import validWordsRaw from './validWords.txt?raw';
 import { useSeo, PAGE_SEO } from './seo';
 import { slotHoldsLaterDay } from './checkpointSlot';
+import { useAnnouncer } from './useAnnouncer';
 
 const WORDS = [
   { word: "BRINY", def: "Salty like the sea.", fact: "The ocean contains about 35 grams of salt per litre. Ancient sailors called the sea 'the briny deep', and the phrase stuck around for centuries." },
@@ -180,13 +181,39 @@ const KEYBOARD = [
   ['ENTER','Z','X','C','V','B','N','M','⌫'],
 ];
 
+// Tile letters never drop below 19px: at 800 weight that is WCAG "large
+// text" (>= 18.66px bold), so light letters on --correct (3.66:1) stay legible
+// on short phones, where the tiles shrink to 34px.
+const TILE_FONT = 'max(19px, calc(var(--wd-tile) * 0.42))';
 const ST = { empty:'empty', correct:'correct', present:'present', absent:'absent' };
+// What takes Enter for itself when focused (see the board's keydown handler).
+const CONTROL = 'a[href], button, [role="button"], [role="switch"]';
 const CHECKPOINT_KEY = 'streakle-words';
 const CLR = { empty:'var(--surface)', active:'var(--surface-gold)', correct:'var(--correct)', present:'var(--present)', absent:'var(--absent)' };
-// Letters on revealed tiles: light on green and grey, dark on amber and on
-// both high-contrast colours, so every letter clears 3:1 against its tile.
-const PALETTE = { ...CLR, ink:{ correct:'var(--ink)', present:'var(--bg)', absent:'var(--ink-2)' } };
-const PALETTE_HC = { ...CLR, correct:'var(--hc-correct)', present:'var(--hc-present)', ink:{ correct:'var(--bg)', present:'var(--bg)', absent:'var(--ink-2)' } };
+const PALETTE = CLR;
+const PALETTE_HC = { ...CLR, correct:'var(--hc-correct)', present:'var(--hc-present)' };
+// Letters on revealed tiles and used keys, the same in both palettes. Key labels
+// are small text, and so are tile letters on screens under ~609px tall (tiles
+// shrink below 44px), so every one clears 4.5:1: dark on green, amber and the
+// high-contrast colours, --ink-2 on grey (light --ink on --correct is only
+// 3.7:1, and --muted on --absent fell short too).
+const INK = { correct:'var(--bg)', present:'var(--bg)', absent:'var(--ink-2)' };
+
+// What a revealed tile or a used key means, in the how-to's words, for
+// screen readers (the colours alone say nothing to them).
+const ST_SPOKEN = { correct:'right spot', present:'wrong spot', absent:'not in word' };
+const spell = (letters) => letters.split('').join(' ');
+const guessesLeft = (n) => `${n} ${n===1?'guess':'guesses'} left`;
+
+// A board row as a screen reader hears it: its letters, then — once revealed —
+// what each one scored. states: the row's tile states, or null until revealed.
+function describeRow(rowIdx, letters, states) {
+  const head=`Guess ${rowIdx+1}: `;
+  if (!letters) return `${head}empty`;
+  if (!states) return head+spell(letters);
+  if (states.every(st=>st===ST.correct)) return `${head}${spell(letters)}, all in the right spot`;
+  return head+states.map((st,i)=>`${letters[i]} ${ST_SPOKEN[st]}`).join(', ');
+}
 
 // Board + keyboard fit the visible height on short phones: under the ~146px
 // GameShell header, 42px of row gaps, the 20px board margin and 8px of air,
@@ -304,8 +331,9 @@ export default function WordsGame() {
       )}
 
 
-      {/* Keyed by date: picking a puzzle in the Archive starts a fresh board. */}
-      <WordsBoard key={boardKey} seedDate={seedDate} isToday={isToday} hc={hc} palette={palette} />
+      {/* Keyed by date: picking a puzzle in the Archive starts a fresh board.
+          While the Archive is open its keys are its own, not the board's. */}
+      <WordsBoard key={boardKey} seedDate={seedDate} isToday={isToday} hc={hc} palette={palette} keysBlocked={showArchive} />
 
 
       {showArchive && (
@@ -320,7 +348,8 @@ export default function WordsGame() {
 }
 
 // isToday: the live board, not an Archive replay (replays never save).
-function WordsBoard({ seedDate, isToday, hc, palette }) {
+// keysBlocked: a dialog (the Archive) is open, so typing never reaches the board.
+function WordsBoard({ seedDate, isToday, hc, palette, keysBlocked }) {
   const daily = useMemo(() => getDailyWord(seedDate), [seedDate])
   // Today's board resumes from its checkpoint, already revealed (no flips, no confetti).
   const [initial] = useState(() => boardFrom((isToday && readCheckpoint(seedDate, daily.word)) || [], daily.word));
@@ -341,8 +370,26 @@ function WordsBoard({ seedDate, isToday, hc, palette }) {
   // Set the moment the deciding guess (a win or the sixth) is submitted, well
   // before gameOver lands after its reveal: from then on no key is taken.
   const decidedRef = useRef(initial.gameOver);
+  const [announce, liveRegion] = useAnnouncer();
+  const resultRef = useRef(null);
+  const wasOverRef = useRef(initial.gameOver);
+  // What to say once focus is on the result: a focus move cancels speech
+  // already queued, so a loss's answer is announced after it, not with it.
+  const afterFocusRef = useRef(null);
 
-  const showMsg = (msg, dur=1800) => { setMessage(msg); setTimeout(()=>setMessage(null), dur); };
+  // Finishing unmounts the keyboard; move focus to the result so keyboard and
+  // screen-reader users land somewhere (not on a reload of a finished game).
+  useEffect(()=>{
+    if (showFact&&!wasOverRef.current) {
+      resultRef.current?.focus();
+      if (afterFocusRef.current) announce(afterFocusRef.current);
+      afterFocusRef.current=null;
+    }
+    wasOverRef.current=showFact;
+  }, [showFact, announce]);
+
+  // The toast is visual; spoken (default: the same text, null: nothing) goes to screen readers.
+  const showMsg = useCallback((msg, dur=1800, spoken=msg) => { setMessage(msg); if (spoken) announce(spoken); setTimeout(()=>setMessage(null), dur); }, [announce]);
 
   const spawnConfetti = () => {
     const items = Array.from({length:30},(_,i)=>({
@@ -397,19 +444,25 @@ function WordsBoard({ seedDate, isToday, hc, palette }) {
 
     const totalDelay = (COLS-1)*150+800;
 
+    // Spoken once the reveal finishes, like the colours: the row's result, then
+    // what's left (or, on the sixth miss, the answer — one message, not two).
+    const spokenRow = describeRow(rowIdx, submittedInput, result);
     setTimeout(()=>{
       setKeyStates(prev=>withKeyStates(prev, submittedInput, result));
       revealingRef.current = false;
       if (isWin) {
+        announce(`${spokenRow}. Solved!`);
         setBounceRow(rowIdx); setTimeout(()=>setBounceRow(null),1000);
         setTimeout(()=>{setWon(true);setGameOver(true);spawnConfetti();setShowFact(true);},400);
       } else if (isLast) {
-        setTimeout(()=>{setGameOver(true);setShowFact(true);showMsg(daily.word,3000);},200);
+        afterFocusRef.current=`${spokenRow}. Out of guesses. The word was ${daily.word}.`;
+        setTimeout(()=>{setGameOver(true);setShowFact(true);showMsg(daily.word,3000,null);},200);
       } else {
+        announce(`${spokenRow}. ${guessesLeft(ROWS-rowIdx-1)}.`);
         setCurrent(c=>c+1);
       }
     }, totalDelay);
-  }, [input, current, guesses, daily.word, isToday, seedDate]);
+  }, [input, current, guesses, daily.word, isToday, seedDate, announce, showMsg]);
 
   const handleKey = useCallback((key) => {
     if (decidedRef.current || revealingRef.current) return;
@@ -418,21 +471,36 @@ function WordsBoard({ seedDate, isToday, hc, palette }) {
     if (/^[A-Z]$/.test(key)&&input.length<COLS) setInput(i=>i+key);
   }, [input, submitGuess]);
 
+  // The control a mouse last pressed: pressing a button focuses it in most
+  // browsers, so Enter typed afterwards is the player's, not the button's.
+  const pointerControlRef = useRef(null);
+  useEffect(()=>{
+    const onPointer=(e)=>{ pointerControlRef.current=e.target instanceof Element?e.target.closest(CONTROL):null; };
+    window.addEventListener('pointerdown',onPointer,true);
+    return ()=>window.removeEventListener('pointerdown',onPointer,true);
+  }, []);
+
   useEffect(()=>{
     const handler=(e)=>{
-      if (e.ctrlKey||e.metaKey||e.altKey) return;
-      // Enter on a focused link or switch belongs to that control, as does
-      // Enter on any other button while nothing is typed (same as Scramble).
+      if (e.key==='Tab') pointerControlRef.current=null; // focus now moves by keyboard
+      // An open dialog owns the keyboard: Enter activates its buttons and
+      // letters never land on the hidden board behind it.
+      if (keysBlocked||e.ctrlKey||e.metaKey||e.altKey) return;
+      // Enter on a focused control activates it (Archive, How to play, an
+      // on-screen key reached with Tab). Only with letters typed, on a button
+      // the mouse pressed (it kept focus), does Enter submit the guess instead.
+      // Links and switches always keep their Enter.
       if (e.key==='Enter'&&e.target instanceof HTMLElement) {
-        const control=e.target.closest('a[href], button, [role="button"], [role="switch"]');
-        if (control&&(!input.length||control.matches('a[href], [role="switch"]'))) return;
+        const control=e.target.closest(CONTROL);
+        const submits=input.length>0&&control===pointerControlRef.current&&!control.matches('a[href], [role="switch"]');
+        if (control&&!submits) return;
         if (control) e.preventDefault();
       }
       handleKey(e.key.toUpperCase());
     };
     window.addEventListener('keydown',handler);
     return ()=>window.removeEventListener('keydown',handler);
-  }, [handleKey, input.length]);
+  }, [handleKey, input.length, keysBlocked]);
 
   const getLetter=(r,c)=>{
     if (guesses[r]) return guesses[r][c]||'';
@@ -445,7 +513,23 @@ function WordsBoard({ seedDate, isToday, hc, palette }) {
     return st?palette[st]:palette.empty;
   };
 
-  const getTileInk=(r,c)=>palette.ink[tileStates[`${r}-${c}`]]||'var(--ink)';
+  const getTileInk=(r,c)=>INK[tileStates[`${r}-${c}`]]||'var(--ink)';
+
+  // A row's tile states once its flip has finished (null before then), so the
+  // spoken board never gets ahead of the visible one.
+  const settledStates=(r)=>{
+    const states=Array.from({length:COLS},(_,c)=>tileStates[`${r}-${c}`]);
+    return states.every(Boolean)&&!states.some((_,c)=>revealingTiles[`${r}-${c}`])?states:null;
+  };
+  const rowLetters=(r)=>guesses[r]||(r===current?input:'');
+
+  // Every key keeps a name (a fresh letter is just itself), so its markup only
+  // ever changes values, never which attributes it has.
+  const keyLabel=(key,st)=>{
+    if (key==='⌫') return 'Backspace';
+    if (key==='ENTER') return 'Enter';
+    return st?`${key}, ${ST_SPOKEN[st]}`:key;
+  };
 
   const buildShare=()=>{
     const emoji=hc?{[ST.correct]:'🟧',[ST.present]:'🟦',[ST.absent]:'⬛'}:{[ST.correct]:'🟩',[ST.present]:'🟨',[ST.absent]:'⬛'};
@@ -468,12 +552,21 @@ function WordsBoard({ seedDate, isToday, hc, palette }) {
         </div>
       )}
 
+      {liveRegion}
+
       <div className="wd-board" style={{display:'flex',flexDirection:'column',gap:6,marginBottom:20}}>
+        {/* The board as screen readers read it: one line per guess. The tiles
+            below are visual only (each letter sits on both faces of its flip). */}
+        <ul className="sr-only" aria-label="Guesses">
+          {Array.from({length:ROWS},(_,rowIdx)=>(
+            <li key={rowIdx}>{describeRow(rowIdx, rowLetters(rowIdx), settledStates(rowIdx))}</li>
+          ))}
+        </ul>
         {Array.from({length:ROWS},(_,rowIdx)=>{
           const isShaking=shakeRow===rowIdx;
           const isBouncing=bounceRow===rowIdx;
           return (
-            <div key={rowIdx} style={{display:'flex',gap:6,animation:isShaking?'shake 0.5s ease':'none'}}>
+            <div key={rowIdx} aria-hidden="true" style={{display:'flex',gap:6,animation:isShaking?'shake 0.5s ease':'none'}}>
               {Array.from({length:COLS},(_,colIdx)=>{
                 const letter=getLetter(rowIdx,colIdx);
                 const tileColor=getTileColor(rowIdx,colIdx);
@@ -493,7 +586,7 @@ function WordsBoard({ seedDate, isToday, hc, palette }) {
                         background:letter?CLR.active:CLR.empty,
                         border:`2px solid ${letter?'var(--gold)':'var(--border)'}`,
                         borderRadius:6,display:'flex',alignItems:'center',justifyContent:'center',
-                        fontSize:'calc(var(--wd-tile) * 0.42)',fontWeight:800,color:'var(--ink)',
+                        fontSize:TILE_FONT,fontWeight:800,color:'var(--ink)',
                         animation:letter&&!colored?'letterPop 0.1s ease':'none',
                       }}>{letter}</div>
                       <div style={{
@@ -502,7 +595,7 @@ function WordsBoard({ seedDate, isToday, hc, palette }) {
                         transform:'rotateY(180deg)',
                         background:tileColor,border:'2px solid transparent',
                         borderRadius:6,display:'flex',alignItems:'center',justifyContent:'center',
-                        fontSize:'calc(var(--wd-tile) * 0.42)',fontWeight:800,color:getTileInk(rowIdx,colIdx),
+                        fontSize:TILE_FONT,fontWeight:800,color:getTileInk(rowIdx,colIdx),
                       }}>{letter}</div>
                     </div>
                   </div>
@@ -514,7 +607,7 @@ function WordsBoard({ seedDate, isToday, hc, palette }) {
       </div>
 
       {showFact&&(
-        <ResultCard game="words" outcome={won?'won':'lost'} title={won?`🎉 Got it in ${current+1}!`:'So close!'} shareText={buildShare}>
+        <ResultCard ref={resultRef} game="words" outcome={won?'won':'lost'} title={won?<><span aria-hidden="true">🎉</span> Got it in {current+1}!</>:'So close!'} shareText={buildShare}>
           <div style={{fontSize:11,fontWeight:700,letterSpacing:2,color:'var(--muted)',textTransform:'uppercase',marginTop:4,marginBottom:4}}>
             {won?"Today's word":"Today's word was"}
           </div>
@@ -532,9 +625,9 @@ function WordsBoard({ seedDate, isToday, hc, palette }) {
                 const st=keyStates[key];
                 const wide=key==='ENTER'||key==='⌫';
                 return (
-                  <button key={key} onClick={()=>handleKey(key)} className={wide?'wd-key wd-key-wide':'wd-key'} style={{
+                  <button key={key} type="button" aria-label={keyLabel(key,st)} onClick={()=>handleKey(key)} className={wide?'wd-key wd-key-wide':'wd-key'} style={{
                     background:st===ST.correct?palette.correct:st===ST.present?palette.present:st===ST.absent?palette.absent:'var(--key)',
-                    color:st===ST.absent?'var(--muted)':palette.ink[st]||'var(--ink)',
+                    color:INK[st]||'var(--ink)',
                   }}>{key}</button>
                 );
               })}

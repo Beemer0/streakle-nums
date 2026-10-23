@@ -83,6 +83,7 @@ async function rerender(user, page = <PoolHistory />) {
   await flush()
 }
 const text = () => host.textContent
+// The page's own links: "← All games" sits in the banner, outside <main>.
 const links = () => [...host.querySelectorAll('main a')].map(a => [a.getAttribute('href'), a.textContent])
 const headings = () => [...host.querySelectorAll('h2')].map(h => h.textContent)
 const POOL_NAMES = /Octagon|World Cup|Mehdi/
@@ -100,7 +101,7 @@ describe('Pool History page', () => {
     await render(newUser('u-me'))
     expect(host.querySelector('h1').textContent).toBe('POOL HISTORY')
     expect(headings()).toEqual(['Active', 'Past'])
-    const [, octagon, worldCup] = links()
+    const [octagon, worldCup] = links()
     expect(octagon[0]).toBe('/octagon')
     expect(octagon[1]).toMatch(/Octagon.*Live.*Open pool/)
     expect(worldCup[0]).toBe('/bracket')
@@ -114,7 +115,7 @@ describe('Pool History page', () => {
     memberOf = { wc2026: true }
     await render(newUser())
     expect(headings()).toEqual(['Past'])
-    expect(links().map(([href]) => href)).toEqual(['/', '/bracket'])
+    expect(links().map(([href]) => href)).toEqual(['/bracket'])
     expect(text()).not.toContain('Octagon')
   })
 
@@ -122,7 +123,7 @@ describe('Pool History page', () => {
     memberOf = { octagon: true }
     await render(newUser())
     expect(headings()).toEqual(['Active'])
-    expect(links().map(([href]) => href)).toEqual(['/', '/octagon'])
+    expect(links().map(([href]) => href)).toEqual(['/octagon'])
     expect(text()).not.toContain('World Cup')
   })
 

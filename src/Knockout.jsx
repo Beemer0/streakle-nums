@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useMemo } from "react";
+import React, { useState, useRef, useEffect, useMemo, useId } from "react";
 import Archive from './Archive'
 import GameShell from "./GameShell";
 import ResultCard from './ResultCard';
@@ -7,6 +7,7 @@ import { useStreak } from './useStreak';
 import { useBoardDate } from './useBoardDate';
 import AwardIcon from './AwardIcon';
 import { clickableProps } from './a11y';
+import { useAnnouncer } from './useAnnouncer';
 import { useSeo, PAGE_SEO } from './seo';
 import { slotHoldsLaterDay } from './checkpointSlot';
 import { PROMOTIONS, WEIGHT_CLASSES, ACHIEVEMENTS } from './knockout/data';
@@ -96,6 +97,21 @@ function boardFrom(cp) {
   };
 }
 
+// How long typing must pause before screen readers hear the match count.
+const COUNT_DELAY_MS = 700;
+const guessesText = (n) => `${n} ${n === 1 ? 'guess' : 'guesses'} remaining`;
+
+// The first empty cell after `key` in reading order (wrapping round), or null.
+function nextEmpty(key, cells) {
+  const start = Number(key[0]) * 3 + Number(key[2]);
+  for (let step = 1; step < 9; step++) {
+    const i = (start + step) % 9;
+    const k = `${Math.floor(i / 3)}-${i % 3}`;
+    if (!cells[k]) return k;
+  }
+  return null;
+}
+
 // ── CSS ───────────────────────────────────────────────────────────────────────
 
 const css = `
@@ -106,6 +122,8 @@ const css = `
 .ko-grid{display:grid;grid-template-columns:90px repeat(3,110px);grid-template-rows:70px repeat(3,100px);gap:4px;padding:0 12px}
 @media(max-width:480px){.ko-grid{grid-template-columns:72px repeat(3,88px);grid-template-rows:60px repeat(3,86px)}}
 @media(min-width:700px) and (min-height:760px){.ko-grid{grid-template-columns:100px repeat(3,128px);grid-template-rows:78px repeat(3,116px)}}
+.ko-opt[role="button"]:focus-visible{outline-offset:-3px}
+.ko-search:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 `;
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -125,6 +143,9 @@ export default function KnockoutGame() {
   const [activeCell, setActiveCell] = useState(null);
   const [query, setQuery] = useState('');
   const [suggestions, setSuggestions] = useState([]);
+  // Escape hides the matches but keeps them: the search still found them,
+  // and Down Arrow brings them back.
+  const [listHidden, setListHidden] = useState(false);
   const [pendingPlayer, setPendingPlayer] = useState(null);
   const [guessesLeft, setGuessesLeft] = useState(initial.guessesLeft);
   const [shakeCell, setShakeCell] = useState(null);
@@ -133,11 +154,58 @@ export default function KnockoutGame() {
   const [confetti, setConfetti] = useState([]);
   const [totalScore, setTotalScore] = useState(initial.totalScore);
   const inputRef = useRef(null);
+  const gridRef = useRef(null);
+  const panelRef = useRef(null);
+  const listRef = useRef(null);
+  const confirmRef = useRef(null);
+  const resultRef = useRef(null);
+  const countTimer = useRef(null);
+  // Where focus goes once the next render lands: a move can unmount the
+  // element that had it (the search panel, Confirm).
+  const focusNext = useRef(null);
+  const [announce, liveRegion] = useAnnouncer();
+  const panelId = useId();
+  const hintId = useId();
 
   // Auto-focus input when cell becomes active
   useEffect(() => {
     if (activeCell) setTimeout(() => inputRef.current?.focus(), 50);
   }, [activeCell]);
+
+  useEffect(() => {
+    const target = focusNext.current;
+    focusNext.current = null;
+    target?.()?.focus();
+  });
+
+  useEffect(() => {
+    const timer = countTimer;
+    return () => clearTimeout(timer.current);
+  }, []);
+
+  // On a short phone the keyboard covers the page's lower part: when matches
+  // appear (or the keyboard resizes the visible area), scroll just enough to
+  // show the list, never pushing the search box above the top. A pinch-zoomed
+  // view is the player's own, so it is left alone.
+  const shownCount = listHidden ? 0 : suggestions.length;
+  useEffect(() => {
+    if (!shownCount) return;
+    const vv = window.visualViewport;
+    const reveal = () => {
+      if (!panelRef.current || !listRef.current || vv?.scale > 1.01) return;
+      const top = vv ? vv.offsetTop : 0;
+      const bottom = vv ? vv.offsetTop + vv.height : window.innerHeight;
+      const by = Math.min(listRef.current.getBoundingClientRect().bottom - bottom,
+        panelRef.current.getBoundingClientRect().top - top);
+      if (by > 0) window.scrollBy(0, by);
+    };
+    reveal();
+    vv?.addEventListener('resize', reveal);
+    return () => vv?.removeEventListener('resize', reveal);
+  }, [shownCount]);
+
+  const cellName = (r, c) => `${LABEL[rowHeaders[r]]} and ${LABEL[colHeaders[c]]}`;
+  const cellEl = (key) => gridRef.current?.querySelector(`[data-cell="${key}"]`);
 
   function handleCellClick(ri, ci) {
     if (won || gameOver) return;
@@ -146,12 +214,15 @@ export default function KnockoutGame() {
     setActiveCell([ri, ci]);
     setQuery('');
     setSuggestions([]);
+    setListHidden(false);
     setPendingPlayer(null);
   }
 
   function handleQuery(val) {
     setQuery(val);
     setPendingPlayer(null);
+    setListHidden(false);
+    clearTimeout(countTimer.current);
     if (!val.trim()) { setSuggestions([]); return; }
     const q = val.toLowerCase();
     const used = new Set(Object.values(cells).map(c => c.player.n));
@@ -160,14 +231,63 @@ export default function KnockoutGame() {
       .sort((a,b) => b.f - a.f)
       .slice(0, 8);
     setSuggestions(results);
+    const n = results.length;
+    countTimer.current = setTimeout(() => announce(n ? `${n} ${n === 1 ? 'match' : 'matches'} shown` : 'No fighter found'), COUNT_DELAY_MS);
   }
 
   function handleSelect(fighter) {
+    clearTimeout(countTimer.current);
+    // The list stays open after a pick, so the picked fighter can be picked
+    // again: that changes no state, so no render would run focusNext (and a
+    // queued target would fire on some later render). Move focus now.
+    if (fighter === pendingPlayer) { confirmRef.current?.focus(); return; }
     setPendingPlayer(fighter);
+    focusNext.current = () => confirmRef.current;
+  }
+
+  function cancelSearch() {
+    clearTimeout(countTimer.current);
+    if (activeCell) { const key = `${activeCell[0]}-${activeCell[1]}`; focusNext.current = () => cellEl(key); }
+    setActiveCell(null); setQuery(''); setSuggestions([]); setListHidden(false); setPendingPlayer(null);
+  }
+
+  // Escape closes the match list first, then the search (back to its cell).
+  function handlePanelKey(e) {
+    if (e.key !== 'Escape') return;
+    e.preventDefault();
+    if (!shownCount) { cancelSearch(); return; }
+    clearTimeout(countTimer.current);
+    setListHidden(true);
+    // Leave the closing list now; queued too, so no older target can win.
+    inputRef.current?.focus();
+    focusNext.current = () => inputRef.current;
+  }
+
+  // Down Arrow moves into the matches (bringing back a list Escape hid);
+  // Enter picks the first one shown.
+  function handleInputKey(e) {
+    if (!suggestions.length) return;
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      if (!listHidden) { listRef.current?.children[0]?.focus(); return; }
+      setListHidden(false);
+      focusNext.current = () => listRef.current?.children[0];
+    }
+    else if (e.key === 'Enter' && !listHidden) { e.preventDefault(); handleSelect(suggestions[0]); }
+  }
+
+  // A match: Enter or Space picks it; the arrows move between matches (Up
+  // from the first goes back to the search box).
+  function handleOptionKey(e, i) {
+    const rows = listRef.current?.children;
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleSelect(suggestions[i]); }
+    else if (e.key === 'ArrowDown') { e.preventDefault(); rows?.[Math.min(i + 1, suggestions.length - 1)]?.focus(); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); (i ? rows?.[i - 1] : inputRef.current)?.focus(); }
   }
 
   function handleConfirm() {
     if (!pendingPlayer || !activeCell) return;
+    clearTimeout(countTimer.current);
     const [ri, ci] = activeCell;
     const key = `${ri}-${ci}`;
     const row = rowHeaders[ri];
@@ -190,6 +310,9 @@ export default function KnockoutGame() {
       setQuery('');
       setSuggestions([]);
       setPendingPlayer(null);
+      const wrong = `Not a match: ${pendingPlayer.n}.`;
+      announce(newGuesses === 0 ? `${wrong} Out of guesses. Final score ${totalScore}.` : `${wrong} ${guessesText(newGuesses)}.`);
+      focusNext.current = newGuesses === 0 ? () => resultRef.current : () => inputRef.current;
       return;
     }
 
@@ -205,6 +328,13 @@ export default function KnockoutGame() {
 
     const newGuesses = guessesLeft - 1;
     setGuessesLeft(newGuesses);
+
+    const next = nextEmpty(key, newCells);
+    const right = `Correct: ${pendingPlayer.n}, +${score} points.`;
+    if (!next) announce(`${right} Board complete! Final score ${newTotal}.`);
+    else if (newGuesses === 0) announce(`${right} Out of guesses. Final score ${newTotal}.`);
+    else announce(`${right} ${guessesText(newGuesses)}.`);
+    focusNext.current = next && newGuesses > 0 ? () => cellEl(next) : () => resultRef.current;
 
     if (Object.keys(newCells).length === 9) {
       setWon(true);
@@ -243,8 +373,10 @@ export default function KnockoutGame() {
     setActiveCell(null);
     setQuery('');
     setSuggestions([]);
+    setListHidden(false);
     setPendingPlayer(null);
     setConfetti([]);
+    clearTimeout(countTimer.current);
   }
 
   function buildShareText() {
@@ -264,6 +396,7 @@ export default function KnockoutGame() {
   return (
     <GameShell game="knockout" date={formatDate(seedDate)} howTo={howTo} onArchive={() => setShowArchive(true)}>
       <style>{css}</style>
+      {liveRegion}
 
       {confetti.map(c=>(
         <div key={c.id} style={{position:'fixed',left:`${c.x}%`,top:'28%',width:c.size,height:c.size,background:c.color,borderRadius:c.size>10?'50%':2,animation:`confetti 1.3s ${c.delay}ms ease forwards`,pointerEvents:'none',zIndex:100}}/>
@@ -293,7 +426,7 @@ export default function KnockoutGame() {
 
       {/* Grid */}
       <div style={{overflowX:'auto',width:'100%',display:'flex',justifyContent:'center'}}>
-        <div className="ko-grid">
+        <div className="ko-grid" ref={gridRef}>
           {/* Top-left blank */}
           <div style={{background:'transparent'}}/>
 
@@ -304,7 +437,7 @@ export default function KnockoutGame() {
               <div key={ci} style={{background:'var(--surface)',border:'1px solid var(--border)',borderRadius:8,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:'4px 6px',textAlign:'center'}}>
                 {col in ACHIEVEMENTS
                   ? <AwardIcon name={col} size={32}/>
-                  : <div style={{background:bg,border:`1px solid ${border}`,borderRadius:4,padding:'2px 6px',fontSize:9,fontWeight:800,color,letterSpacing:0.5}}>{BADGE[col]}</div>}
+                  : <div aria-hidden="true" style={{background:bg,border:`1px solid ${border}`,borderRadius:4,padding:'2px 6px',fontSize:9,fontWeight:800,color,letterSpacing:0.5}}>{BADGE[col]}</div>}
                 <div style={{fontSize:9,fontWeight:700,color,lineHeight:1.2,marginTop:3}}>{LABEL[col]}</div>
               </div>
             );
@@ -315,7 +448,7 @@ export default function KnockoutGame() {
             <React.Fragment key={`row-${ri}`}>
               {/* Row header */}
               <div style={{background:'var(--surface)',border:'1px solid var(--border)',borderRadius:8,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:'4px 6px',textAlign:'center'}}>
-                {(()=>{const{bg,border,color}=getHeaderStyle(row);return(<>{row in ACHIEVEMENTS?<AwardIcon name={row} size={32}/>:<div style={{background:bg,border:`1px solid ${border}`,borderRadius:4,padding:'2px 6px',fontSize:9,fontWeight:800,color,letterSpacing:0.5}}>{BADGE[row]}</div>}<div style={{fontSize:9,fontWeight:700,color,lineHeight:1.2,marginTop:3}}>{LABEL[row]}</div></>);})()}
+                {(()=>{const{bg,border,color}=getHeaderStyle(row);return(<>{row in ACHIEVEMENTS?<AwardIcon name={row} size={32}/>:<div aria-hidden="true" style={{background:bg,border:`1px solid ${border}`,borderRadius:4,padding:'2px 6px',fontSize:9,fontWeight:800,color,letterSpacing:0.5}}>{BADGE[row]}</div>}<div style={{fontSize:9,fontWeight:700,color,lineHeight:1.2,marginTop:3}}>{LABEL[row]}</div></>);})()}
               </div>
               {/* Cells */}
               {colHeaders.map((col,ci)=>{
@@ -323,8 +456,17 @@ export default function KnockoutGame() {
                 const filled=cells[key];
                 const isActive=activeCell&&activeCell[0]===ri&&activeCell[1]===ci;
                 const isShaking=shakeCell===key;
+                const isOpen=!(filled||gameOver||won);
+                // Open cells are buttons named by their criteria; a locked
+                // cell names itself through its content (an image role).
+                const cellLabel=`${cellName(ri,ci)}: ${filled?`${filled.player.n}, +${filled.score} points`:'empty'}`;
                 return (
-                  <div key={key} {...clickableProps(()=>handleCellClick(ri,ci), filled||gameOver||won)} style={{
+                  <div key={key} data-cell={key}
+                    {...clickableProps(()=>handleCellClick(ri,ci), !isOpen)}
+                    aria-label={isOpen?cellLabel:undefined}
+                    aria-expanded={isOpen?Boolean(isActive):undefined}
+                    aria-controls={isOpen&&isActive?panelId:undefined}
+                    style={{
                     background:filled?'var(--correct-wash)':isActive?'var(--surface-gold)':'var(--surface)',
                     border:`2px solid ${filled?'var(--success)':isActive?'var(--gold)':'var(--border)'}`,
                     borderRadius:8,cursor:filled||gameOver||won?'default':'pointer',
@@ -334,14 +476,14 @@ export default function KnockoutGame() {
                     transition:'background 0.2s,border-color 0.2s',
                   }}>
                     {filled?(
-                      <>
+                      <div role="img" aria-label={cellLabel}>
                         <div style={{fontSize:10,fontWeight:700,color:'var(--success-text)',marginBottom:2}}>+{filled.score}</div>
                         <div style={{fontSize:11,fontWeight:700,color:'var(--ink)',lineHeight:1.3}}>{filled.player.n}</div>
-                      </>
+                      </div>
                     ):isActive?(
                       <div style={{fontSize:11,color:'var(--gold)'}}>Type below ↓</div>
                     ):(
-                      <div style={{fontSize:20,opacity:0.2}}>?</div>
+                      <div role={isOpen?undefined:'img'} aria-label={isOpen?undefined:cellLabel} style={{fontSize:20,opacity:0.2}}>?</div>
                     )}
                   </div>
                 );
@@ -353,18 +495,21 @@ export default function KnockoutGame() {
 
       {/* Search */}
       {activeCell && !won && !gameOver && (
-        <div style={{marginTop:16,width:'100%',maxWidth:340,padding:'0 12px',boxSizing:'border-box',animation:'slideUp 0.3s ease'}}>
+        <div id={panelId} ref={panelRef} onKeyDown={handlePanelKey} style={{marginTop:16,width:'100%',maxWidth:340,padding:'0 12px',boxSizing:'border-box',animation:'slideUp 0.3s ease'}}>
           <div style={{fontSize:12,color:'var(--muted)',marginBottom:6,textAlign:'center'}}>
             {LABEL[rowHeaders[activeCell[0]]]} × {LABEL[colHeaders[activeCell[1]]]}
           </div>
-          <input ref={inputRef} value={query} onChange={e=>handleQuery(e.target.value)}
+          <span id={hintId} className="sr-only">Down Arrow moves through the matches; Enter picks the first.</span>
+          <input ref={inputRef} className="ko-search" value={query} onChange={e=>handleQuery(e.target.value)} onKeyDown={handleInputKey}
             placeholder="Search MMA fighter..."
-            style={{width:'100%',boxSizing:'border-box',background:'var(--surface)',border:`2px solid ${pendingPlayer?'var(--success)':'var(--gold)'}`,borderRadius:8,color:'var(--ink)',fontSize:15,padding:'10px 14px',outline:'none'}}
+            aria-label={`Search MMA fighter for ${cellName(activeCell[0],activeCell[1])}`} aria-describedby={hintId}
+            autoComplete="off" autoCorrect="off" autoCapitalize="none" spellCheck={false} enterKeyHint="search"
+            style={{width:'100%',boxSizing:'border-box',background:'var(--surface)',border:`2px solid ${pendingPlayer?'var(--success)':'var(--gold)'}`,borderRadius:8,color:'var(--ink)',fontSize:16,padding:'10px 14px'}}
           />
-          {suggestions.length > 0 && (
-            <div style={{background:'var(--surface)',border:'1px solid var(--border)',borderRadius:8,marginTop:4,overflow:'hidden'}}>
+          {shownCount > 0 && (
+            <div ref={listRef} role="group" aria-label="Matching fighters" style={{background:'var(--surface)',border:'1px solid var(--border)',borderRadius:8,marginTop:4,overflow:'hidden'}}>
               {suggestions.map((f,i)=>(
-                <div key={i} {...clickableProps(()=>handleSelect(f))} style={{
+                <div key={i} className="ko-opt" role="button" tabIndex={0} aria-pressed={pendingPlayer?.n===f.n} onClick={()=>handleSelect(f)} onKeyDown={e=>handleOptionKey(e,i)} style={{
                   padding:'10px 14px',cursor:'pointer',fontSize:13,
                   borderBottom:i<suggestions.length-1?'1px solid var(--border)':'none',
                   background:pendingPlayer?.n===f.n?'var(--correct-wash)':'transparent',
@@ -374,7 +519,7 @@ export default function KnockoutGame() {
                   onMouseOut={e=>e.currentTarget.style.background=pendingPlayer?.n===f.n?'var(--correct-wash)':'transparent'}
                 >
                   <span style={{color:'var(--ink)',fontWeight:600}}>{f.n}</span>
-                  <span style={{color:'var(--faint)',fontSize:11,marginLeft:8}}>
+                  <span style={{color:'var(--text-2)',fontSize:11,marginLeft:8}}>
                     {f.w.map(w=>WEIGHT_CLASSES[w]||w).join(' / ')}
                   </span>
                 </div>
@@ -382,7 +527,7 @@ export default function KnockoutGame() {
             </div>
           )}
           {pendingPlayer && (
-            <button onClick={handleConfirm} style={{
+            <button ref={confirmRef} onClick={handleConfirm} style={{
               marginTop:10,width:'100%',background:'var(--gold)',border:'none',
               borderRadius:8,color:'var(--bg)',fontSize:14,fontWeight:700,
               padding:'11px',cursor:'pointer',transition:'background 0.15s',
@@ -398,7 +543,7 @@ export default function KnockoutGame() {
 
       {/* Result */}
       {(won || gameOver) && (
-        <ResultCard game="knockout" outcome={won?'won':'lost'} title={won ? '🥊 Flawless Victory!' : 'Game Over'} shareText={buildShareText}>
+        <ResultCard ref={resultRef} game="knockout" outcome={won?'won':'lost'} title={won ? '🥊 Flawless Victory!' : 'Game Over'} shareText={buildShareText}>
           <div className="rc-headline">Final score: {totalScore}</div>
           <div className="rc-detail">{Object.keys(cells).length}/9 cells filled</div>
         </ResultCard>
