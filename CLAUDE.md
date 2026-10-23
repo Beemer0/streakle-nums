@@ -43,6 +43,16 @@ puzzles every day; signed-in players build streaks.
   the hash and OAuth params from Vercel Analytics URLs), `saveResult.js`, `useStreak.js`,
   `streak.js`, `evaluate.js` (Wordle logic, tested), `a11y.js` (`clickableProps`),
   `AwardIcon.jsx`, `ErrorBoundary.jsx`, `validWords.txt` (~14.8k words).
+- Accessibility helpers (every game and pool page targets WCAG 2.2 AA; the
+  `*.a11y.test.jsx` suites pin names, states, announcements and focus):
+  `useAnnouncer.jsx` (`const [announce, liveRegion] = useAnnouncer()` — one
+  always-mounted polite live region per page), `useDialogFocus.js` (modal
+  focus: move in, trap Tab, restore), and the global `.sr-only` class in
+  `index.css`. Game boards announce each move's result and what's left, move
+  focus to the next sensible control after a move and to the ResultCard when a
+  game ends (never out of an open dialog), and name every cell/tile/key with
+  its position and state. The site-wide `body::before` texture blocks axe's
+  contrast rule; check contrast from the tokens (4.5:1 text, 3:1 large/UI).
 - Saving a day: every game page takes `{ seedDate, isToday, boardKey, selectDate }`
   from `useBoardDate.js`. Today's board keeps the date it was dealt, so a page
   open past midnight finishes (and saves) that day's puzzle; picking today in
