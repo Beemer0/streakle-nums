@@ -351,8 +351,10 @@ block.
   canonical and Game JSON-LD from `PAGE_SEO`. Non-JS scrapers (Slack, iMessage,
   Discord) now get the right head on `/words`, `/scramble` etc. instead of the
   homepage fallback. `vercel.json` sets `cleanUrls: true` so the files are
-  served without redirects; the `/(.*) → /index.html` rewrite still catches
-  anything not pre-rendered. The private pools (`/bracket`, `/octagon`,
+  served without redirects; the `/(.*) → /` rewrite catches anything not
+  pre-rendered. Keep its destination `/`: with `cleanUrls` on, `/index.html`
+  no longer resolves and every non-prerendered route 404s (that took down
+  `/pools`, `/bracket` and `/octagon` on 2026-10-21). The private pools (`/bracket`, `/octagon`,
   `/pools`) stay off the prerender list so no scraper ever finds them.
 - Lighthouse SEO scores 100/100 on `/` and `/words` on the deployed site
   (2026-10-21); accessibility is 100 too. Performance (77) and best-practices
