@@ -262,7 +262,10 @@ mine writes `completed: false`. `game_results.score` = seconds,
   persisted ladder (`useBoardDate`'s live board).
   The board is a delegated-handler WAI-ARIA grid (roving tabindex, arrows,
   Enter digs, F flags; tap/hold/right-click on pointers) — it deliberately
-  does NOT use `clickableProps`.
+  does NOT use `clickableProps`. Undug and flagged tiles are told apart from
+  dug cells by a 2px `--mines-tile-edge` (3:1+ against dug cells and the page,
+  WCAG 1.4.11); the tile colours are `--mines-*` tokens in `index.css`, and the
+  focus ring is drawn inside that edge (`outline-offset: -6px`).
 - `Archive.jsx` `GAME_META.start` lets a game's calendar begin after the
   site's `LAUNCH_DATE`; the six older games keep the default.
 
@@ -336,6 +339,12 @@ whose cells all fill in counts as found. Score = active time + hint penalty;
   archive replays never touch it or call `saveResult`; a board finished just
   past midnight saves under the day it was dealt. Keyed by date like Weave;
   the clock pauses when hidden and on unmount; honours `streakle-hc`.
+- Keyboard: the page's Enter shortcut submits the word, except on a focused
+  control (button, link, switch), which Enter activates; typing a letter
+  moves focus off such a control first, so "type, then Enter" always
+  submits. The visual `.sc-board` is `aria-hidden`; screen readers get the
+  `.sc-sr-only` "Board" list instead (each word's length, the letters showing,
+  its crossings), and hint announcements name the word they filled.
 
 ## SEO
 `<title>`, meta description, Open Graph + Twitter tags, OG image
