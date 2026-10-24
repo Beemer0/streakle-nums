@@ -45,6 +45,18 @@
   --link-3: #5E8CC0;
   --link-4: #9C78BC;
 
+  /* Mines tiles. Undug (and flagged) tiles are raised with a 2px edge, which
+     is what sets them apart from dug cells: 3.7:1 on --mines-dug, 3.9:1 on
+     --bg, 3.5:1 on --surface (WCAG 1.4.11). The gold focus ring is >= 3:1 on
+     every fill here but 2.2:1 on the edge, so a focused undug tile keeps its
+     edge and draws the ring further in, with a --bg band between the two
+     (3.9:1 to the edge, 8.4:1 to the ring). */
+  --mines-tile: #403829;       /* undug fill, top of its gradient */
+  --mines-tile-low: #342D22;   /* undug fill, bottom */
+  --mines-tile-hover: #4A4132;
+  --mines-tile-edge: #7A6E5A;
+  --mines-dug: #14120F;        /* dug cells, sunken */
+
   /* Feedback */
   --success: var(--correct);
   --success-text: #86EFAC;

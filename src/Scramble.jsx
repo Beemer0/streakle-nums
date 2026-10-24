@@ -24,6 +24,8 @@ const HC_KEY = 'streakle-hc' // shared with Words and Weave
 const SHAKE_MS = 450
 const POP_MS = 700
 
+// A used tile dims through its colours, not opacity: opacity would fade its
+// focus ring too, and Enter on a tile leaves focus on it as it turns used.
 const css = `
 @keyframes scShake{0%,100%{transform:translateX(0)}20%{transform:translateX(-5px)}40%{transform:translateX(5px)}60%{transform:translateX(-4px)}80%{transform:translateX(4px)}}
 @keyframes scPop{0%{transform:scale(1)}45%{transform:scale(1.14)}100%{transform:scale(1)}}
@@ -39,7 +41,7 @@ const css = `
 .sc-rack{display:flex;gap:6px;justify-content:center;flex-wrap:nowrap;margin:10px 0 12px}
 .sc-tile{width:min(54px,calc((100vw - 68px) / 7));height:min(60px,calc((100vw - 68px) / 7 * 1.12));border-radius:8px;border:2px solid var(--gold);background:var(--surface-gold);color:var(--ink);font-family:var(--font-display);font-weight:800;font-size:min(32px,calc((100vw - 68px) / 7 * 0.6));cursor:pointer;padding:0;touch-action:manipulation;-webkit-tap-highlight-color:transparent;transition:transform .12s}
 .sc-tile:active{transform:scale(.94)}
-.sc-tile-used{opacity:.18;cursor:default}
+.sc-tile-used{color:rgba(var(--ink-rgb),.18);border-color:rgba(var(--gold-rgb),.18);background:transparent;cursor:default}
 .sc-tile:focus-visible,.sc-ctl:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
 .sc-ctl{background:none;border:1px solid var(--border);border-radius:8px;color:var(--gold);cursor:pointer;font-size:13px;font-weight:600;padding:8px 12px;touch-action:manipulation;white-space:nowrap}
 .sc-ctl-primary{background:var(--gold);color:var(--bg);border-color:var(--gold)}
@@ -58,9 +60,21 @@ function formatDate(dateStr) {
 const plural = (n, word) => `${n} ${word}${n !== 1 ? 's' : ''}`
 const identity = n => Array.from({ length: n }, (_, i) => i)
 const freshGame = () => ({ found: [], hinted: [], hints: 0, acc: 0 })
-// After a mouse/touch click (detail > 0, unlike keyboard activation), drop
-// focus so a later Enter submits the word instead of re-pressing the button.
-const blurAfterClick = (e) => { if (e.detail > 0) e.currentTarget.blur() }
+
+// A focused control (a letter tile, Hint, ⌫, the high-contrast switch, a
+// link) keeps Enter for itself: Enter activates it, never submits the guess.
+const CONTROL = 'a[href], button, [role="button"], [role="switch"]'
+// Drops focus from whichever control holds it, so the next Enter submits
+// the guess instead of pressing that control.
+const blurFocusedControl = () => {
+  const focused = document.activeElement
+  if (focused instanceof HTMLElement && focused.closest(CONTROL)) focused.blur()
+}
+// After a mouse/touch click (detail > 0, unlike keyboard activation), hand
+// Enter back to the guess: blur the control the click focused, or the one
+// it left focused (one reached by Tab, or refocused by a closing dialog) —
+// not every click moves focus to the button it presses.
+const blurAfterClick = (e) => { if (e.detail > 0) blurFocusedControl() }
 // Wall-clock reads for the game clock. Only ever called from event handlers
 // and effects — never while rendering.
 const clockNow = () => Date.now()
@@ -70,6 +84,53 @@ const randomUnit = () => Math.random()
 const withCompleted = (pz, g) => {
   const found = completeFound(pz, g.found, g.hinted)
   return found === g.found ? g : { ...g, found }
+}
+
+// ── The board for screen readers (its cells are aria-hidden): each word's
+// length, the letters showing in it so far and where it crosses other
+// words. A hidden letter is spoken as "blank" — screen readers skip a bare
+// "_" at their default punctuation level.
+//
+// Every board repeats a word length, so each word is named by its place in
+// the chip row (shortest first, then board order): "word 3". The board
+// list, finds and hints all use that name.
+function wordNumbers(pz) {
+  const order = pz.words.map((w, i) => i).sort((a, b) => pz.words[a].length - pz.words[b].length || a - b)
+  return { order, num: pz.words.map((w, i) => order.indexOf(i) + 1) }
+}
+
+function spokenPattern(pz, i, revealed) {
+  const p = pz.placements[i]
+  return cellsOf(p).map(([r, c], k) => (revealed.has(cellKey(r, c)) ? p.word[k] : 'blank')).join(' ')
+}
+
+// "Letter 1 crosses word 6, letter 3 crosses word 5." — the grid's shape.
+function spokenCrossings(pz, i, cells, num) {
+  const parts = cellsOf(pz.placements[i]).flatMap(([r, c], k) =>
+    cells.get(cellKey(r, c)).words.filter(j => j !== i).map(j => `letter ${k + 1} crosses word ${num[j]}`))
+  if (!parts.length) return ''
+  const text = parts.join(', ')
+  return ` ${text[0].toUpperCase()}${text.slice(1)}.`
+}
+
+function spokenWord(pz, i, found, revealed, cells, num) {
+  if (found.includes(i)) return `Word ${num[i]}: ${pz.words[i]}, found`
+  const showing = cellsOf(pz.placements[i]).some(([r, c]) => revealed.has(cellKey(r, c)))
+  const letters = showing ? `: ${spokenPattern(pz, i, revealed)}` : ', none showing'
+  return `Word ${num[i]}, ${pz.words[i].length} letters${letters}.${spokenCrossings(pz, i, cells, num)}`
+}
+
+// What a hint revealed: its letter (and the words sharing it, at a
+// crossing), then each word that letter sits in — the word's new pattern,
+// or that the letter completed it.
+function hintMessage(pz, cell, next, num) {
+  const shown = revealedCells(pz, next.found, next.hinted)
+  const ws = [...cell.words].sort((a, b) => num[a] - num[b])
+  const shared = ws.length > 1 ? `, shared by words ${ws.map(i => num[i]).join(' and ')}` : ''
+  const words = ws.map(i => (next.found.includes(i)
+    ? `That completes ${pz.words[i]} (word ${num[i]}).`
+    : `Word ${num[i]} now reads ${spokenPattern(pz, i, shown)}.`))
+  return `Hint: ${cell.ch}${shared}. ${words.join(' ')} ${HINT_SECONDS} seconds added.`
 }
 
 // ── Today's checkpoint: found words, hinted cells, hints and clock, so a
@@ -165,6 +226,7 @@ export default function Scramble() {
 function ScrambleBoard({ seedDate, isToday, palette, keysBlocked }) {
   const pz = useMemo(() => generatePuzzle(seedDate), [seedDate])
   const cells = useMemo(() => boardCells(pz), [pz])
+  const { order: wordOrder, num } = useMemo(() => wordNumbers(pz), [pz])
 
   const [g, setG] = useState(() => (isToday && readCheckpoint(seedDate, pz, cells)) || freshGame())
   const [guess, setGuess] = useState([])         // pool tile indices, in spelling order
@@ -307,7 +369,11 @@ function ScrambleBoard({ seedDate, isToday, palette, keysBlocked }) {
     if (found.includes(i)) { reject(`${guessWord} — already found`); return }
     setGuess([])
     const next = advance({ ...g, found: [...found, i] }, [i])
-    if (next.found.length < BOARD_WORDS) announce(`${guessWord} found! ${next.found.length} of ${BOARD_WORDS}.`)
+    if (next.found.length < BOARD_WORDS) {
+      // Words its letters filled in by crossing count as found too.
+      const also = next.found.filter(j => j !== i && !found.includes(j)).map(j => `${pz.words[j]} (word ${num[j]})`)
+      announce(`${guessWord} (word ${num[i]}) found!${also.length ? ` That also completes ${also.join(' and ')}.` : ''} ${next.found.length} of ${BOARD_WORDS}.`)
+    }
   }
 
   const hint = () => {
@@ -318,15 +384,14 @@ function ScrambleBoard({ seedDate, isToday, palette, keysBlocked }) {
     startClock()
     setGuess([])
     const next = advance({ ...g, hinted: [...hinted, cell], hints: hints + 1 }, [])
-    const { r, c, ch } = cells.get(cell)
-    const completed = next.found.filter(i => !found.includes(i)).map(i => pz.words[i])
-    if (next.found.length < BOARD_WORDS) {
-      announce(`Hint: row ${r + 1}, column ${c + 1} is ${ch}. ${HINT_SECONDS} seconds added.${completed.length ? ` That completes ${completed.join(' and ')}.` : ''}`)
-    }
+    if (next.found.length < BOARD_WORDS) announce(hintMessage(pz, cells.get(cell), next, num))
   }
 
   // Typing: letters pick the first unused matching tile, Backspace removes
-  // the last letter, Enter submits, Escape clears. Refreshed every render.
+  // the last letter, Enter submits, Escape clears. Enter on a focused
+  // control activates that control instead; a typed letter drops focus from
+  // one, so typing a word and pressing Enter submits it wherever focus was.
+  // Refreshed every render.
   useEffect(() => {
     keyHandler.current = (e) => {
       if (keysBlocked || e.ctrlKey || e.metaKey || e.altKey) return
@@ -334,15 +399,17 @@ function ScrambleBoard({ seedDate, isToday, palette, keysBlocked }) {
       if (e.key === 'Backspace') { e.preventDefault(); backspace(); return }
       if (e.repeat) return
       if (e.key === 'Enter') {
-        const control = e.target instanceof HTMLElement && e.target.closest('a[href], button, [role="button"], [role="switch"]')
-        if (control && (!guess.length || control.matches('a[href]'))) return
+        if (e.target instanceof HTMLElement && e.target.closest(CONTROL)) return
         e.preventDefault(); submit(); return
       }
       if (e.key === 'Escape') { clearGuess(); return }
       const ch = e.key.length === 1 ? e.key.toUpperCase() : ''
       if (!/^[A-Z]$/.test(ch)) return
       const t = order.find(i => pz.pool[i] === ch && !guess.includes(i))
-      if (t !== undefined) { e.preventDefault(); tapTile(t) }
+      if (t === undefined) return
+      e.preventDefault()
+      if (!done) blurFocusedControl()
+      tapTile(t)
     }
   })
   useEffect(() => {
@@ -401,7 +468,7 @@ function ScrambleBoard({ seedDate, isToday, palette, keysBlocked }) {
   }
 
   // One chip per word, shortest first: its length, or ✓ once found.
-  const chips = pz.words.map((w, i) => ({ i, len: w.length })).sort((a, b) => a.len - b.len || a.i - b.i)
+  const chips = wordOrder.map(i => ({ i, len: pz.words[i].length }))
   const remaining = chips.filter(ch => !found.includes(ch.i)).map(ch => ch.len)
   const cellSize = `min(52px, calc((min(100vw, 480px) - 32px - ${(pz.cols - 1) * 4}px) / ${pz.cols}))`
 
@@ -429,7 +496,10 @@ function ScrambleBoard({ seedDate, isToday, palette, keysBlocked }) {
         ⏱ {formatTime(seconds)}
       </div>
 
-      <div className="sc-board" style={{ gridTemplateColumns: `repeat(${pz.cols}, var(--sc-cell))`, '--sc-cell': cellSize }}>
+      <ul className="sc-sr-only" aria-label="Board">
+        {chips.map(ch => <li key={ch.i}>{spokenWord(pz, ch.i, found, revealed, cells, num)}</li>)}
+      </ul>
+      <div className="sc-board" aria-hidden="true" style={{ gridTemplateColumns: `repeat(${pz.cols}, var(--sc-cell))`, '--sc-cell': cellSize }}>
         {board}
       </div>
 

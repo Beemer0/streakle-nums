@@ -65,6 +65,12 @@ export default function Home() {
         .home-group { font-size: 11px; font-weight: 700; letter-spacing: 2.5px; text-transform: uppercase; color: var(--muted); margin: 0 0 10px 4px; }
         .game-row:hover { background: var(--surface-raised) !important; }
         .game-row:hover .game-row-cta { background: var(--gold-hover) !important; }
+        /* Keyboard focus: each group's card clips its rows (overflow hidden, 12px
+           corners) and a later row paints over an earlier one, so the global
+           outset ring would vanish on a group's first row and show on the wrong
+           row elsewhere. Drawn 4–6px inside the row instead, the ring clears the
+           4px game stripe and the corner curve. */
+        .game-row:focus-visible { outline-offset: -6px; }
         @media (max-width: 520px) {
           /* Phones: name and Play on one line; the description and any ✓ Done / 🔥 streak under them. */
           .game-row {

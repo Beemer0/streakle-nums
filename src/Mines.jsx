@@ -35,14 +35,21 @@ const css = `
    with a px fallback for browsers without container-query units. */
 .mn-cell{aspect-ratio:1;min-width:0;min-height:0;overflow:hidden;white-space:nowrap;container-type:inline-size;border-radius:4px;display:flex;align-items:center;justify-content:center;cursor:pointer;box-sizing:border-box}
 .mn-grid[aria-disabled="true"] .mn-cell{cursor:default}
-.mn-cell:focus-visible{outline:2px solid var(--gold);outline-offset:-2px;z-index:1}
-/* Undug cells sit raised and lighter; dug ones sunken and dark. */
-.mn-hidden{background:linear-gradient(180deg,#403829,#342D22);border:1px solid #4A4236;box-shadow:inset 0 1px 0 rgba(var(--ink-rgb),.07)}
-@media(hover:hover){.mn-grid:not([aria-disabled="true"]) .mn-hidden:hover{background:#4A4132}}
-.mn-flag{background:linear-gradient(180deg,#403829,#342D22);border:1px solid #4A4236}
+/* Focus: a gold ring over the cell's outer 2px, a --bg band inside its border. */
+.mn-cell:focus-visible{outline:2px solid var(--gold);outline-offset:-2px;box-shadow:inset 0 0 0 2px var(--bg);z-index:1}
+/* Undug cells sit raised and lighter; dug ones sunken and dark. The 2px edge
+   is what tells them apart at >= 3:1 (the fills alone are ~1.5:1). */
+.mn-hidden,.mn-flag{background:linear-gradient(180deg,var(--mines-tile),var(--mines-tile-low));border:2px solid var(--mines-tile-edge)}
+.mn-hidden{box-shadow:inset 0 1px 0 rgba(var(--ink-rgb),.07)}
+/* A focused undug tile keeps that edge: its ring moves inside the --bg band
+   (edge 0-2px, band 2-4px, ring 4-6px), so edge, band, ring and fill each
+   differ by >= 3:1. A ring over the edge left only the ~1.5:1 fills to tell
+   a focused undug tile from a focused dug one. */
+.mn-hidden:focus-visible,.mn-flag:focus-visible{outline-offset:-6px}
+@media(hover:hover){.mn-grid:not([aria-disabled="true"]) .mn-hidden:hover{background:var(--mines-tile-hover)}}
 .mn-flag .mn-glyph{animation:mnPop 0.18s ease}
-.mn-zero{background:#14120F;border:1px solid var(--surface);cursor:default}
-.mn-number{background:#14120F;border:1px solid var(--surface)}
+.mn-zero{background:var(--mines-dug);border:1px solid var(--surface);cursor:default}
+.mn-number{background:var(--mines-dug);border:1px solid var(--surface)}
 .mn-boom{background:var(--danger);border:1px solid var(--danger)}
 .mn-boom .mn-glyph{animation:mnBoom 0.45s ease}
 .mn-mine{background:var(--surface);border:1px solid var(--border)}
@@ -54,6 +61,10 @@ const css = `
 .mn-seg{display:flex;border:1px solid var(--border);border-radius:8px;overflow:hidden}
 .mn-seg button{background:none;border:none;color:var(--gold);cursor:pointer;font-size:14px;font-weight:700;padding:0 16px;height:44px;touch-action:manipulation;font-family:inherit}
 .mn-seg button[aria-pressed="true"]{background:var(--gold);color:var(--bg)}
+/* .mn-seg clips its children, so the ring goes inside the button; on the
+   pressed gold button it takes the label's dark colour (--ink is 2:1 there). */
+.mn-seg button:focus-visible{outline:2px solid var(--gold);outline-offset:-3px}
+.mn-seg button[aria-pressed="true"]:focus-visible{outline-color:var(--bg)}
 .mn-ladder{display:flex;gap:6px;width:100%;margin-bottom:12px}
 .mn-pill{flex:1 1 0;min-width:0;border:1px solid var(--border);border-radius:8px;padding:6px 4px;text-align:center;background:var(--surface)}
 .mn-pill-name{font-family:var(--font-display);font-weight:800;font-size:14px;letter-spacing:1px;color:var(--ink)}
