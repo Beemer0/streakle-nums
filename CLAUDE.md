@@ -39,7 +39,11 @@ puzzles every day; signed-in players build streaks.
   then Share and "Next: GAME →". Its `ShareButton` owns the share-sheet →
   clipboard → "Copied!" logic — games only pass a `shareText()` builder.
 - Shared: `AuthContext.js` (`useAuth`), `AuthProvider.jsx`, `supabase.js` (PKCE
-  OAuth, so no tokens ever sit in the URL — keep it that way), `analytics.js` (strips
+  OAuth, so no tokens ever sit in the URL — keep it that way), `supabaseLoader.js`
+  (`getSupabase()`: the client loads on first use, outside the entry chunk — code
+  on Home's first paint must use it, never import `./supabase` statically;
+  `mayHaveSession()` lets a guest's page render without waiting for the
+  session read), `analytics.js` (strips
   the hash and OAuth params from Vercel Analytics URLs), `saveResult.js`, `useStreak.js`,
   `streak.js`, `evaluate.js` (Wordle logic, tested), `a11y.js` (`clickableProps`),
   `AwardIcon.jsx`, `ErrorBoundary.jsx`, `validWords.txt` (~14.8k words).
@@ -101,7 +105,9 @@ puzzles every day; signed-in players build streaks.
   `--link-1..4` for Link's groups — coloured by position (easiest →
   trickiest), so Link's puzzles carry no colours.
   Two fonts only: `var(--font-display)` Barlow Condensed (titles),
-  `var(--font-body)` DM Sans.
+  `var(--font-body)` DM Sans — self-hosted woff2 in `src/fonts/`, declared in
+  `src/fonts.css` (no Google Fonts request); `index.html` preloads only the
+  Barlow 800 latin face the h1s use.
 - Push directly to `master` — no PRs unless asked.
 - Verify every change with `npm run build` (and `npm test` for logic).
 - Daily puzzles are date-seeded and must be identical for every user/browser.
@@ -366,7 +372,19 @@ block.
   `/pools`, `/bracket` and `/octagon` on 2026-10-21). The private pools (`/bracket`, `/octagon`,
   `/pools`) stay off the prerender list so no scraper ever finds them.
 - Lighthouse SEO scores 100/100 on `/` and `/words` on the deployed site
-  (2026-10-21); accessibility is 100 too. Performance (77) and best-practices
-  (77) have room: the Google Fonts stylesheet is render-blocking, the main
-  index chunk is ~466 KB (~191 KB of unused JS flagged), and AdSense sets one
-  third-party cookie — all separate from SEO, listed here as future work.
+  (2026-10-21); accessibility is 100 too.
+- Performance (deployed, mobile, 2026-10-23): `/` 89–90 (was 72; FCP
+  3.8 → 1.7 s, LCP 5.2 → 3.6 s), `/words` 93–97 (was 76); TBT and CLS ~0.
+  What did it: self-hosted fonts (no render-blocking third-party CSS);
+  Supabase out of the entry chunk (469.8 KB / 137 KB gzip → 269.6 KB /
+  86 KB gzip; React DOM is most of what's left); a guest's page renders
+  without waiting for `getSession()`; and Home's logo rises instead of fading.
+  Never fade the page's largest element from opacity 0: Chrome then records
+  LCP only when the fade ends, and Lighthouse counts everything fetched
+  meanwhile (AdSense) against it.
+- Still open: AdSense (`adsbygoogle.js` + ~170 KB `show_ads_impl`) is the
+  biggest remaining load cost and sets the `test_cookie` third-party cookie
+  that keeps best-practices at 77. Injecting it ~3 s after `load` measured `/`
+  at 96–97 and best-practices at 96 locally, but that's the owner's call
+  (ad timing, and AdSense may look for the static tag). `/words` LCP waits
+  on its chunk, mostly `validWords.txt` (89 KB raw), which could load lazily.
