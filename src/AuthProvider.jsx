@@ -1,10 +1,9 @@
 import { useEffect, useState } from 'react'
-import { supabase } from './supabase'
+import { getSupabase, mayHaveSession } from './supabaseLoader'
 import { AuthContext } from './AuthContext'
-import { sendPendingResults } from './saveResult'
 
 // Create a profile row on first sign in
-async function createProfile(user) {
+async function createProfile(supabase, user) {
   const { data } = await supabase
     .from('profiles')
     .select('id')
@@ -23,32 +22,55 @@ async function createProfile(user) {
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
-  const [loading, setLoading] = useState(true)
+  // A guest's page renders straight away; one that may hold a session waits
+  // for Supabase to read it, so it never flashes the signed-out view.
+  const [loading, setLoading] = useState(() => mayHaveSession(globalThis.window))
 
   useEffect(() => {
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null)
-      setLoading(false)
+    let active = true
+    let subscription = null
+
+    getSupabase().then(supabase => {
+      if (!active) return
+
+      // Get initial session
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        if (!active) return
+        setUser(session?.user ?? null)
+        setLoading(false)
+      }, error => {
+        console.error('Error reading session:', error)
+        if (active) setLoading(false)
+      })
+
+      // Listen for auth changes
+      const { data } = supabase.auth.onAuthStateChange((_event, session) => {
+        setUser(session?.user ?? null)
+        const signedIn = session?.user
+        if (!signedIn) return
+        // Deferred: supabase calls made inside this callback can deadlock the
+        // auth lock. Results reference the profile row, so it goes first.
+        setTimeout(async () => {
+          await createProfile(supabase, signedIn)
+          const { sendPendingResults } = await import('./saveResult')
+          sendPendingResults(signedIn.id)
+        }, 0)
+      })
+      subscription = data.subscription
+    }, error => {
+      // The client didn't load (offline, a stale deploy): carry on signed out.
+      console.error('Error loading Supabase:', error)
+      if (active) setLoading(false)
     })
 
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null)
-      const signedIn = session?.user
-      if (!signedIn) return
-      // Deferred: supabase calls made inside this callback can deadlock the
-      // auth lock. Results reference the profile row, so it goes first.
-      setTimeout(async () => {
-        await createProfile(signedIn)
-        sendPendingResults(signedIn.id)
-      }, 0)
-    })
-
-    return () => subscription.unsubscribe()
+    return () => {
+      active = false
+      subscription?.unsubscribe()
+    }
   }, [])
 
   const signOut = async () => {
+    const supabase = await getSupabase()
     await supabase.auth.signOut()
     setUser(null)
   }

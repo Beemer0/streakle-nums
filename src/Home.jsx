@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from './AuthContext'
-import { supabase } from './supabase'
+import { getSupabase } from './supabaseLoader'
 import UserMenu from './UserMenu'
 import { calcStreak } from './streak'
 import { useSeo, PAGE_SEO } from './seo'
@@ -36,10 +36,11 @@ export default function Home() {
   useEffect(() => {
     if (!user) return
     const today = new Date().toLocaleDateString('en-CA')
-    supabase
-      .from('game_results')
-      .select('game, puzzle_date, completed')
-      .eq('user_id', user.id)
+    getSupabase()
+      .then(supabase => supabase
+        .from('game_results')
+        .select('game, puzzle_date, completed')
+        .eq('user_id', user.id))
       .then(({ data }) => {
         if (!data) return
         const map = {}
@@ -49,6 +50,7 @@ export default function Home() {
         setStreaks(calcStreaks(completed))
         setResultsFor(user.id)
       })
+      .catch(error => console.error('Error loading results:', error))
   }, [user])
 
   return (
@@ -60,6 +62,9 @@ export default function Home() {
     }}>
       <style>{`
         @keyframes fadeIn { from { opacity:0; transform:translateY(10px) } to { opacity:1; transform:translateY(0) } }
+        /* The logo only rises: the h1 is the page's largest paint, and a fade
+           from opacity 0 holds that paint (LCP) back until the fade ends. */
+        @keyframes riseIn { from { transform:translateY(10px) } to { transform:translateY(0) } }
         @keyframes pulse  { 0%,100%{opacity:1} 50%{opacity:0.4} }
         .game-row { text-decoration: none; display: flex; align-items: center; transition: background 0.15s; }
         .home-group { font-size: 11px; font-weight: 700; letter-spacing: 2.5px; text-transform: uppercase; color: var(--muted); margin: 0 0 10px 4px; }
@@ -104,7 +109,7 @@ export default function Home() {
       <main style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
 
       {/* ── Logo ── */}
-      <div className="home-section" style={{ textAlign: 'center', marginBottom: 12, animation: 'fadeIn 0.5s ease' }}>
+      <div className="home-section" style={{ textAlign: 'center', marginBottom: 12, animation: 'riseIn 0.5s ease' }}>
         <h1 className="home-logo" style={{
           fontFamily: 'var(--font-display)',
           fontSize: 72, fontWeight: 800, letterSpacing: 10,

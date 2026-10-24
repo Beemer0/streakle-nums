@@ -1,4 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
+import { authStorageKey } from './supabaseLoader.js'
 
 vi.stubEnv('VITE_SUPABASE_URL', 'https://example.supabase.co')
 vi.stubEnv('VITE_SUPABASE_ANON_KEY', 'anon-key')
@@ -12,6 +13,12 @@ const fakeWindow = (hash, search = '') => ({
 
 it('signs in with the PKCE flow, so OAuth tokens never land in the page URL', () => {
   expect(supabase.auth.flowType).toBe('pkce')
+})
+
+// AuthProvider decides whether to wait for the client by looking for the
+// session under this key, before the client has loaded.
+it('keeps the session where supabaseLoader looks for it', () => {
+  expect(supabase.auth.storageKey).toBe(authStorageKey('https://example.supabase.co'))
 })
 
 describe('takeImplicitTokens', () => {

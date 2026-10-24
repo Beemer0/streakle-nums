@@ -4,7 +4,6 @@ import { useAuth } from './AuthContext.js'
 import { isGamePath } from './games.js'
 import Home from './Home.jsx'
 import ErrorBoundary from './ErrorBoundary.jsx'
-import LoginPage from './LoginPage.jsx'
 import { GameLoading } from './GameShell.jsx'
 
 // Game routes are code-split — each loads its own chunk on demand.
@@ -18,6 +17,7 @@ const Privacy  = lazy(() => import('./Privacy.jsx'))
 const Bracket  = lazy(() => import('./Bracket.jsx'))
 const Octagon  = lazy(() => import('./Octagon.jsx'))
 const PoolHistory = lazy(() => import('./PoolHistory.jsx'))
+const LoginPage = lazy(() => import('./LoginPage.jsx'))
 const Mines    = lazy(() => import('./Mines.jsx'))
 const Weave    = lazy(() => import('./Weave.jsx'))
 const Scramble = lazy(() => import('./Scramble.jsx'))

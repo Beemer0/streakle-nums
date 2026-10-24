@@ -1,5 +1,5 @@
 import { useEffect, useState, useSyncExternalStore } from 'react'
-import { supabase } from './supabase'
+import { getSupabase } from './supabaseLoader'
 import { useAuth } from './AuthContext'
 import { POOLS } from './pools'
 
@@ -27,7 +27,8 @@ const getRefreshes = () => refreshes
 
 function fetchMemberPoolIds(userId) {
   if (cache?.userId === userId) return cache.promise
-  const promise = Promise.all(POOLS.map(p => supabase.rpc('is_member_of', { pool: p.id })))
+  const promise = getSupabase()
+    .then(supabase => Promise.all(POOLS.map(p => supabase.rpc('is_member_of', { pool: p.id }))))
     .then(results => {
       const failed = results.find(r => r.error)
       if (failed) throw failed.error
