@@ -12,13 +12,24 @@ export const NO_PAGE_SHORTCUTS = '[data-no-page-shortcuts]'
 // (GameShell's top bar) place it in its own layout instead.
 // A disclosure, not an ARIA menu: the avatar button shows and hides a panel of
 // ordinary links and buttons that Tab moves through.
+// Keyed by the player, so signing out (even when the logout request reports
+// an error after the session is gone) or in as someone else starts the menu
+// afresh: closed, with no stale sign-out message.
 export default function UserMenu({ isInline = false }) {
-  const { user, signOut } = useAuth()
+  const { user } = useAuth()
+  return user ? <AccountMenu key={user.id} user={user} isInline={isInline} /> : null
+}
+
+function AccountMenu({ user, isInline }) {
+  const { signOut } = useAuth()
   const { poolIds } = usePoolMemberships()
   const [open, setOpen] = useState(false)
   // The avatar URL that failed to load, so a refused image falls back to the
   // initial (and a different user's avatar gets its own try).
   const [failedAvatar, setFailedAvatar] = useState(null)
+  const [signingOut, setSigningOut] = useState(false)
+  const [signOutFailed, setSignOutFailed] = useState(false)
+  const inFlight = useRef(false) // a second click while one is in flight does nothing
   const triggerRef = useRef(null)
   const panelId = useId()
 
@@ -35,8 +46,6 @@ export default function UserMenu({ isInline = false }) {
     return () => window.removeEventListener('keydown', onKey)
   }, [open])
 
-  if (!user) return null
-
   const avatar = user.user_metadata?.avatar_url
   const showAvatar = avatar && failedAvatar !== avatar
   const name = user.user_metadata?.full_name || user.email
@@ -47,12 +56,31 @@ export default function UserMenu({ isInline = false }) {
     if (e.relatedTarget && !e.currentTarget.contains(e.relatedTarget)) setOpen(false)
   }
 
+  // A failed sign-out keeps the player signed in (see AuthProvider) and opens
+  // the menu (it may have been closed while the request ran) on a message
+  // under the button; each failure re-announces it.
+  const handleSignOut = async () => {
+    if (inFlight.current) return
+    inFlight.current = true
+    setSigningOut(true)
+    setSignOutFailed(false)
+    const signedOut = await signOut()
+    inFlight.current = false
+    setSigningOut(false)
+    if (signedOut) {
+      setOpen(false)
+    } else {
+      setOpen(true)
+      setSignOutFailed(true)
+    }
+  }
+
   // Open, the whole menu (avatar included) keeps Tab, Enter/Space and Escape,
   // and a letter typed in it never pulls focus out to a game's guess. Closed,
   // the avatar is an ordinary button: typing on it reaches the game.
   return (
     <div onBlur={handleBlur} data-no-page-shortcuts={open || undefined} style={isInline ? { position: 'relative', zIndex: 50 } : { position: 'absolute', right: 16, top: 20, zIndex: 50 }}>
-      <button ref={triggerRef} type="button" onClick={() => setOpen(o => !o)}
+      <button ref={triggerRef} type="button" onClick={() => { setOpen(o => !o); setSignOutFailed(false) }}
         aria-expanded={open} aria-controls={open ? panelId : undefined} aria-label="Account menu" style={{
           width: 36, height: 36, borderRadius: '50%', padding: 0,
           background: 'var(--surface)', border: '2px solid var(--border)',
@@ -93,7 +121,7 @@ export default function UserMenu({ isInline = false }) {
             </div>
           )}
           <div style={{ borderTop: '1px solid var(--border)', paddingTop: 10 }}>
-            <button type="button" onClick={signOut} style={{
+            <button type="button" onClick={handleSignOut} style={{
               width: '100%', background: 'none', border: '1px solid rgba(var(--danger-text-rgb),0.25)',
               borderRadius: 6, color: 'var(--danger-text)', cursor: 'pointer',
               fontSize: 13, fontWeight: 600, padding: '8px',
@@ -102,8 +130,13 @@ export default function UserMenu({ isInline = false }) {
               onMouseOver={e => e.currentTarget.style.background = 'rgba(var(--danger-text-rgb),0.07)'}
               onMouseOut={e => e.currentTarget.style.background = 'none'}
             >
-              Sign out
+              {signingOut ? 'Signing out…' : 'Sign out'}
             </button>
+            {signOutFailed && (
+              <p role="alert" style={{ margin: '8px 0 0', maxWidth: 200, fontSize: 12, lineHeight: 1.4, color: 'var(--danger-text)' }}>
+                Couldn't sign out. Check your connection and try again.
+              </p>
+            )}
           </div>
         </div>
       )}

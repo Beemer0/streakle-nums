@@ -1,13 +1,14 @@
 // @vitest-environment happy-dom
 import { it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { act } from 'react'
+import { act, useEffect } from 'react'
 import { createRoot } from 'react-dom/client'
 
-const { events, calls, sendPendingResults, getSession } = vi.hoisted(() => ({
+const { events, calls, sendPendingResults, getSession, signOut } = vi.hoisted(() => ({
   events: [],
   calls: [],
   sendPendingResults: vi.fn(async (id) => { calls.push(`send:${id}`) }),
   getSession: vi.fn(),
+  signOut: vi.fn(),
 }))
 
 vi.mock('./saveResult', () => ({ sendPendingResults }))
@@ -23,7 +24,7 @@ vi.mock('./supabase', () => {
       auth: {
         getSession,
         onAuthStateChange: (cb) => { events.push(cb); return { data: { subscription: { unsubscribe() {} } } } },
-        signOut: async () => ({ error: null }),
+        signOut,
       },
       from: () => profiles,
     },
@@ -48,8 +49,11 @@ const { AuthProvider } = await import('./AuthProvider.jsx')
 const { useAuth } = await import('./AuthContext.js')
 const SESSION_KEY = 'sb-example-auth-token'
 
+let auth // the context value, for calling signOut from a test
 function Probe() {
-  const { user, loading } = useAuth()
+  const value = useAuth()
+  useEffect(() => { auth = value })
+  const { user, loading } = value
   return <p>{loading ? 'loading' : user?.id ?? 'guest'}</p>
 }
 
@@ -61,6 +65,7 @@ beforeEach(() => {
   calls.length = 0
   sendPendingResults.mockClear()
   getSession.mockReset().mockResolvedValue({ data: { session: null } })
+  signOut.mockReset().mockResolvedValue({ error: null })
   localStorage.clear()
   host = document.createElement('div')
   root = createRoot(host)
@@ -111,4 +116,35 @@ it('lets the page render when reading a stored session fails', async () => {
   await vi.waitFor(() => expect(host.textContent).toBe('guest'))
   expect(log).toHaveBeenCalledWith('Error reading session:', expect.any(Error))
   log.mockRestore()
+})
+
+const signedIn = async () => {
+  await mount()
+  await vi.waitFor(() => expect(events).toHaveLength(1))
+  await fire({ user: { id: 'u-1', email: 'a@b.c', user_metadata: {} } })
+  expect(host.textContent).toBe('u-1')
+}
+const callSignOut = async () => {
+  let result
+  await act(async () => { result = await auth.signOut() })
+  return result
+}
+
+it('signs the player out', async () => {
+  await signedIn()
+  expect(await callSignOut()).toBe(true)
+  expect(host.textContent).toBe('guest')
+})
+
+it('keeps the player signed in when the logout request fails, as the session stays stored', async () => {
+  vi.spyOn(console, 'error').mockImplementation(() => {})
+  signOut.mockResolvedValue({ error: new Error('Failed to fetch') })
+  await signedIn()
+  expect(await callSignOut()).toBe(false)
+  expect(host.textContent).toBe('u-1')
+
+  signOut.mockRejectedValue(new Error('chunk failed to load'))
+  expect(await callSignOut()).toBe(false)
+  expect(host.textContent).toBe('u-1')
+  vi.mocked(console.error).mockRestore()
 })

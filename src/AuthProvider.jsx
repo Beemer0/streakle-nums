@@ -69,10 +69,21 @@ export function AuthProvider({ children }) {
     }
   }, [])
 
+  // Resolves to whether the player is signed out. A logout request that fails
+  // (offline, a server error) leaves the session stored, so they stay signed
+  // in rather than see a signed-out page that a reload would undo; the
+  // account menu says so.
   const signOut = async () => {
-    const supabase = await getSupabase()
-    await supabase.auth.signOut()
-    setUser(null)
+    try {
+      const supabase = await getSupabase()
+      const { error } = await supabase.auth.signOut()
+      if (error) throw error
+      setUser(null)
+      return true
+    } catch (error) {
+      console.error('Error signing out:', error)
+      return false
+    }
   }
 
   return (
