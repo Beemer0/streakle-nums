@@ -2,6 +2,12 @@ import { useState, useEffect, useRef, useId } from 'react'
 import { useAuth } from './AuthContext'
 import { usePoolMemberships } from './usePoolMemberships'
 
+// A region that keeps its keys to itself: while focus is inside one, the
+// page-wide keyboard shortcuts (a game's typing: letters, Backspace, Enter,
+// Escape) stand down. The open account menu is one; another popup can carry
+// the same data-no-page-shortcuts attribute.
+export const NO_PAGE_SHORTCUTS = '[data-no-page-shortcuts]'
+
 // Pinned to the page's top-right corner by default; `isInline` lets a header
 // (GameShell's top bar) place it in its own layout instead.
 // A disclosure, not an ARIA menu: the avatar button shows and hides a panel of
@@ -41,8 +47,11 @@ export default function UserMenu({ isInline = false }) {
     if (e.relatedTarget && !e.currentTarget.contains(e.relatedTarget)) setOpen(false)
   }
 
+  // Open, the whole menu (avatar included) keeps Tab, Enter/Space and Escape,
+  // and a letter typed in it never pulls focus out to a game's guess. Closed,
+  // the avatar is an ordinary button: typing on it reaches the game.
   return (
-    <div onBlur={handleBlur} style={isInline ? { position: 'relative', zIndex: 50 } : { position: 'absolute', right: 16, top: 20, zIndex: 50 }}>
+    <div onBlur={handleBlur} data-no-page-shortcuts={open || undefined} style={isInline ? { position: 'relative', zIndex: 50 } : { position: 'absolute', right: 16, top: 20, zIndex: 50 }}>
       <button ref={triggerRef} type="button" onClick={() => setOpen(o => !o)}
         aria-expanded={open} aria-controls={open ? panelId : undefined} aria-label="Account menu" style={{
           width: 36, height: 36, borderRadius: '50%', padding: 0,

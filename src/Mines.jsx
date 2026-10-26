@@ -17,6 +17,10 @@ const GREEN = 'var(--success)', RED = 'var(--danger)'
 const DIGIT_COLORS = ['#93C5FD', 'var(--success-text)', 'var(--danger-text)', '#C4B5FD', '#FDBA74', '#5EEAD4', 'var(--ink)', 'var(--gold)']
 const CHECKPOINT_KEY = 'streakle-mines'
 const BOOM_MS = 1100
+// What a move says waits this long after the focus move that comes with it:
+// screen readers cut off a live message that arrives together with a focus
+// change, but queue one that arrives once the focus speech has begun.
+const ANNOUNCE_AFTER_FOCUS_MS = 200
 
 const css = `
 @keyframes mnBoom{0%{transform:scale(1)}40%{transform:scale(1.35)}100%{transform:scale(1)}}
@@ -74,9 +78,18 @@ const css = `
 .mn-pip.on{background:var(--gold)}
 .mn-toast{position:fixed;top:80px;left:50%;transform:translateX(-50%);background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px 20px;font-size:14px;font-weight:600;color:var(--ink);z-index:60;animation:mnSlideUp 0.2s ease;white-space:nowrap}
 .mn-sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+/* Here the bar is fixed over the bottom of the screen, which a browser's
+   focus scrolling ignores. Its height is set once (1px border + 10px + the
+   46px toggle + 10px, plus the home-bar inset, which stays 0 until the
+   viewport meta opts into viewport-fit=cover) and reserved twice: as the
+   root's scroll padding, so a focused cell, Next or the result stops above
+   the bar (8px clears a ring drawn outside its element), and below the page
+   (GameShell's own 24px on top), so the last of it can scroll that far. This
+   <style> only exists while Mines is mounted, so no other page keeps either. */
 @media(max-width:520px){
-  .mn-bar{position:fixed;bottom:0;left:0;right:0;z-index:50;margin:0;padding:10px 16px calc(10px + env(safe-area-inset-bottom));background:rgba(15,14,12,0.96);border-top:1px solid var(--border)}
-  .mn-main{padding-bottom:96px !important}
+  html{--mn-bar-h:calc(67px + env(safe-area-inset-bottom));scroll-padding-bottom:calc(var(--mn-bar-h) + 8px)}
+  .mn-bar{position:fixed;bottom:0;left:0;right:0;z-index:50;height:var(--mn-bar-h);margin:0;padding:10px 16px calc(10px + env(safe-area-inset-bottom));background:rgba(15,14,12,0.96);border-top:1px solid var(--border)}
+  .mn-main{padding-bottom:calc(var(--mn-bar-h) + 24px) !important}
 }
 `
 
@@ -88,6 +101,23 @@ function formatDate(dateStr) {
 
 const sum = arr => arr.reduce((a, b) => a + b, 0)
 const plural = (n, word) => `${n} ${word}${n !== 1 ? 's' : ''}`
+
+// Focus the player can no longer use: dropped to <body> with a control that
+// went away, or left on the board, which a clear or the day's end disables.
+// Anywhere else (the Dig / Flag toggle, a header button, the open Archive)
+// the player put it, so it stays.
+function focusStranded(grid) {
+  const el = document.activeElement
+  return !el || el === document.body || !el.isConnected || Boolean(grid?.contains(el))
+}
+
+// Without preventScroll the browser scrolls a focused element its own way
+// (Chrome centres it); 'nearest' moves only as far as needed and honours the
+// root's scroll padding, so on a phone it stops above the fixed bar.
+function focusInView(el) {
+  el.focus({ preventScroll: true })
+  el.scrollIntoView({ block: 'nearest', inline: 'nearest' })
+}
 
 // Every safe cell revealed, every mine flagged — the finished-board state.
 function fullReveal(board) {
@@ -199,6 +229,15 @@ export default function Mines() {
   const lastPointerType = useRef('mouse')
   const suppressClick = useRef(false)
   const ladderRef = useRef(null)
+  const gridRef = useRef(null)
+  const nextRef = useRef(null)
+  const resultRef = useRef(null)
+  // Set by a clear, a new rung and the day's end, whose render removes or
+  // disables the control that had focus (never by a load, a reload into a
+  // later rung or an Archive switch): the render it waits for (`phase` and
+  // `rung`), what to focus once that render lands (`target`), whether the
+  // ladder goes to the top first, and what to say.
+  const afterMove = useRef(null)
 
   const { board, cells, rung, hits, acc, phase, hit } = g
   const spec = RUNGS[rung]
@@ -248,6 +287,19 @@ export default function Mines() {
     pushTimeout(() => setToast(t => (t === msg ? null : t)), 2200)
   }
 
+  // An earlier render's effects can run after a move is set: a clock tick's,
+  // say, which React runs a task after laying it out, or first thing before
+  // the move's own render. So a move is taken only by the render it names.
+  useEffect(() => {
+    const move = afterMove.current
+    if (!move || move.phase !== phase || move.rung !== rung) return
+    afterMove.current = null
+    if (move.top) ladderRef.current?.scrollIntoView({ block: 'start' })
+    const el = move.target()
+    if (el && focusStranded(gridRef.current)) focusInView(el)
+    if (move.say) pushTimeout(() => announce(move.say), ANNOUNCE_AFTER_FOCUS_MS)
+  })
+
   const spawnConfetti = () => {
     const items = Array.from({length:30},(_,i)=>({
       id:i, x:20+Math.random()*60, delay:Math.random()*700,
@@ -286,6 +338,8 @@ export default function Mines() {
     // records the loss.
     persist({ ...next, phase: lost ? 'lost' : 'ready' })
     pushTimeout(() => {
+      // The loss was said with the blast; focus goes to the result.
+      if (lost) afterMove.current = { phase: 'lost', rung, target: () => resultRef.current }
       setG(cur => lost
         ? { ...cur, phase: 'lost' }
         : { ...cur, cells: openingState(cur.board), phase: 'ready', hit: -1 })
@@ -307,14 +361,19 @@ export default function Mines() {
       if (isToday) saveResult({ game: 'mines', puzzleDate: seedDate, completed: true, score: Math.round(total / 1000), swaps_used: mistakes })
       persist(next)
       spawnConfetti()
-      announce(`All three boards cleared in ${formatTime(total)}.`)
+      afterMove.current = { phase: 'won', rung, target: () => resultRef.current, say: `All three boards cleared in ${formatTime(total)}.` }
     } else {
       const next = { ...g, cells: done, acc: accNext, phase: 'cleared' }
       setG(next)
       setSegStart(null)
       // Written as the NEXT rung so a reload lands on it, not on a replay.
       persist({ ...next, rung: rung + 1, phase: 'ready', hit: -1 })
-      announce(`${spec.label} cleared in ${formatTime(accNext[rung])}. ${RUNGS[rung + 1].label} unlocked.`)
+      afterMove.current = {
+        phase: 'cleared',
+        rung,
+        target: () => nextRef.current,
+        say: `${spec.label} cleared in ${formatTime(accNext[rung])}. ${RUNGS[rung + 1].label} unlocked.`,
+      }
     }
     void nextCells
   }
@@ -352,8 +411,15 @@ export default function Mines() {
     const nb = generateBoard(seedDate, r)
     setG({ ...g, board: nb, cells: openingState(nb), rung: r, phase: 'ready', hit: -1 })
     setFocusIdx(nb.open)
-    announce(`${RUNGS[r].label}: ${nb.cols} by ${nb.rows}, ${nb.mines} mines. 3 attempts.`)
-    ladderRef.current?.scrollIntoView({ block: 'start' })
+    // Next goes with this render. Once the new board is laid out, the ladder
+    // goes to the top and focus to the opening cell, the board's Tab stop.
+    afterMove.current = {
+      phase: 'ready',
+      rung: r,
+      top: true,
+      target: () => gridRef.current?.querySelector(`[data-idx="${nb.open}"]`),
+      say: `${RUNGS[r].label}: ${nb.cols} by ${nb.rows}, ${nb.mines} mines. 3 attempts.`,
+    }
   }
 
   // Pause when the tab hides or the page unloads so backgrounded time never
@@ -437,7 +503,8 @@ export default function Mines() {
     e.preventDefault()
     if (i !== focusIdx) {
       setFocusIdx(i)
-      e.currentTarget.querySelector(`[data-idx="${i}"]`)?.focus()
+      const el = e.currentTarget.querySelector(`[data-idx="${i}"]`)
+      if (el) focusInView(el)
     }
   }
 
@@ -534,6 +601,7 @@ export default function Mines() {
         </div>
 
         <div
+          ref={gridRef}
           className={`mn-grid${phase === 'exploded' ? ' mn-shake' : ''}`}
           role="grid"
           aria-label={`${spec.label} board, ${board.rows} rows by ${board.cols} columns, ${board.mines} mines`}
@@ -561,7 +629,7 @@ export default function Mines() {
 
         {phase === 'cleared' && (
           <div style={{ textAlign: 'center', margin: '16px 0 4px', animation: 'mnSlideUp 0.4s ease' }}>
-            <button onClick={nextRung} style={{ background: GOLD, color: 'var(--bg)', border: 'none', borderRadius: 8, padding: '10px 28px', fontSize: 15, fontWeight: 700, cursor: 'pointer' }}
+            <button ref={nextRef} onClick={nextRung} style={{ background: GOLD, color: 'var(--bg)', border: 'none', borderRadius: 8, padding: '10px 28px', fontSize: 15, fontWeight: 700, cursor: 'pointer' }}
               onMouseOver={e => e.currentTarget.style.background = 'var(--gold-hover)'}
               onMouseOut={e => e.currentTarget.style.background = GOLD}>
               Next: {RUNGS[rung + 1].label} →
@@ -570,7 +638,7 @@ export default function Mines() {
         )}
 
         {phase === 'won' && (
-          <ResultCard game="mines" outcome="won" title="🎉 All clear!" shareText={shareText}>
+          <ResultCard ref={resultRef} game="mines" outcome="won" title="🎉 All clear!" shareText={shareText}>
             <div className="rc-headline">{formatTime(totalMs)} · {plural(mistakes, 'mistake')}</div>
             <div className="rc-detail">
               {RUNGS.map((s, i) => `${s.label} ${formatTime(acc[i])}`).join(' · ')}
@@ -579,7 +647,7 @@ export default function Mines() {
         )}
 
         {phase === 'lost' && (
-          <ResultCard game="mines" outcome="lost" title="Game over!" shareText={shareText}>
+          <ResultCard ref={resultRef} game="mines" outcome="lost" title="Game over!" shareText={shareText}>
             <div className="rc-detail">Out of attempts on {spec.label} · {formatTime(totalMs)} · {plural(mistakes, 'mistake')}</div>
           </ResultCard>
         )}

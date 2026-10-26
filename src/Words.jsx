@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import Archive from './Archive'
 import GameShell from "./GameShell";
 import ResultCard from './ResultCard';
+import { NO_PAGE_SHORTCUTS } from './UserMenu';
 import { saveResult } from './saveResult';
 import { useStreak } from './useStreak';
 import { useBoardDate } from './useBoardDate';
@@ -486,6 +487,9 @@ function WordsBoard({ seedDate, isToday, hc, palette, keysBlocked }) {
       // An open dialog owns the keyboard: Enter activates its buttons and
       // letters never land on the hidden board behind it.
       if (keysBlocked||e.ctrlKey||e.metaKey||e.altKey) return;
+      // So does the open account menu: Enter there works its items (even the
+      // avatar a mouse pressed), and letters and Backspace skip the row.
+      if (e.target instanceof Element&&e.target.closest(NO_PAGE_SHORTCUTS)) return;
       // Enter on a focused control activates it (Archive, How to play, an
       // on-screen key reached with Tab). Only with letters typed, on a button
       // the mouse pressed (it kept focus), does Enter submit the guess instead.

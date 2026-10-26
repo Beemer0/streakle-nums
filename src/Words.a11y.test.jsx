@@ -406,6 +406,69 @@ describe('Words: Enter on a focused page button with letters typed (F160)', () =
   })
 })
 
+// The open account menu keeps its keys (Tab, Enter, Escape): nothing typed
+// on the avatar or Sign out lands in the row.
+describe('Words with the account menu open', () => {
+  const avatar = () => host.querySelector('button[aria-label="Account menu"]')
+  const signOut = () => [...host.querySelectorAll('button')].find(b => b.textContent.trim() === 'Sign out')
+  async function openMenu() {
+    await act(async () => { avatar().focus() })
+    await click(avatar())
+    expect(avatar().getAttribute('aria-expanded')).toBe('true')
+  }
+
+  it('keeps letters and Backspace typed on Sign out or the avatar off the board', async () => {
+    await mount()
+    await type('AB')
+    await openMenu()
+
+    // A browser sends keys to the focused element, so focus each one first.
+    for (const target of [signOut(), avatar()]) {
+      await act(async () => { target.focus() })
+      await press('C', target)
+      await press('Backspace', target)
+      expect(spokenRows()[0]).toBe('Guess 1: A B')
+      expect(document.activeElement).toBe(target)
+    }
+    expect(avatar().getAttribute('aria-expanded')).toBe('true')
+  })
+
+  it('lets Escape close the menu onto the avatar and leaves the row alone', async () => {
+    await mount()
+    await type('AB')
+    await openMenu()
+    await act(async () => { signOut().focus() })
+
+    await press('Escape', signOut())
+    expect(avatar().getAttribute('aria-expanded')).toBe('false')
+    expect(signOut()).toBeUndefined()
+    expect(document.activeElement).toBe(avatar())
+    expect(spokenRows()[0]).toBe('Guess 1: A B')
+  })
+
+  it('lets Enter on the avatar close the menu, even when the mouse opened it with a full row typed', async () => {
+    await mount()
+    await type(MISSES[0])
+    await pointerPress(avatar())
+    expect(avatar().getAttribute('aria-expanded')).toBe('true')
+
+    const enter = await enterOn(avatar())
+    await tick(2000)
+    expect(enter.defaultPrevented).toBe(false)
+    expect(avatar().getAttribute('aria-expanded')).toBe('false')
+    expect(spokenRows()[0]).toBe(`Guess 1: ${spell(MISSES[0])}`)
+    expect(live()).toBe('')
+  })
+
+  it('with the menu closed, a letter typed on the avatar still lands in the row', async () => {
+    await mount()
+    await act(async () => { avatar().focus() })
+    await press('C', avatar())
+    expect(avatar().getAttribute('aria-expanded')).toBe('false')
+    expect(spokenRows()[0]).toBe('Guess 1: C')
+  })
+})
+
 describe('Words with the Archive dialog open (F160)', () => {
   it('lets Enter activate a dialog button instead of submitting the hidden guess', async () => {
     await mount()

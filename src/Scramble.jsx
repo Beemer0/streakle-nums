@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import Archive from './Archive'
 import GameShell from './GameShell'
 import ResultCard from './ResultCard'
+import { NO_PAGE_SHORTCUTS } from './UserMenu'
 import { saveResult } from './saveResult'
 import { useStreak } from './useStreak'
 import { useBoardDate } from './useBoardDate'
@@ -396,6 +397,9 @@ function ScrambleBoard({ seedDate, isToday, palette, keysBlocked }) {
     keyHandler.current = (e) => {
       if (keysBlocked || e.ctrlKey || e.metaKey || e.altKey) return
       if (e.target instanceof HTMLElement && e.target.closest('input, textarea, [contenteditable="true"]')) return
+      // Keys pressed in the open account menu are the menu's: a letter must
+      // not blur Sign out, nor Backspace or Escape edit the guess.
+      if (e.target instanceof HTMLElement && e.target.closest(NO_PAGE_SHORTCUTS)) return
       if (e.key === 'Backspace') { e.preventDefault(); backspace(); return }
       if (e.repeat) return
       if (e.key === 'Enter') {

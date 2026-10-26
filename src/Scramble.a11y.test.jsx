@@ -246,6 +246,61 @@ describe('Enter on a focused control', () => {
   })
 })
 
+// The open account menu keeps its keys (Tab, Enter, Escape): typing there
+// neither pulls focus out of it nor reaches the guess.
+describe('keys pressed in the open account menu', () => {
+  const avatar = () => named('Account menu')
+  const signOut = () => textButton('Sign out')
+  const typedTwo = () => `Your word: ${ROOT[0]} ${ROOT[1]}`
+  async function openMenu() {
+    await act(async () => { avatar().focus() })
+    await click(avatar())
+    expect(avatar().getAttribute('aria-expanded')).toBe('true')
+  }
+
+  it.each([
+    ['Sign out', () => signOut()],
+    ['the avatar', () => avatar()],
+  ])('a letter typed on %s keeps focus there and stays out of the guess', async (_, target) => {
+    await mount()
+    await type(ROOT.slice(0, 2))
+    await openMenu()
+    await act(async () => { target().focus() })
+    const letter = await press(ROOT[2])
+    expect(letter.defaultPrevented).toBe(false)
+    expect(document.activeElement).toBe(target())
+    expect(avatar().getAttribute('aria-expanded')).toBe('true')
+    expect(spokenGuess()).toBe(typedTwo())
+  })
+
+  it('Backspace leaves the guess alone, and Escape closes the menu onto the avatar without clearing it', async () => {
+    await mount()
+    await type(ROOT.slice(0, 2))
+    await openMenu()
+    await act(async () => { signOut().focus() })
+
+    const back = await press('Backspace')
+    expect(back.defaultPrevented).toBe(false)
+    expect(document.activeElement).toBe(signOut())
+    expect(spokenGuess()).toBe(typedTwo())
+
+    await press('Escape')
+    expect(avatar().getAttribute('aria-expanded')).toBe('false')
+    expect(signOut()).toBeUndefined()
+    expect(document.activeElement).toBe(avatar())
+    expect(spokenGuess()).toBe(typedTwo())
+  })
+
+  it('with the menu closed, a letter typed on the avatar still drops its focus and types', async () => {
+    await mount()
+    await act(async () => { avatar().focus() })
+    await type(ROOT.slice(0, 2))
+    expect(document.activeElement).not.toBe(avatar())
+    expect(avatar().getAttribute('aria-expanded')).toBe('false')
+    expect(spokenGuess()).toBe(typedTwo())
+  })
+})
+
 describe('a letter tile used by Enter', () => {
   it('keeps focus, and its focus ring stays at full strength (3:1 on the page)', async () => {
     await mount()
