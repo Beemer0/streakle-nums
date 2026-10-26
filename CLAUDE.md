@@ -79,16 +79,24 @@ puzzles every day; signed-in players build streaks.
   write comes first, "saveResult, then checkpoint the finish" can't lose a day.
 - Tests live next to the code as `*.test.js` (`evaluate.test.js`, `streak.test.js`,
   `mines/engine.test.js`, `weave/engine.test.js`, `scramble/engine.test.js`,
+  `scramble/schedule.test.js`, `words/schedule.test.js`, `rotationSchedule.test.js`,
   the pool scoring suites).
-- Content banks: `Words` has 144 words (`WORDS[YYYYMMDD % 144]` — some answers
-  return after ~59 days), `Link` 71 puzzles in `src/link/puzzles.js`, scheduled by
-  `src/link/schedule.js`: before `LINK_CUTOVER` (2026-10-25) the shipped
-  `YYYYMMDD % 71` (frozen at 71, so history never changes), from it a fixed
-  rotation — each puzzle returns only every 71 days. To add puzzles, append
-  them and add an `ERAS` entry starting on a cycle boundary no time zone has
-  reached: the new era serves them first, so served dates never change and no
-  gap shrinks. Never edit, reorder or remove a shipped puzzle (`schedule.test.js`
-  fingerprints the first 71). The grids, `Nums`, `Mines`, `Weave` and
+- Content banks: `Link` 71 puzzles in `src/link/puzzles.js` and `Words` 144
+  words in `src/words/bank.js`, both scheduled by the shared
+  `src/rotationSchedule.js` (`src/link/schedule.js`, `src/words/schedule.js`):
+  before the cutover (`LINK_CUTOVER` 2026-10-25, `WORDS_CUTOVER` 2026-10-30)
+  the shipped `YYYYMMDD % count` (frozen at the shipped count, so history never
+  changes), from it a fixed rotation — each entry returns only every cycle (71
+  / 144 days). Link's rotation is least-recently-served first; Words' is a
+  seeded shuffle (the strict order kept the bank's alphabetical runs) whose
+  first returns come at least `MIN_GAP` (120) days after the old formula's
+  last use, then every 144 days — never change its seed, `MIN_GAP`, the fill
+  or the PRNG (`words/schedule.test.js` pins the rotation). To add entries,
+  append them and add an `ERAS` entry starting on a cycle boundary no time
+  zone has reached: the new era serves them first, so served dates never
+  change and no gap shrinks. Never edit, reorder or remove a shipped entry
+  (the schedule tests fingerprint them; `check-words.mjs` keeps its own
+  frozen hash of the shipped words). The grids, `Nums`, `Mines`, `Weave` and
   `Scramble` generate fresh daily.
   Validate edits with `node scripts/check-words.mjs`, `node scripts/check-link.mjs`
   (also fails on a puzzle outside the schedule or any repeat within 71 days),
@@ -317,7 +325,10 @@ the puzzle ENDS at 0 swaps (`completed: false`). `game_results.score` = stars,
   touch it and never call `saveResult`. The board is keyed by date, tiles are
   real buttons (tap-tap or pointer drag, Escape clears), swaps FLIP-animate
   unless reduced motion is on, and it honours Words' `streakle-hc`
-  high-contrast setting.
+  high-contrast setting. A touch/pen press starts out captured by its tile,
+  so the grid taking the capture fires a bubbling `lostpointercapture`: only
+  the grid's own capture loss of the pressing pointer may end a drag
+  (`Weave.drag.test.jsx`), or touch drags never swap.
 
 ## Scramble — daily anagram crossword (`/scramble`)
 One set of 7 letters a day (a shuffled 7-letter root word) and a
@@ -339,16 +350,30 @@ whose cells all fill in counts as found. Score = active time + hint penalty;
   hand-picked common list is its anagram (TEAM/MEAT/MATE are out).
 - Layout: the root goes first; each later word takes the spot with the most
   crossings, then the tightest board (≤ 9×9); words only touch where they
-  cross. No root repeats within a 64-day block; shorter words (shared by
-  many roots) don't repeat within each 16-day stretch. A cold load late in
-  a block replays the block first (~30 ms desktop worst case; the checker
-  gates it at 120 ms in fresh engine instances).
+  cross. Before `SCRAMBLE_CUTOVER` (2026-10-30, frozen): no root repeats
+  within a 64-day block, shorter words not within each 16-day stretch (a
+  root could return across a block edge). From it: the 290 roots that can
+  build a board are dealt into 5 fixed groups and 32-day blocks take the
+  groups in turn, so a root returns no sooner than 129 days (across the
+  cutover too, via the frozen `ROOTS_BEFORE_CUTOVER`); a root's shorter
+  words' colours must sum to its cycle number mod 10, so no board repeats
+  within a 1600-day epoch (after that one may return, never sooner than 1569
+  days — by design, no upkeep); no day repeats one of the 12 boards served
+  before the cutover (`SERVED_BOARDS`). Shorter words don't repeat within 16
+  days inside a block. A cold load builds at most one block (~45–55 ms
+  desktop worst case; the checker gates it at 120 ms, best of 3 fresh
+  engine instances).
 - **Any change to the constants, layout search, pool shuffle, `mixSeed`,
-  block scheme or `words.js` rewrites every historical board.** The
-  2026-10-18 board is pinned as `FALLBACK` — update it with
-  `node scripts/check-scramble.mjs --dump 2026-10-18`. The checker replays
-  2025-01-01..2030-12-31 (exit 1 on any fallback, stray letter run,
-  unspellable word, disconnected board, repeat or slow generation).
+  block or group scheme, the colouring or `words.js` rewrites boards.**
+  Every served board before the cutover is pinned (`schedule.test.js`
+  `SERVED`, and the 2026-10-18 board as `FALLBACK` — print it with
+  `node scripts/check-scramble.mjs --dump 2026-10-18`), and so are the boards
+  from the cutover (its first block, two far days, a digest of every block
+  through 2030): never update a pin for a day any time zone has reached. The
+  checker replays 2025-01-01..2030-12-31 (`--days 4017` reaches the second
+  epoch; exit 1 on any fallback, stray letter run, unspellable word,
+  disconnected board, a root back within 129 days, a board repeat the scheme
+  doesn't allow or slow generation).
 - `Scramble.jsx` keeps today's found words, hinted cells, hints and clock in
   localStorage (`streakle-scramble`, v2 — the old ladder's v1 is ignored — and bound to
   the board by a pool+words signature, so a same-day engine change resets it);
