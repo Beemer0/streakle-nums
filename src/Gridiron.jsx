@@ -94,8 +94,18 @@ const css = `
 @keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-5px)}40%{transform:translateX(5px)}60%{transform:translateX(-4px)}80%{transform:translateX(4px)}}
 @keyframes confetti{0%{transform:translateY(0) rotate(0deg);opacity:1}100%{transform:translateY(130px) rotate(720deg);opacity:0}}
 @keyframes cellReveal{0%{transform:scale(0.85);opacity:0}100%{transform:scale(1);opacity:1}}
-.gridiron-grid{display:grid;grid-template-columns:90px repeat(3,110px);grid-template-rows:70px repeat(3,100px);gap:4px;padding:0 12px}
-@media(max-width:480px){.gridiron-grid{grid-template-columns:72px repeat(3,88px);grid-template-rows:60px repeat(3,86px)}}
+.gridiron-grid{display:grid;grid-template-columns:90px repeat(3,110px);grid-template-rows:70px repeat(3,100px);gap:4px;padding:0 12px;margin-inline:auto}
+.gridiron-head{padding:4px 6px}
+.gridiron-cell{padding:6px}
+.gridiron-name{font-size:11px}
+/* Phones: cells shrink (to 64px, never under a 44px target) rather than
+   overflow; slim side padding leaves the longest labels and names room (an
+   88px cell holds "Roethlisberger" whole), and the header row grows for a
+   two-line label. */
+@media(max-width:480px){.gridiron-grid{grid-template-columns:72px repeat(3,minmax(64px,88px));grid-template-rows:minmax(60px,auto) repeat(3,86px)}.gridiron-head{padding:4px 2px}.gridiron-cell{padding:6px 2px}}
+/* Narrower than the 372px phone grid (320-371px): slimmer gutters and 10px
+   names for the narrower cells (the very longest still break mid-word). */
+@media(max-width:371px){.gridiron-grid{padding:0 6px;gap:3px}.gridiron-name{font-size:10px}}
 @media(min-width:700px) and (min-height:760px){.gridiron-grid{grid-template-columns:100px repeat(3,128px);grid-template-rows:78px repeat(3,116px)}}
 .gridiron-opt[role="button"]:focus-visible{outline-offset:-3px}
 .gridiron-search:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
@@ -383,8 +393,10 @@ function GridironBoard({ seedDate, isToday, streak }) {
         </div>
       )}
 
-      {/* Grid */}
-      <div style={{overflowX:'auto',width:'100%',display:'flex',justifyContent:'center'}}>
+      {/* Grid: centred by its own auto margins, which (unlike centring the
+          scroller's content) let a grid too wide for the screen overflow to
+          the right only, where it scrolls, never past the left edge. */}
+      <div style={{overflowX:'auto',width:'100%',display:'flex'}}>
         <div className="gridiron-grid" ref={gridRef}>
 
           <div style={{background:'transparent'}}/>
@@ -392,17 +404,17 @@ function GridironBoard({ seedDate, isToday, streak }) {
           {colHeaders.map((col,ci)=>{
             const {award,label,color,logoUrl}=getHeaderContent(col);
             return (
-              <div key={ci} style={{background:'var(--surface)',border:'1px solid var(--border)',borderRadius:8,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:'4px 6px',textAlign:'center'}}>
+              <div key={ci} className="gridiron-head" style={{background:'var(--surface)',border:'1px solid var(--border)',borderRadius:8,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',textAlign:'center'}}>
                 {logoUrl ? <img src={logoUrl} alt="" width={38} height={38} style={{objectFit:'contain'}} onError={e=>{e.target.style.display='none'}}/> : <AwardIcon name={award} size={38}/>}
-                <div style={{fontSize:9,fontWeight:700,color,lineHeight:1.2,marginTop:3}}>{label}</div>
+                <div style={{fontSize:9,fontWeight:700,color,lineHeight:1.2,marginTop:3,overflowWrap:'anywhere'}}>{label}</div>
               </div>
             );
           })}
 
           {rowHeaders.map((row,ri)=>(
             <React.Fragment key={`row-${ri}`}>
-              <div style={{background:'var(--surface)',border:'1px solid var(--border)',borderRadius:8,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:'4px 6px',textAlign:'center'}}>
-                {(()=>{const{award,label,color,logoUrl}=getHeaderContent(row);return(<>{logoUrl?<img src={logoUrl} alt="" width={38} height={38} style={{objectFit:'contain'}} onError={e=>{e.target.style.display='none'}}/>:<AwardIcon name={award} size={38}/>}<div style={{fontSize:9,fontWeight:700,color,lineHeight:1.2,marginTop:3}}>{label}</div></>);})()}
+              <div className="gridiron-head" style={{background:'var(--surface)',border:'1px solid var(--border)',borderRadius:8,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',textAlign:'center'}}>
+                {(()=>{const{award,label,color,logoUrl}=getHeaderContent(row);return(<>{logoUrl?<img src={logoUrl} alt="" width={38} height={38} style={{objectFit:'contain'}} onError={e=>{e.target.style.display='none'}}/>:<AwardIcon name={award} size={38}/>}<div style={{fontSize:9,fontWeight:700,color,lineHeight:1.2,marginTop:3,overflowWrap:'anywhere'}}>{label}</div></>);})()}
               </div>
               {colHeaders.map((col,ci)=>{
                 const key=`${ri}-${ci}`;
@@ -414,7 +426,7 @@ function GridironBoard({ seedDate, isToday, streak }) {
                 // cell names itself through its content (an image role).
                 const cellLabel=`${cellName(ri,ci)}: ${filled?`${filled.player.n}, +${filled.score} points`:'empty'}`;
                 return (
-                  <div key={key} data-cell={key}
+                  <div key={key} data-cell={key} className="gridiron-cell"
                     {...clickableProps(()=>handleCellClick(ri,ci), !isOpen)}
                     aria-label={isOpen?cellLabel:undefined}
                     aria-expanded={isOpen?Boolean(isActive):undefined}
@@ -424,14 +436,15 @@ function GridironBoard({ seedDate, isToday, streak }) {
                     border:`2px solid ${filled?'var(--success)':isActive?'var(--gold)':'var(--border)'}`,
                     borderRadius:8,cursor:filled||gameOver||won?'default':'pointer',
                     display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',
-                    padding:6,textAlign:'center',userSelect:'none',
+                    textAlign:'center',userSelect:'none',
                     animation:isShaking?'shake 0.45s ease':filled&&!initial.cells[key]?'cellReveal 0.35s ease':'none',
                     transition:'background 0.2s,border-color 0.2s',
                   }}>
                     {filled?(
                       <div role="img" aria-label={cellLabel}>
                         <div style={{fontSize:10,fontWeight:700,color:'var(--success-text)',marginBottom:2}}>+{filled.score}</div>
-                        <div style={{fontSize:11,fontWeight:700,color:'var(--ink)',lineHeight:1.3}}>{filled.player.n}</div>
+                        {/* A name too long for a phone's cell breaks inside it rather than spill out. */}
+                        <div className="gridiron-name" style={{fontWeight:700,color:'var(--ink)',lineHeight:1.3,overflowWrap:'anywhere'}}>{filled.player.n}</div>
                       </div>
                     ):isActive?(
                       <div style={{fontSize:11,color:'var(--gold)'}}>Type below ↓</div>

@@ -573,55 +573,100 @@ for (const g of GAMES) {
       await mount(g.Game)
       await openCell(0, 0)
       await type('an')
-      const row = rows()[0]
-      await click(row)
+      // Knockout's weight classes tell fighters apart: readable on the row
+      // as shown and hovered (and on the picked-row colour, kept for safety).
+      const hint = g.name === 'Knockout' ? rows()[0].children[1] : null
+      await click(rows()[0])
       const submit = button(g.submit)
       expect(contrast(submit.style.color, submit.style.background)).toBeGreaterThanOrEqual(4.5)
-      if (g.name === 'Knockout') {
-        // The weight classes tell same-named fighters apart: readable on the
-        // row as shown, picked and hovered.
-        const hint = rows()[0].children[1]
+      if (hint) {
         for (const bg of ['var(--surface)', 'var(--correct-wash)', 'var(--surface-gold)']) {
           expect(contrast(hint.style.color, bg)).toBeGreaterThanOrEqual(4.5)
         }
       }
     })
 
-    if (g.name === 'Knockout') {
-      it('marks the picked fighter as pressed', async () => {
-        await mount(g.Game)
-        await openCell(0, 0)
-        await type('an')
-        expect(rows().every(row => row.getAttribute('aria-pressed') === 'false')).toBe(true)
-        await press(input(), 'ArrowDown')
-        await press(rows()[0], 'ArrowDown')
-        await press(rows()[1], ' ')
-        expect(rows()[1].getAttribute('aria-pressed')).toBe('true')
-        expect(rows()[0].getAttribute('aria-pressed')).toBe('false')
-        expect(focused()).toBe(button('Confirm:'))
-      })
+    // On a phone the open list ran a screen tall, so a submit button below
+    // it sat under the fold: a pick closes the list, as in all three games.
+    it('closes the matches on a pick, so the submit button sits right under the box and takes focus', async () => {
+      await mount(g.Game)
+      await openCell(1, 1)
+      await type('an')
+      // Plain buttons, not toggles: a picked match never stays listed.
+      expect(rows().some(row => row.hasAttribute('aria-pressed'))).toBe(false)
+      const second = rowName(rows()[1])
+      await click(rows()[1])
+      expect(list()).toBeNull()
+      expect(input().value).toBe(second)
+      const submit = button(g.submit)
+      expect(submit.textContent).toContain(second)
+      expect(focused()).toBe(submit)
+      // Nothing between the box and the button (the next element holds it).
+      expect(input().nextElementSibling.contains(submit)).toBe(true)
+      expect(host.textContent).toContain('9 guesses left') // picking spends nothing
+      // No stray focus move or count turns up later.
+      await tick(1000)
+      expect(focused()).toBe(submit)
+      expect(spoken()).not.toContain('shown')
+    })
 
-      it('moves focus to Confirm when the picked fighter is picked again, and Escape still returns to the box', async () => {
-        await mount(g.Game)
-        await openCell(0, 0)
-        await type('an')
-        await press(input(), 'ArrowDown')
-        await press(rows()[0], 'Enter')
-        expect(focused()).toBe(button('Confirm:'))
+    it('searches again once the box changes after a pick, and a new pick (even the same player) focuses the submit button', async () => {
+      await mount(g.Game)
+      await openCell(0, 2)
+      await type('an')
+      const [first, second] = rows().map(rowName)
+      await click(rows()[0])
+      expect(focused()).toBe(button(g.submit))
 
-        // Back to the (still listed, pressed) fighter, and Enter again.
-        await act(async () => { rows()[0].focus() })
-        await press(rows()[0], 'Enter')
-        expect(focused()).toBe(button('Confirm:'))
-        expect(rows()[0].getAttribute('aria-pressed')).toBe('true')
+      // Changing the search drops the pick and brings the matches back.
+      await type('an')
+      expect(rows().map(rowName)).toContain(second)
+      expect(button(g.submit)?.disabled ?? true).toBe(true)
+      await click(rows().find(row => rowName(row) === second))
+      expect(input().value).toBe(second)
+      expect(focused()).toBe(button(g.submit))
+      expect(focused().textContent).toContain(second)
 
-        await act(async () => { rows()[0].focus() })
-        await press(rows()[0], 'Escape')
-        expect(list()).toBeNull()
-        expect(focused()).toBe(input())
-        await tick(100)
-        expect(focused()).toBe(input())
-      })
-    }
+      // Back to the first player, by keyboard this time.
+      await type('an')
+      await press(input(), 'ArrowDown')
+      await press(rows()[0], 'Enter')
+      expect(list()).toBeNull()
+      expect(focused()).toBe(button(g.submit))
+      expect(focused().textContent).toContain(first)
+
+      // The same player again: still a pick, still focused.
+      await type('an')
+      await click(rows()[0])
+      expect(focused()).toBe(button(g.submit))
+      expect(focused().textContent).toContain(first)
+      expect(host.textContent).toContain('9 guesses left')
+    })
+
+    it('Escape on the submit button after a pick closes the search, back to its cell', async () => {
+      await mount(g.Game)
+      await openCell(2, 2)
+      await type('an')
+      await press(input(), 'Enter')
+      expect(focused()).toBe(button(g.submit))
+      await press(button(g.submit), 'Escape')
+      expect(input()).toBeNull()
+      expect(focused()).toBe(cellEl(2, 2))
+      expect(saveResult).not.toHaveBeenCalled()
+    })
+
+    it('centres the grid with its own margins, never by centring the scroller, so a narrow screen can scroll to its left edge', async () => {
+      await mount(g.Game)
+      const grid = host.querySelector(g.grid)
+      const scroller = grid.parentElement
+      expect(scroller.style.overflowX).toBe('auto')
+      expect(scroller.style.justifyContent).toBe('')
+      const css = [...host.querySelectorAll('style')].map(s => s.textContent).join('\n')
+      expect(css).toMatch(new RegExp(`\\${g.grid}\\{[^}]*margin-inline:auto`))
+      // On phones the answer columns shrink instead of overflowing, never
+      // below a comfortable tap target (the layout itself is checked in a
+      // real browser: happy-dom draws nothing).
+      expect(css).toContain(`@media(max-width:480px){${g.grid}{grid-template-columns:72px repeat(3,minmax(64px,88px))`)
+    })
   })
 }
