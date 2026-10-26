@@ -57,6 +57,10 @@ puzzles every day; signed-in players build streaks.
   game ends (never out of an open dialog), and name every cell/tile/key with
   its position and state. The site-wide `body::before` texture blocks axe's
   contrast rule; check contrast from the tokens (4.5:1 text, 3:1 large/UI).
+  A page-wide key handler (Words' and Scramble's typing) must return early
+  for `e.target.closest(NO_PAGE_SHORTCUTS)` (exported by `UserMenu.jsx`): the
+  open account menu carries `data-no-page-shortcuts`, and so should any
+  future popup that keeps its own keys.
 - Saving a day: every game page takes `{ seedDate, isToday, boardKey, selectDate }`
   from `useBoardDate.js`. Today's board keeps the date it was dealt, so a page
   open past midnight finishes (and saves) that day's puzzle; picking today in
@@ -271,7 +275,13 @@ mine writes `completed: false`. `game_results.score` = seconds,
   does NOT use `clickableProps`. Undug and flagged tiles are told apart from
   dug cells by a 2px `--mines-tile-edge` (3:1+ against dug cells and the page,
   WCAG 1.4.11); the tile colours are `--mines-*` tokens in `index.css`, and the
-  focus ring is drawn inside that edge (`outline-offset: -6px`).
+  focus ring is drawn inside that edge (`outline-offset: -6px`). At ≤520px
+  the bar is fixed to the bottom; its height (`--mn-bar-h`) is reserved as the
+  root's scroll padding and below the page, so focus never sits under it.
+  Focus moves after a clear (to Next), Next (to the new board's opening cell)
+  and the day's end (to the result) go through the `afterMove` ref, which
+  names the render it waits for — keep that, or a clock tick's effects can
+  take the move against the old DOM.
 - `Archive.jsx` `GAME_META.start` lets a game's calendar begin after the
   site's `LAUNCH_DATE`; the six older games keep the default.
 
