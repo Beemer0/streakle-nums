@@ -106,7 +106,8 @@ describe('generatePuzzle', () => {
     }
   })
 
-  it('never repeats a root within a block or a shorter word within a stretch', () => {
+  // The scheme before the cutover; schedule.test.js covers the one after it.
+  it('before the cutover, never repeats a root within a block or a shorter word within a stretch', () => {
     const start = addDays(BLOCK_EPOCH, ROOT_BLOCK_DAYS * 2)
     const roots = [], stretch = []
     for (let k = 0; k < ROOT_BLOCK_DAYS; k++) {

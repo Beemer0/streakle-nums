@@ -1,8 +1,8 @@
 // Scramble — the pure engine behind /scramble. No React, no DOM, no clock, no
 // Math.random (dates only go through Date.UTC arithmetic): every board is a
 // deterministic function of the date string, so all players get the same
-// puzzle. Imported unchanged by Scramble.jsx,
-// engine.test.js and scripts/check-scramble.mjs.
+// puzzle. Imported unchanged by Scramble.jsx, engine.test.js,
+// schedule.test.js and scripts/check-scramble.mjs.
 //
 // A day is one set of POOL_SIZE letters — a scrambled 7-letter root word —
 // and a Scrabble-style board of BOARD_WORDS words built from those letters:
@@ -11,9 +11,16 @@
 // cross. Players find the words in any order; a found word's letters show up
 // in the words that cross it.
 //
-// ANY change to the constants, the layout search, the pool shuffle, mixSeed,
-// the block scheme or words.js rewrites every historical board. The FALLBACK
-// snapshot test makes that deliberate.
+// Boards dealt before SCRAMBLE_CUTOVER are frozen. ANY change to the
+// constants, the layout search, the pool shuffle, mixSeed, the block scheme
+// or words.js rewrites them — and the FALLBACK snapshot and the pins in
+// schedule.test.js (the served boards, ROOTS_BEFORE_CUTOVER and
+// SERVED_BOARDS) fail. Any of those, or a change to the group deal, the
+// colouring or the group-block constants, also rewrites every board from the
+// cutover on — and the post-cutover pins in schedule.test.js (its first
+// group block, two far days and a digest of every group block through 2030)
+// fail. Only ever make one from a new cutover that no time zone has reached,
+// and never update a pin for a day any time zone has reached.
 
 import { WORDS } from './words.js'
 
@@ -66,6 +73,13 @@ export function mixSeed(seed) {
   h = Math.imul(h ^ (h >>> 16), 0x85EBCA6B)
   h = Math.imul(h ^ (h >>> 13), 0xC2B2AE35)
   return (h ^ (h >>> 16)) | 0
+}
+
+// 32-bit FNV-1a, for word colours.
+function fnv1a(str) {
+  let h = 0x811C9DC5
+  for (let i = 0; i < str.length; i++) h = Math.imul(h ^ str.charCodeAt(i), 0x01000193)
+  return h >>> 0
 }
 
 function shuffled(arr, rng) {
@@ -241,24 +255,30 @@ export const TARGET_LENGTHS = [6, 5, 5, 4, 4]
 export const MIN_LONG_WORDS = 2  // shorter words of 5+ letters a board must have
 
 // One board attempt for `root`: the root goes at the origin, then each word
-// takes bestSpot among the unused candidates of its target length.
-function layout(root, candidates, rng) {
+// takes bestSpot among the unused candidates of its target length. With a
+// `need` (from the cutover), the last word must also bring the colours of the
+// shorter words to need mod RESIDUES, and keeps its target length.
+function layout(root, candidates, rng, need = null) {
   const grid = new Map()
   const placements = [{ word: root, row: 0, col: 0, dir: rng() < 0.5 ? ACROSS : DOWN }]
   place(grid, placements[0])
   const used = new Set([root])
   const order = shuffled(candidates, rng)
-  for (const target of TARGET_LENGTHS) {
-    const lengths = [target, ...[6, 5, 4].filter(n => n !== target)]
+  let colours = 0
+  for (const [i, target] of TARGET_LENGTHS.entries()) {
+    const fixed = need !== null && i === TARGET_LENGTHS.length - 1
+    const lengths = fixed ? [target] : [target, ...[6, 5, 4].filter(n => n !== target)]
+    const colour = fixed ? (need - colours % RESIDUES + RESIDUES) % RESIDUES : -1
     let spot = null
     for (const len of lengths) {
-      spot = bestSpot(grid, placements, order.filter(w => w.length === len && !used.has(w)), rng)
+      spot = bestSpot(grid, placements, order.filter(w => w.length === len && !used.has(w) && (colour < 0 || wordColour(w) === colour)), rng)
       if (spot) break
     }
     if (!spot) return null
     place(grid, spot)
     placements.push(spot)
     used.add(spot.word)
+    colours += wordColour(spot.word)
   }
   if (placements.slice(1).filter(p => p.word.length >= 5).length < MIN_LONG_WORDS) return null
   const { minR, minC } = bounds(placements)
@@ -277,46 +297,157 @@ function withShape(pool, placements, meta) {
   return { pool, root: placements[0].word, placements, words: placements.map(p => p.word), rows, cols, meta }
 }
 
-// bannedRoots / bannedWords: roots and shorter words used recently (see
-// generatePuzzle). A root needs at least BOARD_WORDS − 1 fresh words inside it.
-function generateDay(dateStr, bannedRoots, bannedWords) {
+// One day's board from `roots`, minus bannedRoots / bannedWords (roots and
+// shorter words used recently — see the schedule below). A root needs at
+// least BOARD_WORDS − 1 fresh words inside it. From the cutover a day has a
+// colour `need` (see layout), and a board served before it is skipped.
+function generateDay(dateStr, roots, bannedRoots, bannedWords, need = null) {
   const rng = mulberry32(mixSeed(dateSeed(dateStr)))
-  const roots = shuffled(WORDS[POOL_SIZE], rng).filter(w => !bannedRoots.has(w)).slice(0, GEN_ROOTS)
-  for (let r = 0; r < roots.length; r++) {
-    const root = roots[r]
+  const order = shuffled(roots, rng).filter(w => !bannedRoots.has(w)).slice(0, GEN_ROOTS)
+  for (let r = 0; r < order.length; r++) {
+    const root = order[r]
     const candidates = subwords(root).filter(w => !bannedWords.has(w))
     if (candidates.length < BOARD_WORDS - 1) continue
     for (let attempt = 0; attempt < GEN_LAYOUTS; attempt++) {
-      const placements = layout(root, candidates, rng)
-      if (placements) return withShape(poolFor(root, rng), placements, { root: r, attempt, fallback: false })
+      const placements = layout(root, candidates, rng, need)
+      if (!placements || (need !== null && SERVED.has(boardId(placements.map(p => p.word))))) continue
+      return withShape(poolFor(root, rng), placements, { root: r, attempt, fallback: false })
     }
   }
   return null
 }
 
-// No repeats: days are tiled into ROOT_BLOCK_DAYS-day blocks from
-// BLOCK_EPOCH, and no root repeats within a block. Shorter words are shared
-// between many roots (RAIN fits PAINTER, TRAINED, …), so banning them for a
-// whole block would starve later days; they are banned within each
-// WORD_BLOCK_DAYS-day stretch of the block instead. A day depends on the
-// days before it in its block, so a block is generated in order once and
-// cached.
+// ── Schedule ──
+//
+// Before SCRAMBLE_CUTOVER (frozen): days are tiled into ROOT_BLOCK_DAYS-day
+// blocks from BLOCK_EPOCH, and no root repeats within a block. Shorter words
+// are shared between many roots (RAIN fits PAINTER, TRAINED, …), so banning
+// them for a whole block would starve later days; they are banned within
+// each WORD_BLOCK_DAYS-day stretch of the block instead. Across a block edge
+// a root could come back the next day, and a whole board 45 days later
+// (2026-12-18 would have repeated 2026-11-03).
 export const BLOCK_EPOCH = '2025-01-01'
 export const ROOT_BLOCK_DAYS = 64
 export const WORD_BLOCK_DAYS = 16
+
+// From SCRAMBLE_CUTOVER (a page load still builds at most one block):
+// - Roots: the roots that can build a board (290 of 521) are dealt once into
+//   ROOT_GROUPS fixed groups (rootGroups), and GROUP_BLOCK_DAYS-day blocks
+//   from the cutover take the groups in turn, so a root sits out the other
+//   groups' blocks and returns at least ROOT_GAP (129) days later, across
+//   the cutover too. Five groups of 58 roots for 32-day blocks (two word
+//   stretches) leave every day a board through 2040 with room to spare:
+//   36-day blocks would too, 40-day ones would not.
+// - Shorter words: none repeats within WORD_BLOCK_DAYS days inside a block
+//   (rolling, so also within each 16-day stretch); across a block edge one
+//   can come back sooner.
+// - Boards (a root and its shorter words, whatever the shuffle and layout):
+//   a root gets at most one day per cycle (ROOT_GROUPS blocks), and its
+//   shorter words' colours must add up to the cycle number mod RESIDUES, so
+//   no board repeats within an epoch (RESIDUES cycles, EPOCH_DAYS = 1600
+//   days from the cutover). The colours then come round again, so by design
+//   a board may return, but only in its root's group block RESIDUES cycles
+//   on: never sooner than EPOCH_DAYS − GROUP_BLOCK_DAYS + 1 = 1569 days
+//   (~4.3 years; the closest return through 2040 is 1570 days). No day
+//   repeats a board served before the cutover (SERVED_BOARDS); the frozen
+//   days before launch were never shown, so their boards may come back.
+//   These hold while no day falls back to FALLBACK (a served board), which
+//   the checker gates: none does through 2040.
+// A day depends only on the days before it in its block, so a block is
+// generated in order once and cached.
+export const SCRAMBLE_CUTOVER = '2026-10-30'
+export const ROOT_GROUPS = 5
+export const GROUP_BLOCK_DAYS = 32
+export const ROOT_GAP = (ROOT_GROUPS - 1) * GROUP_BLOCK_DAYS + 1
+export const RESIDUES = 10
+export const EPOCH_DAYS = RESIDUES * ROOT_GROUPS * GROUP_BLOCK_DAYS
+const GROUP_SEED = 0x5C4A3B1E
+
+// A shorter word's colour, 0 … RESIDUES − 1.
+export const wordColour = (word) => fnv1a(word) % RESIDUES
+
+// A board's identity, ignoring the shuffle and the layout: its root, then its
+// shorter words in alphabetical order (`words` = root first, as in a
+// puzzle's words).
+export const boardId = (words) => `${words[0]}: ${words.slice(1).sort().join(' ')}`
+
+// Frozen from the days before the cutover (schedule.test.js regenerates both
+// from them). The roots of the ROOT_GAP − 1 days before it, oldest first,
+// which rootGroups keeps out of the groups that would bring one back too soon:
+export const ROOTS_BEFORE_CUTOVER = [
+  'FORWARD BANDAGE TRIBUTE PATIENT ALCHEMY DIAMOND HOWEVER VILLAGE', // 2026-06-24
+  'VAMPIRE SNORKEL BOULDER PICTURE EMERALD BARGAIN SECTION BRACKET', // 2026-07-02
+  'MACHINE BALCONY FORTUNE TADPOLE THICKET BLANKET POSTURE REFLECT', // 2026-07-10
+  'TRAGEDY ENDLESS VERDICT CARTOON NEUTRAL CONTEST MANAGER DYNAMIC', // 2026-07-18
+  'WRINKLE SWEATER MUSICAL TURBINE CRIMSON EMERALD FURNACE DROUGHT', // 2026-07-26
+  'BLUBBER INSTEAD HEALTHY SOLDIER CRYSTAL UNICORN WESTERN NEUTRAL', // 2026-08-03
+  'INHERIT TADPOLE WHISKER FIGHTER FEATHER GLITTER HARMONY OVERLAP', // 2026-08-11
+  'CHAPTER PAINTER FRECKLE EVENING CONCERT SAILING MEANING IMPROVE', // 2026-08-19
+  'SEVENTY EXPLAIN FIREMAN VINTAGE REALITY BRAVERY PANTHER TRANSIT', // 2026-08-27
+  'PROJECT CHEMIST DENTIST PASSION TEXTURE FORTUNE MEDICAL COMPASS', // 2026-09-04
+  'LEATHER STORAGE BUTCHER HAIRCUT HALIBUT ATHLETE PAYMENT THERAPY', // 2026-09-12
+  'TOASTER TREASON PORTION CONFIRM CAREFUL HEARING PRECISE KITCHEN', // 2026-09-20
+  'BALANCE PRODUCE PROTECT IMAGINE RESTORE STAPLER STRETCH BANDAGE', // 2026-09-28
+  'POVERTY ARRIVAL AVERAGE SURPLUS FOREVER TRUMPET FARMING WESTERN', // 2026-10-06
+  'OATMEAL PAINTER CAPTURE GESTURE PATIENT PORTION MONSTER GLACIER', // 2026-10-14
+  'CAPSULE EXPLORE FURNACE DEFAULT EMBRACE SCIENCE MONTHLY MUSICAL', // 2026-10-22
+].join(' ').split(' ')
+
+// And the boards served before it — from launch, the Archive's first day —
+// which no later day repeats:
+export const SERVED_BOARDS = [
+  'PATIENT: INEPT PAIN PAINT PANE PINE', // 2026-10-18
+  'PORTION: INTRO PINT PRINT TORN TROOP',
+  'MONSTER: MENTOR METRO MOST SNORE TERM',
+  'GLACIER: CIGAR GARLIC GIRL GRAIL LACE',
+  'CAPSULE: CASE CLUE LAPSE SCALE SPACE',
+  'EXPLORE: ELOPE EXPEL PEEL POLE REPEL',
+  'FURNACE: CANE CRANE CURE FARCE FERN',
+  'DEFAULT: ADULT DEFT DUAL FAULT FLUTE',
+  'EMBRACE: AMBER BRACE CRAM EMBER MARE',
+  'SCIENCE: NICE NIECE SCENE SEEN SINCE',
+  'MONTHLY: HOLY HOTLY MONTH MOTH MYTH',
+  'MUSICAL: ALUM CLAIM MUSIC SLIM SLUM', // 2026-10-29
+]
+const SERVED = new Set(SERVED_BOARDS)
+
 const DAY_MS = 86400000
 const dayNumber = (dateStr) => {
   const [y, m, d] = dateStr.split('-').map(Number)
   return Date.UTC(y, m - 1, d) / DAY_MS
 }
 const dateOf = (n) => new Date(n * DAY_MS).toISOString().slice(0, 10)
-const BLOCKS = new Map()
 
-// The returned object is shared — treat it as read-only. Never throws once
-// FALLBACK is filled; opts are for tests and the checker.
-export function generatePuzzle(dateStr, opts = {}) {
-  const { noFallback = false } = opts
-  const n = dayNumber(dateStr)
+let GROUPS = null
+// The ROOT_GROUPS root groups, dealt once. Only roots with BOARD_WORDS − 1
+// shorter words, MIN_LONG_WORDS of them 5+ letters, can build a board. They
+// are dealt in order of how many shorter words they hold (seeded order
+// within a count), each to the smallest group it may join, so every group
+// gets the same spread of roots. A root last used d days before the cutover
+// (d < ROOT_GAP) may only join a group whose first block starts ROOT_GAP − d
+// days or more after the cutover.
+export function rootGroups() {
+  if (!GROUPS) {
+    const usedDaysBefore = new Map() // root → days before the cutover it was last used
+    ROOTS_BEFORE_CUTOVER.forEach((root, i) => usedDaysBefore.set(root, ROOTS_BEFORE_CUTOVER.length - i))
+    const roots = shuffled(WORDS[POOL_SIZE], mulberry32(GROUP_SEED))
+      .filter(w => subwords(w).length >= BOARD_WORDS - 1 && subwords(w).filter(s => s.length >= 5).length >= MIN_LONG_WORDS)
+      .sort((a, b) => subwords(a).length - subwords(b).length)
+    GROUPS = Array.from({ length: ROOT_GROUPS }, () => [])
+    for (const root of roots) {
+      const d = usedDaysBefore.get(root)
+      let best = d === undefined ? 0 : Math.ceil((ROOT_GAP - d) / GROUP_BLOCK_DAYS)
+      for (let g = best + 1; g < ROOT_GROUPS; g++) if (GROUPS[g].length < GROUPS[best].length) best = g
+      GROUPS[best].push(root)
+    }
+  }
+  return GROUPS
+}
+
+const BLOCKS = new Map(), GROUP_BLOCKS = new Map()
+
+// Day number n before the cutover.
+function blockDay(n) {
   const epoch = dayNumber(BLOCK_EPOCH)
   const b = Math.floor((n - epoch) / ROOT_BLOCK_DAYS)
   const first = epoch + b * ROOT_BLOCK_DAYS
@@ -325,14 +456,40 @@ export function generatePuzzle(dateStr, opts = {}) {
   while (block.days.length <= n - first) {
     const k = block.days.length
     if (k % WORD_BLOCK_DAYS === 0) block.words = new Set()
-    const p = generateDay(dateOf(first + k), block.roots, block.words)
+    const p = generateDay(dateOf(first + k), WORDS[POOL_SIZE], block.roots, block.words)
     if (p) {
       block.roots.add(p.root)
       p.words.slice(1).forEach(w => block.words.add(w))
     }
     block.days.push(p)
   }
-  const p = block.days[n - first]
+  return block.days[n - first]
+}
+
+// Day number n from the cutover.
+function groupDay(n) {
+  const cut = dayNumber(SCRAMBLE_CUTOVER)
+  const b = Math.floor((n - cut) / GROUP_BLOCK_DAYS)
+  const first = cut + b * GROUP_BLOCK_DAYS
+  const need = Math.floor(b / ROOT_GROUPS) % RESIDUES // the block's cycle, mod RESIDUES
+  let block = GROUP_BLOCKS.get(b)
+  if (!block) { block = { days: [], roots: new Set() }; GROUP_BLOCKS.set(b, block) }
+  while (block.days.length <= n - first) {
+    const k = block.days.length
+    const words = new Set(block.days.slice(Math.max(0, k - WORD_BLOCK_DAYS + 1)).flatMap(p => (p ? p.words.slice(1) : [])))
+    const p = generateDay(dateOf(first + k), rootGroups()[b % ROOT_GROUPS], block.roots, words, need)
+    if (p) block.roots.add(p.root)
+    block.days.push(p)
+  }
+  return block.days[n - first]
+}
+
+// The returned object is shared — treat it as read-only. Never throws once
+// FALLBACK is filled; opts are for tests and the checker.
+export function generatePuzzle(dateStr, opts = {}) {
+  const { noFallback = false } = opts
+  const n = dayNumber(dateStr)
+  const p = n < dayNumber(SCRAMBLE_CUTOVER) ? blockDay(n) : groupDay(n)
   if (p || noFallback) return p
   return withShape(FALLBACK.pool, FALLBACK.placements, { root: -1, attempt: -1, fallback: true })
 }
