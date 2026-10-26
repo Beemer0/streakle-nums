@@ -2,7 +2,8 @@
 // and whether it is live, comes from the database: Pool History (/pools, in
 // the account menu) lists the pools the viewer belongs to (is_member_of), and a
 // pool counts as past once it has a pool_archive row — archiving one moves it
-// from Active to Past with no code change. A new pool needs its page, its route
+// from Active to Past with no code change. A new pool needs its page, its route,
+// a vercel.json rewrite (pools aren't prerendered; App.routing.test.jsx checks)
 // and one entry here.
 export const POOLS = [
   { id: 'octagon', name: 'Octagon', kind: "UFC pick'em", path: '/octagon', emoji: '🥊' },

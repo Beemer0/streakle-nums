@@ -1,7 +1,6 @@
 import { lazy, Suspense } from 'react'
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom'
 import { useAuth } from './AuthContext.js'
-import { isGamePath } from './games.js'
 import Home from './Home.jsx'
 import ErrorBoundary from './ErrorBoundary.jsx'
 import { GameLoading } from './GameShell.jsx'
@@ -21,20 +20,15 @@ const LoginPage = lazy(() => import('./LoginPage.jsx'))
 const Mines    = lazy(() => import('./Mines.jsx'))
 const Weave    = lazy(() => import('./Weave.jsx'))
 const Scramble = lazy(() => import('./Scramble.jsx'))
+const NotFound = lazy(() => import('./NotFound.jsx'))
 
-// Pages framed by PageShell, alongside the games' GameShell. Their top bar
-// carries the Sign in link (sign-in itself, by design, has none).
-const PAGE_SHELL_PATHS = ['/login', '/privacy', '/pools', '/bracket', '/octagon']
-
-function hasOwnTopBar(pathname) {
-  return isGamePath(pathname) || PAGE_SHELL_PATHS.includes(pathname.toLowerCase().replace(/\/+$/, ''))
-}
-
-// Pages without a top bar of their own get a floating Sign in link.
+// Home is the one page without a top bar (the games have GameShell's, every
+// other page PageShell's, which carries the Sign in link — sign-in itself,
+// by design, has none), so only Home gets a floating Sign in link.
 function SignInBanner() {
   const { user } = useAuth()
   const { pathname } = useLocation()
-  if (user || hasOwnTopBar(pathname)) return null
+  if (user || pathname !== '/') return null
 
   return (
     <a href="/login" className="sign-in-banner">
@@ -56,6 +50,10 @@ function LoadingScreen() {
   )
 }
 
+// Every route below must be served by Vercel as a page: either prerendered
+// (PRERENDERED in seo.js) or rewritten to `/` in vercel.json — a private page
+// like the pools needs the rewrite. Anything else gets dist/404.html with a
+// 404 status (App.routing.test.jsx fails on a route that is neither).
 export default function AppRoutes() {
   const { loading } = useAuth()
 
@@ -81,6 +79,7 @@ export default function AppRoutes() {
             <Route path="/pools" element={<PoolHistory />} />
             <Route path="/privacy" element={<Privacy />} />
             <Route path="/login" element={<LoginPage />} />
+            <Route path="*" element={<NotFound />} />
           </Routes>
         </Suspense>
       </ErrorBoundary>

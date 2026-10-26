@@ -6,22 +6,19 @@
 //
 // Not a full SSR pass: the body stays as the SPA shell, so React re-mounts
 // cleanly over it. Only the <head> is customised.
+//
+// It also writes dist/404.html, which Vercel serves with a 404 status for any
+// URL that is neither a file nor one of vercel.json's rewrites; the SPA then
+// boots there and shows its not-found page.
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { PAGE_SEO } from '../src/seo.js'
+import { PAGE_SEO, PRERENDERED } from '../src/seo.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const root = resolve(dirname(__filename), '..')
 const dist = join(root, 'dist')
 const SITE_URL = 'https://playstreakle.com'
-
-// Public, indexable routes get a static per-route HTML. The private pools
-// (/bracket, /octagon, /pools) stay out so a scraper never finds them.
-const ROUTES = [
-  'home', 'scramble', 'weave', 'mines', 'faceoff', 'gridiron', 'knockout',
-  'words', 'link', 'nums', 'privacy', 'login',
-]
 
 function escapeHtml(s) {
   return String(s)
@@ -41,7 +38,8 @@ function replace(html, pattern, replacement, label) {
 
 function renderPage(template, seo) {
   const { title, description, path, jsonLd, noindex } = seo
-  const url = SITE_URL + path
+  // A page without a path (the not-found page) gets no canonical link.
+  const url = path ? SITE_URL + path : SITE_URL
   let out = template
 
   out = replace(out, /<title>[^<]*<\/title>/,
@@ -61,7 +59,7 @@ function renderPage(template, seo) {
 
   // Insert canonical, per-route JSON-LD, and robots meta (noindex only) before </head>.
   const extras = [
-    `<link rel="canonical" href="${escapeHtml(url)}" />`,
+    path ? `<link rel="canonical" href="${escapeHtml(url)}" />` : '',
     jsonLd ? `<script type="application/ld+json" id="route-jsonld">${JSON.stringify(jsonLd)}</script>` : '',
     noindex ? `<meta name="robots" content="noindex" />` : '',
   ].filter(Boolean).join('\n    ')
@@ -75,7 +73,7 @@ const template = readFileSync(join(dist, 'index.html'), 'utf8')
 let count = 0
 let home = null
 
-for (const key of ROUTES) {
+for (const key of PRERENDERED) {
   const seo = PAGE_SEO[key]
   if (!seo) {
     throw new Error(`[prerender] no PAGE_SEO entry for "${key}"`)
@@ -98,5 +96,8 @@ if (home) {
   writeFileSync(join(dist, 'index.html'), home)
   count++
 }
+
+writeFileSync(join(dist, '404.html'), renderPage(template, PAGE_SEO.notFound))
+count++
 
 console.log(`[prerender] wrote ${count} HTML files`)

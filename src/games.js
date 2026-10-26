@@ -117,10 +117,3 @@ export function nextGame(key) {
   const i = GAMES.findIndex(g => g.key === key)
   return GAMES[(i + 1) % GAMES.length]
 }
-
-/** True for a game page's path: '/weave', '/weave/', '/Weave' (routes match case-insensitively). */
-export function isGamePath(pathname) {
-  const lower = pathname.toLowerCase()
-  const path = lower.length > 1 ? lower.replace(/\/+$/, '') : lower
-  return GAMES.some(g => g.path === path)
-}

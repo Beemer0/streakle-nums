@@ -155,7 +155,22 @@ export const PAGE_SEO = {
     path: '/pools',
     noindex: true, // members-only — keep it out of search results
   },
+  // Any URL no route matches. No path: it has no canonical address.
+  notFound: {
+    title: 'Page not found | Streakle',
+    description: "This page doesn't exist. Today's Streakle puzzles are one click away.",
+    noindex: true,
+  },
 }
+
+// The public pages scripts/prerender.mjs writes a static index.html for. The
+// private pools stay out so a scraper never finds them; vercel.json rewrites
+// those to the SPA instead, and any other URL gets dist/404.html with a 404
+// status (App.routing.test.jsx keeps the three in step).
+export const PRERENDERED = [
+  'home', 'scramble', 'weave', 'mines', 'faceoff', 'gridiron', 'knockout',
+  'words', 'link', 'nums', 'privacy', 'login',
+]
 
 // Streakle is a client-rendered SPA, so every route otherwise inherits the
 // homepage metadata baked into index.html. This applies the per-route
@@ -163,12 +178,12 @@ export const PAGE_SEO = {
 export function useSeo({ title, description, path, jsonLd, noindex }) {
   useEffect(() => {
     document.title = title
-    const url = SITE_URL + path
+    const url = path ? SITE_URL + path : null
 
     setMeta('name', 'description', description)
     setMeta('property', 'og:title', title)
     setMeta('property', 'og:description', description)
-    setMeta('property', 'og:url', url)
+    setMeta('property', 'og:url', url ?? SITE_URL)
     setMeta('name', 'twitter:title', title)
     setMeta('name', 'twitter:description', description)
     setCanonical(url)
@@ -187,8 +202,13 @@ function setMeta(attr, key, content) {
   el.setAttribute('content', content)
 }
 
+// A page without an address of its own (the not-found page) drops the link.
 function setCanonical(href) {
   let el = document.head.querySelector('link[rel="canonical"]')
+  if (!href) {
+    el?.remove()
+    return
+  }
   if (!el) {
     el = document.createElement('link')
     el.setAttribute('rel', 'canonical')

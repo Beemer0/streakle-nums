@@ -1,7 +1,8 @@
 {
   "cleanUrls": true,
   "rewrites": [
-    { "source": "/(.*)", "destination": "/" }
+    { "source": "/(bracket|octagon|pools)", "destination": "/" },
+    { "source": "/(bracket|octagon|pools)/", "destination": "/" }
   ],
   "headers": [
     {
