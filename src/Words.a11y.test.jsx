@@ -5,6 +5,7 @@ import { act } from 'react'
 import { createRoot } from 'react-dom/client'
 import { AuthContext } from './AuthContext'
 import { evaluate } from './evaluate'
+import { getDailyWord } from './words/schedule'
 
 // Words for screen-reader and keyboard users: a spoken board, announced
 // results, named keys, focus on the result, readable key labels, and an
@@ -44,15 +45,14 @@ vi.stubGlobal('localStorage', memoryStorage())
 
 const { default: WordsGame } = await import('./Words.jsx')
 
-// The game picks WORDS[YYYYMMDD % length]; read the bank the way the checkers do.
 const source = (file) => readFileSync(new URL(file, import.meta.url), 'utf8')
-const WORDS = [...source('./Words.jsx').matchAll(/\{ word: "([A-Z]{5})"/g)].map(m => m[1])
 const VALID = source('./validWords.txt').trim().toUpperCase().split(/\s+/)
 
 const KEY = 'streakle-words'
 const TODAY = '2026-10-21'
 const USER = { id: 'u-1', email: 'player@example.com', user_metadata: {} }
-const ANSWER = WORDS[parseInt(TODAY.replace(/-/g, '')) % WORDS.length]
+// Today's answer, from the page's own schedule.
+const ANSWER = getDailyWord(TODAY).word
 const MISSES = ['CRANE', 'SLOTH', 'PIVOT', 'MUDDY', 'WHELK', 'JAZZY', 'FROWN', 'GLYPH'].filter(w => w !== ANSWER)
 // A valid guess with distinct letters that scores all three colours today.
 const MIXED = VALID.find(w => {

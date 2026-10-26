@@ -1,9 +1,10 @@
 // @vitest-environment happy-dom
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { readFileSync } from 'node:fs'
 import { act } from 'react'
 import { createRoot } from 'react-dom/client'
 import { AuthContext } from './AuthContext'
+import { WORDS } from './words/bank'
+import { getDailyWord } from './words/schedule'
 
 // Today's Words board lives in a localStorage checkpoint, so a reload resumes
 // it exactly: no refunded guesses, no revived finished game, no second save.
@@ -42,11 +43,8 @@ vi.stubGlobal('localStorage', memoryStorage())
 
 const { default: WordsGame } = await import('./Words.jsx')
 
-// The game picks WORDS[YYYYMMDD % length]; read the bank the way the checkers
-// do (through a variable, which Vite leaves alone, unlike a literal new URL()).
-const source = (file) => readFileSync(new URL(file, import.meta.url), 'utf8')
-const WORDS = [...source('./Words.jsx').matchAll(/\{ word: "([A-Z]{5})"/g)].map(m => m[1])
-const wordFor = (date) => WORDS[parseInt(date.replace(/-/g, '')) % WORDS.length]
+// Each day's answer, from the page's own schedule.
+const wordFor = (date) => getDailyWord(date).word
 // The checkpoint names its answer by a 32-bit FNV-1a hash, in base 36.
 const sigOf = (word) => {
   let h = 0x811c9dc5
@@ -309,9 +307,10 @@ describe("Words: today's checkpoint", () => {
     expect(rowText(0)).toBe('')
   })
 
-  // A word added to the bank mid-day shifts today's pick (YYYYMMDD % length):
-  // the checkpoint was written against the bank one word shorter.
-  const STALE = WORDS[parseInt(TODAY.replace(/-/g, '')) % (WORDS.length - 1)]
+  // A build deployed mid-day that changed today's word (as adding a word did
+  // under the old YYYYMMDD % length pick): the checkpoint was written against
+  // the word the old build dealt, here the pick from a bank one word shorter.
+  const STALE = WORDS[parseInt(TODAY.replace(/-/g, '')) % (WORDS.length - 1)].word
   it.each([
     ['mid-game', [MISSES[0]]],
     ['won', [MISSES[0], STALE]],

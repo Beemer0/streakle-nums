@@ -1,6 +1,5 @@
 // @vitest-environment happy-dom
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { readFileSync } from 'node:fs'
 import { act } from 'react'
 import { createRoot } from 'react-dom/client'
 import { AuthContext } from './AuthContext'
@@ -58,12 +57,11 @@ const { default: MinesGame } = await import('./Mines.jsx')
 const { default: ScrambleGame } = await import('./Scramble.jsx')
 const { getDailyPuzzle: linkFor } = await import('./link/schedule.js')
 const { PUZZLES: LINK_PUZZLES } = await import('./link/puzzles.js')
+const { getDailyWord } = await import('./words/schedule.js')
+const { WORDS } = await import('./words/bank.js')
 
-// Words picks WORDS[YYYYMMDD % length]; read the bank the way the checker does.
-const source = (file) => readFileSync(new URL(file, import.meta.url), 'utf8')
 const seedOf = (date) => parseInt(date.replace(/-/g, ''))
-const WORDS = [...source('./Words.jsx').matchAll(/\{ word: "([A-Z]{5})"/g)].map(m => m[1])
-const wordFor = (date) => WORDS[seedOf(date) % WORDS.length]
+const wordFor = (date) => getDailyWord(date).word
 
 const TODAY = '2026-10-21'
 const PAST = '2026-10-18'
@@ -176,6 +174,23 @@ describe('Words', () => {
     await pickArchiveDay(TODAY)
     await typeWord(wordFor(TODAY))
     expect(saveResult).toHaveBeenCalledWith({ game: 'words', puzzleDate: TODAY, completed: true })
+  })
+
+  it('deals from the rotation after the Words cutover, not YYYYMMDD % 144', async () => {
+    const date = '2026-11-01'
+    const rotated = WORDS[89].word // CREDO
+    const oldFormula = WORDS[seedOf(date) % 144].word // WORDS[13], DWARF
+    expect(wordFor(date)).toBe(rotated)
+    expect(oldFormula).not.toBe(rotated)
+
+    vi.setSystemTime(new Date(2026, 10, 1, 12))
+    await mount(WordsGame)
+    expect(host.textContent).toContain('November 1, 2026')
+    // The rotation's word is today's answer: it wins in one.
+    await typeWord(rotated)
+    expect(ended()).toBe(true)
+    expect(host.textContent).toContain('Got it in 1!')
+    expect(saveResult).toHaveBeenCalledWith({ game: 'words', puzzleDate: date, completed: true })
   })
 })
 
