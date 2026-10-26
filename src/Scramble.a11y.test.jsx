@@ -14,8 +14,11 @@ import { readFileSync } from 'node:fs'
 // by finds and hints, which name words the same way.
 const { saveResult } = vi.hoisted(() => ({ saveResult: vi.fn() }))
 vi.mock('./saveResult', () => ({ saveResult }))
+// The player's streak (none unless a test sets one).
+const streakNow = vi.hoisted(() => ({ days: 0 }))
+vi.mock('./useStreak', () => ({ useStreak: () => ({ streak: streakNow.days, loading: false }) }))
 
-// The Archive and streak reads find no history; nobody belongs to a pool.
+// The Archive reads find no history; nobody belongs to a pool.
 vi.mock('./supabase', () => {
   const query = () => {
     const q = { select: () => q, eq: () => q, then: (res, rej) => Promise.resolve({ data: [], error: null }).then(res, rej) }
@@ -86,6 +89,7 @@ beforeEach(() => {
   vi.useFakeTimers()
   vi.setSystemTime(new Date(2026, 9, 21, 12))
   saveResult.mockClear()
+  streakNow.days = 0
   localStorage.clear()
 })
 afterEach(() => {
@@ -380,6 +384,34 @@ describe('the board for screen readers', () => {
     await type(ROOT)
     await press('Enter')
     expect(live()).toBe(`${ROOT} (word ${num(0)}) found! That also completes ${PZ.words[other]} (word ${num(other)}). 2 of ${BOARD_WORDS}.`)
+  })
+})
+
+// On a phone the CSS sizes the cells from the visible height too, using the
+// board's shape and whether the streak line takes a row of its own (layout
+// itself is checked in a real browser; happy-dom has none).
+describe('fitting the board on a phone', () => {
+  const board = () => host.querySelector('.sc-board')
+
+  it('the board carries its rows and columns, and reserves no streak row without a streak', async () => {
+    await mount()
+    expect(board().style.getPropertyValue('--sc-rows')).toBe(String(PZ.rows))
+    expect(board().style.getPropertyValue('--sc-cols')).toBe(String(PZ.cols))
+    expect(board().style.getPropertyValue('--sc-streak-h')).toBe('0px')
+    expect(host.querySelector('.sc-streak')).toBeNull()
+  })
+
+  it('a streak reserves its row, and still reads in full where a short phone shows only the number', async () => {
+    streakNow.days = 12
+    await mount()
+    expect(board().style.getPropertyValue('--sc-streak-h')).toBe('26px')
+    const streak = host.querySelector('.sc-streak')
+    expect(readable(streak)).toBe('🔥 12 day streak')
+    // It sits with the chips and the timer, ahead of them, as before.
+    const status = streak.parentElement
+    expect(status.firstElementChild).toBe(streak)
+    expect(status.querySelector('[role="img"]').getAttribute('aria-label')).toBe(`0 of ${BOARD_WORDS} words found; still to find: ${CHIP_ORDER.map(i => PZ.words[i].length).join(', ')} letters`)
+    expect(status.querySelector('[role="timer"]').getAttribute('aria-label')).toBe('Time 0:00')
   })
 })
 

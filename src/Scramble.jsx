@@ -12,7 +12,7 @@ import {
   generatePuzzle, boardCells, cellKey, cellsOf, revealedCells, completeFound, nextHint,
   scoreSeconds, formatTime, shareLine,
 } from './scramble/engine'
-import { GOLD, INK } from './theme'
+import { INK } from './theme'
 import { slotHoldsLaterDay } from './checkpointSlot'
 
 const DARK_INK = 'var(--bg)'
@@ -25,6 +25,30 @@ const HC_KEY = 'streakle-hc' // shared with Words and Weave
 const SHAKE_MS = 450
 const POP_MS = 700
 
+// ── Board size ──
+// Cells are sized by width (up to 52px). On a phone the board also shares the
+// visible height (dvh, so Safari's toolbars count) with the page around it,
+// so the rack and the Enter row are on screen on load even for a 9-row board.
+// A short phone (an iPhone SE in Safari shows 548px) also gets a tighter page:
+// streak, chips and timer share one row, the gaps around the guess and rack
+// shrink and the board's gap is 3px. Cells stop shrinking at MIN_CELL.
+// The reserves are the page's own heights on a phone, in px:
+const PHONE = '(max-width:480px)' // GameShell's phone header
+const SHORT_PHONE = `${PHONE} and (max-height:760px)`
+const MIN_CELL = 22 // 13px letters
+const RACK_TILE_H = 'min(60px,calc((100vw - 68px) / 7 * 1.12))'
+const RACK_TILE_H_SHORT = 'min(44px,calc((100vw - 68px) / 7 * 1.12))'
+// GameShell's top bar, title and date (147) + chips (24 + 10) + timer (24 + 12)
+const ABOVE_BOARD = 217
+// guess row (16 + 44 + 4) + rack margins (10 + 12) + controls (36) + 4 of air
+const BELOW_BOARD = 126
+// Short phones: GameShell (147) + one row of streak, chips and timer (24 + 8)
+const ABOVE_BOARD_SHORT = 179
+// guess row (6 + 40) + rack margins (6 + 8) + controls (36) + 4 of air
+const BELOW_BOARD_SHORT = 100
+// The streak line (signed-in players on a streak) on its own row: 18 + 8.
+const STREAK_LINE = 26
+
 // A used tile dims through its colours, not opacity: opacity would fade its
 // focus ring too, and Enter on a tile leaves focus on it as it turns used.
 const css = `
@@ -32,7 +56,11 @@ const css = `
 @keyframes scPop{0%{transform:scale(1)}45%{transform:scale(1.14)}100%{transform:scale(1)}}
 @keyframes scConfetti{0%{transform:translateY(0) rotate(0deg);opacity:1}100%{transform:translateY(130px) rotate(720deg);opacity:0}}
 @keyframes scSlideUp{from{transform:translateY(12px);opacity:0}to{transform:translateY(0);opacity:1}}
-.sc-board{display:grid;gap:4px;justify-content:center;margin:0 auto}
+.sc-status{display:flex;flex-direction:column;align-items:center}
+.sc-streak{font-size:13px;color:var(--gold);font-weight:600;margin-bottom:8px}
+.sc-chips{display:flex;gap:6px;margin-bottom:10px}
+.sc-timer{font-family:var(--font-display);font-size:18px;font-weight:600;color:var(--ink);margin-bottom:12px;font-variant-numeric:tabular-nums}
+.sc-board{--sc-gap:4px;--sc-width-cell:min(52px,calc((min(100vw,480px) - 32px - (var(--sc-cols) - 1) * var(--sc-gap)) / var(--sc-cols)));--sc-cell:var(--sc-width-cell);display:grid;gap:var(--sc-gap);justify-content:center;margin:0 auto}
 .sc-cell{width:var(--sc-cell);height:var(--sc-cell);box-sizing:border-box;border-radius:6px;display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-weight:800;font-size:calc(var(--sc-cell) * 0.58);line-height:1;color:var(--ink);border:2px solid transparent;user-select:none;-webkit-user-select:none}
 .sc-empty{background:var(--surface);border-color:var(--border-strong)}
 .sc-pop{animation:scPop .5s ease}
@@ -40,7 +68,7 @@ const css = `
 .sc-guess{display:flex;gap:4px;justify-content:center;align-items:center;min-height:44px;margin:16px 0 4px}
 .sc-guess-tile{width:34px;height:40px;border-radius:6px;background:var(--surface-gold);border:2px solid var(--gold);display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-weight:800;font-size:22px;color:var(--ink)}
 .sc-rack{display:flex;gap:6px;justify-content:center;flex-wrap:nowrap;margin:10px 0 12px}
-.sc-tile{width:min(54px,calc((100vw - 68px) / 7));height:min(60px,calc((100vw - 68px) / 7 * 1.12));border-radius:8px;border:2px solid var(--gold);background:var(--surface-gold);color:var(--ink);font-family:var(--font-display);font-weight:800;font-size:min(32px,calc((100vw - 68px) / 7 * 0.6));cursor:pointer;padding:0;touch-action:manipulation;-webkit-tap-highlight-color:transparent;transition:transform .12s}
+.sc-tile{width:min(54px,calc((100vw - 68px) / 7));height:${RACK_TILE_H};border-radius:8px;border:2px solid var(--gold);background:var(--surface-gold);color:var(--ink);font-family:var(--font-display);font-weight:800;font-size:min(32px,calc((100vw - 68px) / 7 * 0.6));cursor:pointer;padding:0;touch-action:manipulation;-webkit-tap-highlight-color:transparent;transition:transform .12s}
 .sc-tile:active{transform:scale(.94)}
 .sc-tile-used{color:rgba(var(--ink-rgb),.18);border-color:rgba(var(--gold-rgb),.18);background:transparent;cursor:default}
 .sc-tile:focus-visible,.sc-ctl:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
@@ -50,6 +78,20 @@ const css = `
 .sc-chip{min-width:26px;padding:3px 6px;border-radius:6px;border:1px solid var(--border);font-size:12px;font-weight:700;color:var(--text-2);text-align:center;font-variant-numeric:tabular-nums}
 .sc-toast{position:fixed;top:80px;left:50%;transform:translateX(-50%);background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px 20px;font-size:14px;font-weight:600;color:var(--ink);z-index:60;animation:scSlideUp .2s ease;white-space:nowrap}
 .sc-sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+@media ${PHONE}{
+.sc-board{--sc-vh:100vh;--sc-reserve:calc(${ABOVE_BOARD + BELOW_BOARD}px + var(--sc-streak-h) + ${RACK_TILE_H});--sc-height-cell:calc((var(--sc-vh) - var(--sc-reserve) - (var(--sc-rows) - 1) * var(--sc-gap)) / var(--sc-rows));--sc-cell:min(var(--sc-width-cell),max(${MIN_CELL}px,var(--sc-height-cell)))}
+@supports (height:100dvh){.sc-board{--sc-vh:100dvh}}
+}
+@media ${SHORT_PHONE}{
+.sc-board{--sc-gap:3px;--sc-reserve:calc(${ABOVE_BOARD_SHORT + BELOW_BOARD_SHORT}px + ${RACK_TILE_H_SHORT})}
+.sc-status{flex-direction:row;flex-wrap:wrap;justify-content:center;gap:4px 10px;margin-bottom:8px}
+.sc-streak,.sc-chips,.sc-timer{margin-bottom:0}
+.sc-chips{gap:4px}
+.sc-streak-label{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.sc-guess{min-height:40px;margin:6px 0 0}
+.sc-rack{margin:6px 0 8px}
+.sc-tile{height:${RACK_TILE_H_SHORT}}
+}
 `
 
 function formatDate(dateStr) {
@@ -204,13 +246,8 @@ export default function Scramble() {
     <GameShell game="scramble" date={formatDate(seedDate)} howTo={howTo} onArchive={() => setShowArchive(true)} hc={hc} onToggleHc={toggleHc}>
       <style>{css}</style>
 
-
-      {streak > 0 && (
-        <div style={{ fontSize: 13, color: GOLD, fontWeight: 600, marginBottom: 8 }}>🔥 {streak} day streak</div>
-      )}
-
       {/* Keyed by date: a new puzzle is a fresh board, never a stale one. */}
-      <ScrambleBoard key={boardKey} seedDate={seedDate} isToday={isToday} palette={hc ? PALETTE_HC : PALETTE} keysBlocked={showArchive} />
+      <ScrambleBoard key={boardKey} seedDate={seedDate} isToday={isToday} palette={hc ? PALETTE_HC : PALETTE} keysBlocked={showArchive} streak={streak} />
 
 
       {showArchive && (
@@ -224,7 +261,7 @@ export default function Scramble() {
   )
 }
 
-function ScrambleBoard({ seedDate, isToday, palette, keysBlocked }) {
+function ScrambleBoard({ seedDate, isToday, palette, keysBlocked, streak }) {
   const pz = useMemo(() => generatePuzzle(seedDate), [seedDate])
   const cells = useMemo(() => boardCells(pz), [pz])
   const { order: wordOrder, num } = useMemo(() => wordNumbers(pz), [pz])
@@ -474,8 +511,14 @@ function ScrambleBoard({ seedDate, isToday, palette, keysBlocked }) {
   // One chip per word, shortest first: its length, or ✓ once found.
   const chips = wordOrder.map(i => ({ i, len: pz.words[i].length }))
   const remaining = chips.filter(ch => !found.includes(ch.i)).map(ch => ch.len)
-  const cellSize = `min(52px, calc((min(100vw, 480px) - 32px - ${(pz.cols - 1) * 4}px) / ${pz.cols}))`
-
+  // The board's shape feeds the cell size (see the css); the streak line,
+  // when it has a row of its own, is part of the height a phone reserves.
+  const boardStyle = {
+    gridTemplateColumns: `repeat(${pz.cols}, var(--sc-cell))`,
+    '--sc-rows': pz.rows,
+    '--sc-cols': pz.cols,
+    '--sc-streak-h': `${streak > 0 ? STREAK_LINE : 0}px`,
+  }
 
   return (
     <>
@@ -483,27 +526,32 @@ function ScrambleBoard({ seedDate, isToday, palette, keysBlocked }) {
         <div key={c.id} style={{ position: 'fixed', left: `${c.x}%`, top: '28%', width: c.size, height: c.size, background: c.color, borderRadius: c.size > 10 ? '50%' : 2, animation: `scConfetti 1.3s ${c.delay}ms ease forwards`, pointerEvents: 'none', zIndex: 100 }} />
       ))}
 
-      <div style={{ display: 'flex', gap: 6, marginBottom: 10 }} role="img"
-        aria-label={`${found.length} of ${BOARD_WORDS} words found${found.length ? `: ${found.map(i => pz.words[i]).join(', ')}` : ''}${remaining.length ? `; still to find: ${remaining.join(', ')} letters` : ''}`}>
-        {chips.map(ch => {
-          const got = found.includes(ch.i)
-          return (
-            <span key={ch.i} className="sc-chip" aria-hidden="true" style={got ? { color: 'var(--success-text)', borderColor: 'var(--correct-deep)' } : null}>
-              {got ? '✓' : ch.len}
-            </span>
-          )
-        })}
-      </div>
+      <div className="sc-status">
+        {streak > 0 && (
+          <div className="sc-streak">🔥 {streak}<span className="sc-streak-label"> day streak</span></div>
+        )}
 
-      <div style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 600, color: INK, marginBottom: 12, fontVariantNumeric: 'tabular-nums' }}
-        role="timer" aria-label={`Time ${formatTime(seconds)}`}>
-        ⏱ {formatTime(seconds)}
+        <div className="sc-chips" role="img"
+          aria-label={`${found.length} of ${BOARD_WORDS} words found${found.length ? `: ${found.map(i => pz.words[i]).join(', ')}` : ''}${remaining.length ? `; still to find: ${remaining.join(', ')} letters` : ''}`}>
+          {chips.map(ch => {
+            const got = found.includes(ch.i)
+            return (
+              <span key={ch.i} className="sc-chip" aria-hidden="true" style={got ? { color: 'var(--success-text)', borderColor: 'var(--correct-deep)' } : null}>
+                {got ? '✓' : ch.len}
+              </span>
+            )
+          })}
+        </div>
+
+        <div className="sc-timer" role="timer" aria-label={`Time ${formatTime(seconds)}`}>
+          ⏱ {formatTime(seconds)}
+        </div>
       </div>
 
       <ul className="sc-sr-only" aria-label="Board">
         {chips.map(ch => <li key={ch.i}>{spokenWord(pz, ch.i, found, revealed, cells, num)}</li>)}
       </ul>
-      <div className="sc-board" aria-hidden="true" style={{ gridTemplateColumns: `repeat(${pz.cols}, var(--sc-cell))`, '--sc-cell': cellSize }}>
+      <div className="sc-board" aria-hidden="true" style={boardStyle}>
         {board}
       </div>
 
