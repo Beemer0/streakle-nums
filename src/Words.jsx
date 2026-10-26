@@ -69,6 +69,8 @@ function describeRow(rowIdx, letters, states) {
 // GameShell header, 42px of row gaps, the 20px board margin and 8px of air,
 // tiles and keys share what's left (tile = key + 2px) and only reach full
 // size (52/50) from 678px tall. Keys stop at 42px; tiles take the rest.
+// Nothing may sit between the header and the board: the budget has no room
+// for it, so the streak shares the date's line (see DateLine).
 const css = `
 @keyframes shake{0%,100%{transform:translateX(0)}15%{transform:translateX(-6px)}30%{transform:translateX(6px)}45%{transform:translateX(-4px)}60%{transform:translateX(4px)}75%{transform:translateX(-2px)}90%{transform:translateX(2px)}}
 @keyframes bounce{0%,100%{transform:translateY(0)}40%{transform:translateY(-10px)}}
@@ -85,7 +87,27 @@ const css = `
 .wd-key{flex:1 1 0;min-width:0;height:var(--wd-key);padding:0;border:none;border-radius:6px;font-size:14px;font-weight:700;cursor:pointer;user-select:none;transition:background .3s,color .3s}
 .wd-key-wide{flex:1.5 1 0;font-size:11px}
 @media (min-width:600px) and (min-height:800px){.wd-board{--wd-tile:60px}.wd-kb{--wd-key:56px}.wd-key{font-size:15px}.wd-key-wide{font-size:12px}}
+.wd-streak{white-space:nowrap;line-height:1;color:var(--gold);font-weight:600}
+.wd-streak-sep{color:var(--muted);font-weight:400}
 `;
+
+// The puzzle date, then the player's streak on the same line. The streak
+// arrives late (after useStreak's reads), so it must cost the board no
+// height: on a line of its own it pushed the board and keyboard down ~26px,
+// the bottom row off a short phone and under a thumb mid-tap (F262). Its
+// fixed line-height keeps the emoji font's taller metrics out of the line.
+function DateLine({ date, streak }) {
+  if (!(streak > 0)) return date;
+  return (
+    <>
+      {date}<span className="sr-only">,</span>{' '}
+      <span className="wd-streak">
+        <span className="wd-streak-sep" aria-hidden="true">·</span>
+        {' '}<span aria-hidden="true">🔥</span> {streak} day streak
+      </span>
+    </>
+  );
+}
 
 // Keyboard colours after a guess: green beats amber beats grey.
 function withKeyStates(prev, guess, result) {
@@ -171,15 +193,8 @@ export default function WordsGame() {
   )
 
   return (
-    <GameShell game="words" date={formatDate(seedDate)} howTo={howTo} onArchive={() => setShowArchive(true)} hc={hc} onToggleHc={toggleHc}>
+    <GameShell game="words" date={<DateLine date={formatDate(seedDate)} streak={isToday ? streak : 0} />} howTo={howTo} onArchive={() => setShowArchive(true)} hc={hc} onToggleHc={toggleHc}>
       <style>{css}</style>
-
-      {streak > 0 && (
-        <div style={{fontSize:13, color:'var(--gold)', fontWeight:600, marginBottom:8}}>
-          🔥 {streak} day streak
-        </div>
-      )}
-
 
       {/* Keyed by date: picking a puzzle in the Archive starts a fresh board.
           While the Archive is open its keys are its own, not the board's. */}

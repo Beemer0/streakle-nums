@@ -13,15 +13,18 @@ import { getDailyWord } from './words/schedule'
 const { saveResult } = vi.hoisted(() => ({ saveResult: vi.fn() }))
 vi.mock('./saveResult', () => ({ saveResult }))
 
-// The Archive and streak reads find no history; nobody belongs to a pool.
+// The Archive and streak reads find no history, unless a test signs a player
+// in with some (history); nobody belongs to a pool.
+const history = vi.hoisted(() => ({ user: null, completed: [] }))
 vi.mock('./supabase', () => {
   const query = () => {
-    const q = { select: () => q, eq: () => q, then: (res, rej) => Promise.resolve({ data: [], error: null }).then(res, rej) }
+    const rows = () => history.completed.map(puzzle_date => ({ puzzle_date }))
+    const q = { select: () => q, eq: () => q, then: (res, rej) => Promise.resolve({ data: rows(), error: null }).then(res, rej) }
     return q
   }
   return {
     supabase: {
-      auth: { getUser: async () => ({ data: { user: null }, error: null }) },
+      auth: { getUser: async () => ({ data: { user: history.user }, error: null }) },
       rpc: async () => ({ data: false, error: null }),
       from: query,
     },
@@ -77,6 +80,8 @@ beforeEach(() => {
   vi.setSystemTime(new Date(2026, 9, 21, 12))
   saveResult.mockClear()
   localStorage.clear()
+  history.user = null
+  history.completed = []
 })
 afterEach(() => {
   unmount()
@@ -466,6 +471,68 @@ describe('Words with the account menu open', () => {
     await press('C', avatar())
     expect(avatar().getAttribute('aria-expanded')).toBe('false')
     expect(spokenRows()[0]).toBe('Guess 1: C')
+  })
+})
+
+// The streak arrives after the board has drawn (useStreak reads the account,
+// then its results), and the board and keyboard are sized to fit under the
+// header with no room to spare. On a line of its own it pushed them ~26px
+// down, the bottom row off a short phone and under a thumb mid-tap (F262).
+describe('Words streak (F262)', () => {
+  const dateLine = () => host.querySelector('.gs-date')
+  // What sits in the page between the date line and the board.
+  const betweenDateAndBoard = () => {
+    const found = []
+    for (let el = dateLine().nextElementSibling; el && el !== boardEl(); el = el.nextElementSibling) found.push(el)
+    return found
+  }
+
+  it('shares the date line, so nothing but the hidden live region sits between the header and the board', async () => {
+    history.user = USER
+    history.completed = ['2026-10-19', '2026-10-20', '2026-10-21']
+    await mount()
+    await act(async () => {}) // useStreak's reads settle
+
+    expect(dateLine().textContent).toContain('3 day streak')
+    // Read as one phrase, without the fire emoji or the separator dot.
+    expect(readable(dateLine()).replace(/\s+/g, ' ').trim()).toBe('October 21, 2026, 3 day streak')
+    const between = betweenDateAndBoard()
+    expect(between.map(el => el.tagName)).toEqual(['STYLE', 'DIV'])
+    expect(between[1]).toBe(liveRegion())
+    expect(liveRegion().className).toBe('sr-only')
+    expect(host.textContent.match(/day streak/g)).toHaveLength(1)
+  })
+
+  it('leaves the streak off a replayed day, whose date it would seem to describe', async () => {
+    history.user = USER
+    history.completed = ['2026-10-19', '2026-10-20', '2026-10-21']
+    await mount()
+    await act(async () => {})
+    expect(dateLine().textContent).toContain('3 day streak')
+
+    // The Archive closes 150ms after a pick.
+    const pickDay = async (date) => {
+      await click(archiveButton())
+      await tick(0)
+      await click(dialog().querySelector(`button[title="${date}"]`))
+      await tick(200)
+    }
+    await pickDay('2026-10-20')
+    expect(dateLine().textContent).toBe('October 20, 2026')
+
+    // Back on the live day, it returns.
+    await pickDay('2026-10-21')
+    expect(readable(dateLine()).replace(/\s+/g, ' ').trim()).toBe('October 21, 2026, 3 day streak')
+  })
+
+  it('leaves the date line and the space above the board alone with no streak', async () => {
+    await mount()
+    await act(async () => {})
+
+    expect(dateLine().textContent).toBe('October 21, 2026')
+    expect(dateLine().children).toHaveLength(0)
+    expect(betweenDateAndBoard().map(el => el.tagName)).toEqual(['STYLE', 'DIV'])
+    expect(host.textContent).not.toContain('day streak')
   })
 })
 

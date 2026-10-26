@@ -57,7 +57,8 @@ export function ShellFooter() {
  *
  * @param {object} props
  * @param {string} props.game - key in GAMES (title and accent come from there)
- * @param {string} props.date - the puzzle date, already formatted
+ * @param {import('react').ReactNode} props.date - the puzzle date, already
+ *   formatted (Words adds the player's streak to the same line)
  * @param {import('react').ReactNode} props.howTo - how-to-play copy
  * @param {() => void} props.onArchive - opens the archive
  * @param {boolean} [props.hc] - high-contrast colours are on
