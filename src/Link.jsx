@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useMemo } from "react";
+import { useState, useRef, useEffect, useMemo, Fragment } from "react";
 import Archive from './Archive'
 import GameShell from "./GameShell";
 import ResultCard from './ResultCard';
@@ -35,6 +35,99 @@ const TILE_GAP = 8;
 const COLS = 4;
 const LIVES = 4;
 const CHECKPOINT_KEY = 'streakle-link';
+// Room between a tile's 2px border and its word, each side.
+const TILE_PAD_X = 1;
+
+// ── Fitting a word to its tile. A tile is a quarter of the board, so on a
+// phone a long word (ATTENBOROUGH, WHEELBARROW) is wider than its tile at the
+// size it gets on a wide screen. Each word shrinks just enough to fit on one
+// line, never below MIN_WORD_PX; the few that still don't fit (on a 320px
+// screen) break onto a second line at a clean join (ATTEN-BOROUGH) rather
+// than spill past the tile.
+const MIN_WORD_PX = 9;
+
+// DM Sans 700 advance widths (em) of A–Z at the optical sizes the tiles use
+// (9–14px, where the letters are a little wider than at large sizes), rounded
+// up, so a word's width is known before it is laid out. Any other character
+// counts as wide as a W.
+const GLYPH_EM = {
+  A: 0.72, B: 0.65, C: 0.74, D: 0.71, E: 0.6, F: 0.57, G: 0.79, H: 0.73, I: 0.29,
+  J: 0.56, K: 0.67, L: 0.57, M: 0.89, N: 0.74, O: 0.79, P: 0.63, Q: 0.79, R: 0.64,
+  S: 0.62, T: 0.61, U: 0.69, V: 0.71, W: 1.03, X: 0.68, Y: 0.64, Z: 0.6,
+};
+const WIDEST_GLYPH_EM = GLYPH_EM.W;
+const textEm = (text) => [...text].reduce((em, ch) => em + (GLYPH_EM[ch] ?? WIDEST_GLYPH_EM), 0);
+
+// The size a word gets with room to spare (the size every word had before
+// tiles fitted their words), and the size that fits its longest run between
+// spaces to its tile: the tile is a size container, so 1cqi is 1% of the
+// width inside its padding.
+const roomyWordPx = (word) => word.length > 8 ? 10 : word.length > 6 ? 12 : 14;
+const fittedWordSize = (word) => {
+  const widestRunEm = Math.max(...word.split(' ').map(textEm));
+  const fitCqi = Math.floor(10000 / widestRunEm) / 100;
+  return `clamp(${MIN_WORD_PX}px, ${fitCqi}cqi, ${roomyWordPx(word)}px)`;
+};
+
+// Where a long run may break if it has to: the join of two consonants
+// nearest its middle (by width) that aren't one sound or a pair that opens
+// syllables (TH, ST…), else a vowel–consonant–vowel join, keeping 3+ letters
+// on each side (WHEEL-BARROW, COPPER-FIELD). -1: nowhere. Only a run wider
+// than BREAKABLE_RUN_EM gets one: a tile on a 320px screen holds 62px of text,
+// 6.9em at MIN_WORD_PX, so anything narrower always fits on one line.
+const BREAKABLE_RUN_EM = 6.5;
+const MIN_PART_LETTERS = 3;
+const VOWEL = /[AEIOUY]/;
+const isVowel = (ch) => ch !== undefined && VOWEL.test(ch);
+const isConsonant = (ch) => ch !== undefined && /[A-Z]/.test(ch) && !VOWEL.test(ch);
+const KEEP_TOGETHER = new Set(['CH', 'CK', 'GH', 'NG', 'PH', 'QU', 'SH', 'TH', 'WH',
+  'BL', 'BR', 'CL', 'CR', 'DR', 'FL', 'FR', 'GL', 'GR', 'PL', 'PR', 'SC', 'SK', 'SL',
+  'SM', 'SN', 'SP', 'ST', 'SW', 'TR', 'TW', 'WR']);
+function breakIndex(run) {
+  const runEm = textEm(run);
+  if (runEm <= BREAKABLE_RUN_EM) return -1;
+  const half = runEm / 2;
+  let best = null;
+  for (let i = MIN_PART_LETTERS; i <= run.length - MIN_PART_LETTERS; i++) {
+    const [before, after, next] = [run[i - 1], run[i], run[i + 1]];
+    const rank = isConsonant(before) && isConsonant(after) && !KEEP_TOGETHER.has(before + after) ? 0
+      : isVowel(before) && isConsonant(after) && isVowel(next) ? 1 : null;
+    if (rank === null) continue;
+    const offMiddle = Math.abs(textEm(run.slice(0, i)) - half);
+    if (!best || rank < best.rank || (rank === best.rank && offMiddle < best.offMiddle)) best = { i, rank, offMiddle };
+  }
+  return best ? best.i : -1;
+}
+
+// A word tile's box (the grid tile and its flying copy): a size container
+// whose font size is the roomy one, so a browser without container units
+// (which drops the fitted size) shows the word as before.
+const wordBoxStyle = (word) => ({
+  containerType: 'inline-size',
+  display: 'flex', alignItems: 'center', justifyContent: 'center',
+  fontSize: roomyWordPx(word), fontWeight: 700, textAlign: 'center',
+  padding: `0 ${TILE_PAD_X}px`,
+});
+
+// The word inside it. A long run carries a soft hyphen at its break point,
+// shown (as a hyphen) only if the run breaks there. The hyphen is the
+// .lk-shy marker's generated content, so the tile's text (and, with the
+// marker aria-hidden, its name) stays exactly the word. Anything that still
+// can't fit breaks at the last letter that does.
+function TileWord({ word }) {
+  const runs = word.split(' ').map(run => ({ run, at: breakIndex(run) }));
+  const text = runs.every(({ at }) => at < 0) ? word : runs.map(({ run, at }, r) => (
+    <Fragment key={r}>
+      {r > 0 && ' '}
+      {at < 0 ? run : <>{run.slice(0, at)}<span className="lk-shy" aria-hidden="true" />{run.slice(at)}</>}
+    </Fragment>
+  ));
+  return (
+    <span style={{ fontSize: fittedWordSize(word), maxWidth: '100%', overflowWrap: 'anywhere', textWrap: 'balance' }}>
+      {text}
+    </span>
+  );
+}
 
 // Screen-reader wording for what's left, e.g. "2 lives left".
 const livesLeftText = (n) => n === 0 ? 'no lives left' : `${n} ${n === 1 ? 'life' : 'lives'} left`;
@@ -102,6 +195,7 @@ const css = `
 @keyframes slideUp{from{transform:translateY(16px);opacity:0}to{transform:translateY(0);opacity:1}}
 @keyframes fadeIn{from{opacity:0}to{opacity:1}}
 @keyframes confetti{0%{transform:translateY(0) rotate(0deg);opacity:1}100%{transform:translateY(120px) rotate(720deg);opacity:0}}
+.lk-shy::before{content:"\\00AD"}
 `;
 
 // One word of a solved group flipping from its grid spot (fromX/fromY, px
@@ -122,18 +216,17 @@ function FlyingTile({ word, fromX, fromY, toX, toY, delay, color }) {
 
   return (
     <div ref={ref} aria-hidden="true" style={{
+      ...wordBoxStyle(word),
       position: 'absolute', left: 0, top: 0,
       transform: `translate(${fromX}px,${fromY}px)`,
       width: '23%', height: 56,
       background: color, borderRadius: 8,
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      fontSize: word.length > 8 ? 10 : word.length > 6 ? 12 : 14,
-      fontWeight: 700, color: 'var(--bg)',
+      color: 'var(--bg)',
       pointerEvents: 'none', zIndex: 20,
       boxShadow: '0 4px 20px rgba(0,0,0,0.45)',
-      willChange: 'transform', padding: '0 4px', textAlign: 'center',
+      willChange: 'transform',
       perspective: '400px', transformStyle: 'preserve-3d',
-    }}>{word}</div>
+    }}><TileWord word={word} /></div>
   );
 }
 
@@ -413,26 +506,29 @@ function LinkBoard({ seedDate, isToday, streak }) {
           ))}
         </div>
 
-        <div role="group" aria-label="Words" style={{ display: 'grid', gridTemplateColumns: `repeat(${COLS}, 1fr)`, gap: TILE_GAP, marginBottom: 16 }}>
+        {/* minmax(0, 1fr): a column never grows past its quarter for a long word. */}
+        <div role="group" aria-label="Words" style={{ display: 'grid', gridTemplateColumns: `repeat(${COLS}, minmax(0, 1fr))`, gap: TILE_GAP, marginBottom: 16 }}>
           {remaining.map(word => {
             const isSel = selected.includes(word);
             const isShaking = shakeWords.includes(word);
             const isHidden = hiddenWords.includes(word);
             return (
               <div key={word} ref={el => wordRefs.current[word] = el} {...clickableProps(() => toggleWord(word), inert)} aria-pressed={inert ? undefined : isSel} style={{
-                aspectRatio: '5/3', background: isSel ? 'var(--gold)' : 'var(--surface)',
+                ...wordBoxStyle(word),
+                // Filling its column; no min-height, so a word needing more
+                // lines than the 5:3 shape holds grows the tile, not spills.
+                width: '100%', aspectRatio: '5/3', background: isSel ? 'var(--gold)' : 'var(--surface)',
                 border: `2px solid ${isSel ? 'var(--gold)' : 'var(--border)'}`,
-                borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: word.length > 8 ? 10 : word.length > 6 ? 12 : 14,
-                fontWeight: 700, color: isSel ? 'var(--bg)' : 'var(--ink)',
+                borderRadius: 8,
+                color: isSel ? 'var(--bg)' : 'var(--ink)',
                 cursor: inert ? 'default' : 'pointer',
-                userSelect: 'none', textAlign: 'center', padding: '0 4px',
+                userSelect: 'none',
                 transition: 'background 0.15s, border-color 0.15s',
                 animation: isShaking ? 'shake 0.45s ease' : isSel ? 'pop 0.3s ease' : 'none',
                 boxShadow: isSel ? '0 0 0 3px rgba(var(--gold-rgb),0.2)' : 'none',
                 opacity: isHidden ? 0 : 1,
               }}>
-                {word}
+                <TileWord word={word} />
               </div>
             );
           })}

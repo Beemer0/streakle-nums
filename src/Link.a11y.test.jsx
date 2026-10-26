@@ -130,6 +130,8 @@ describe('Link accessibility', () => {
     const word = p.categories[0].words[0]
     await click(tile(word))
     expect(tile(word).getAttribute('aria-pressed')).toBe('true')
+    // ...and is named by its word alone.
+    expect(tiles().map(t => t.textContent).sort()).toEqual(p.categories.flatMap(c => c.words).sort())
     // Enter on a focused tile still toggles it.
     await press(tile(word), 'Enter')
     expect(tile(word).getAttribute('aria-pressed')).toBe('false')
@@ -311,6 +313,34 @@ describe('Link accessibility', () => {
     expect(document.activeElement).toBe(resultCard())
     // The finished board's words are plain text, not stale toggle buttons.
     expect(tiles().filter(t => t.hasAttribute('aria-pressed') || t.hasAttribute('role'))).toHaveLength(0)
+  })
+
+  it('lets a long word break at a clean join that screen readers never hear', async () => {
+    // 2026-11-01 deals ATTENBOROUGH and COPPERFIELD, too wide for a tile on a
+    // 320px screen even at the smallest size a word gets.
+    vi.setSystemTime(new Date(2026, 10, 1, 12))
+    const words = linkFor('2026-11-01').categories.flatMap(c => c.words)
+    expect(words).toEqual(expect.arrayContaining(['ATTENBOROUGH', 'COPPERFIELD']))
+    await mount()
+
+    // The break is an empty, aria-hidden marker whose generated content is a
+    // soft hyphen (invisible unless the word breaks there, then a hyphen), so
+    // the tile's text is still exactly its word.
+    expect([...host.querySelectorAll('style')].map(s => s.textContent).join('')).toContain('.lk-shy::before{content:"\\00AD"}')
+    const markers = (el) => [...el.querySelectorAll('.lk-shy')]
+    for (const [w, before, after] of [['ATTENBOROUGH', 'ATTEN', 'BOROUGH'], ['COPPERFIELD', 'COPPER', 'FIELD']]) {
+      const [marker, ...more] = markers(tile(w))
+      expect(more).toHaveLength(0)
+      expect(marker.getAttribute('aria-hidden')).toBe('true')
+      expect(marker.textContent).toBe('')
+      expect([marker.previousSibling.textContent, marker.nextSibling.textContent]).toEqual([before, after])
+    }
+    // Words that always fit on one line carry none.
+    expect(markers(tile('PENN'))).toEqual([])
+    expect(markers(tile('HOUDINI'))).toEqual([])
+    // Every tile is still a toggle whose text is its word.
+    expect(tiles().map(t => t.textContent).sort()).toEqual([...words].sort())
+    for (const t of tiles()) expect(t.getAttribute('role')).toBe('button')
   })
 
   it('does not pull focus to the result card when a finished day reloads', async () => {

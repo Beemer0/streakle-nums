@@ -4,14 +4,22 @@
 // colour (Link colours a group by its position, easiest to trickiest). Every
 // puzzle must be in the schedule (an era per batch of new puzzles), and from
 // LINK_CUTOVER none may return within a full shipped cycle (71 days; shipped
-// history included). Run after editing src/link/puzzles.js:  node scripts/check-link.mjs
+// history included). New puzzles also get a warning for any word over 10
+// letters. Run after editing src/link/puzzles.js:  node scripts/check-link.mjs
 import { PUZZLES } from '../src/link/puzzles.js'
 import { dailyPuzzleIndex, LINK_CUTOVER, ERAS } from '../src/link/schedule.js'
 import { addDays, dateDay } from '../src/dateMath.js'
 
 const MIN_GAP = 71
+// A tile on a 320px phone fits about 10 letters at its smallest size; a longer
+// word there may break onto two lines (ATTEN-BOROUGH). New puzzles get a warning
+// (not a failure) so an author can pick a shorter word; the shipped bank,
+// which already has a few, is left alone.
+const LONG_WORD_LETTERS = 10
+const SHIPPED_PUZZLES = ERAS[0].count
 
 let bad = 0
+let longWords = 0
 if (ERAS[ERAS.length - 1].count !== PUZZLES.length) {
   bad++
   console.log(`${PUZZLES.length - ERAS[ERAS.length - 1].count} puzzle(s) not in the schedule: add an era in src/link/schedule.js`)
@@ -30,6 +38,11 @@ PUZZLES.forEach((p, i) => {
   const nonAscii = all.filter(w => /[^\x00-\x7F]/.test(w))
   if (nonAscii.length) errs.push(`NON-ASCII: ${nonAscii.join(', ')}`)
   if (errs.length) { bad++; console.log(`PUZZLE ${i}: ${errs.join(' | ')}`) }
+  const long = i < SHIPPED_PUZZLES ? [] : all.filter(w => w.split(' ').some(run => run.length > LONG_WORD_LETTERS))
+  if (long.length) {
+    longWords += long.length
+    console.log(`warning: PUZZLE ${i}: ${long.join(', ')} (over ${LONG_WORD_LETTERS} letters: may take two lines on a 320px phone)`)
+  }
 })
 const lastServed = new Map()
 let minGap = Infinity, repeats = 0
@@ -43,5 +56,6 @@ for (let d = '2025-01-01'; d <= '2030-12-31'; d = addDays(d, 1)) {
   lastServed.set(i, d)
 }
 
+if (longWords) console.log(`${longWords} long word(s) in new puzzles (a warning, not a failure)`)
 console.log(`\n${PUZZLES.length} puzzles, ${bad} broken; from ${LINK_CUTOVER} to 2030-12-31 the closest repeat is ${minGap} days (${repeats} closer than ${MIN_GAP})`)
 process.exit(bad + repeats > 0 ? 1 : 0)
