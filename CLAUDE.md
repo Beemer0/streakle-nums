@@ -31,14 +31,17 @@ puzzles every day; signed-in players build streaks.
 - `PageShell.jsx` gives the non-game pages (Login, Privacy, Pool History,
   Bracket, Octagon) the same frame: GameShell's exported `TopBar` and
   `ShellFooter` around a `title` / `subtitle` / `date` head and a `width`-capped
-  column (no `title` = the page names nothing yet). A new framed page also
-  goes in `PAGE_SHELL_PATHS` in `App.jsx`, so the floating `SignInBanner`
-  skips it.
+  column (no `title` = the page names nothing yet). Every page but Home has a
+  top bar, so the floating `SignInBanner` shows only on `/`. `NotFound.jsx`
+  (the `path="*"` route) is a PageShell page too.
 - `ResultCard.jsx` (+ `.css`) is every game's end-of-game card: outcome
   title, the game's own stats as children (`.rc-headline` / `.rc-detail`),
   then Share and "Next: GAME →". Its `ShareButton` owns the share-sheet →
   clipboard → "Copied!" logic — games only pass a `shareText()` builder.
-- Shared: `AuthContext.js` (`useAuth`), `AuthProvider.jsx`, `supabase.js` (PKCE
+- Shared: `AuthContext.js` (`useAuth`), `AuthProvider.jsx` (`signOut()` resolves
+  to whether the player is signed out: a failed logout request leaves the
+  session stored, so they stay signed in and the account menu says so),
+  `supabase.js` (PKCE
   OAuth, so no tokens ever sit in the URL — keep it that way), `supabaseLoader.js`
   (`getSupabase()`: the client loads on first use, outside the entry chunk — code
   on Home's first paint must use it, never import `./supabase` statically;
@@ -239,7 +242,8 @@ non-members are redirected to `/`; nothing names a pool until membership is
 known. `noindex`.
 - `src/pools.js` is the registry (`POOLS`: id, name, kind, path, emoji) plus
   pure grouping/recap helpers (tested). **A new pool needs an entry there**
-  (alongside its page and route); its members then see it automatically, and it
+  (alongside its page, its route and a `vercel.json` rewrite — pools are never
+  prerendered); its members then see it automatically, and it
   moves from Active to Past once it gets a `pool_archive` row — no code change.
 - `src/usePoolMemberships.js` asks `is_member_of(pool)` for each registered
   pool, cached per user per page load and shared by UserMenu and PoolHistory. A pool's in-page join form must call
@@ -401,11 +405,18 @@ block.
   canonical and Game JSON-LD from `PAGE_SEO`. Non-JS scrapers (Slack, iMessage,
   Discord) now get the right head on `/words`, `/scramble` etc. instead of the
   homepage fallback. `vercel.json` sets `cleanUrls: true` so the files are
-  served without redirects; the `/(.*) → /` rewrite catches anything not
-  pre-rendered. Keep its destination `/`: with `cleanUrls` on, `/index.html`
-  no longer resolves and every non-prerendered route 404s (that took down
-  `/pools`, `/bracket` and `/octagon` on 2026-10-21). The private pools (`/bracket`, `/octagon`,
-  `/pools`) stay off the prerender list so no scraper ever finds them.
+  served without redirects. The private pools (`/bracket`, `/octagon`,
+  `/pools`) stay off the prerender list (`PRERENDERED` in `src/seo.js`) so no
+  scraper ever finds them; `vercel.json` rewrites just those three (with and
+  without a trailing slash) to `/`. Every other URL gets `dist/404.html`
+  (written by prerender: noindex, no canonical) with a real 404 status, and
+  the SPA boots there and shows `NotFound.jsx`. **A new route must be
+  prerendered or get a rewrite** (`App.routing.test.jsx` fails otherwise),
+  and rewrite destinations stay `/`: with `cleanUrls` on, `/index.html` no
+  longer resolves (that 404'd the pools on 2026-10-21). Known side effects:
+  a wrong-case URL (`/Words`) renders the right page under a 404 status, and
+  `/404` itself is a noindex 200. `public/ads.txt` declares the AdSense
+  publisher ID (the same one as `index.html`'s ad script).
 - Lighthouse SEO scores 100/100 on `/` and `/words` on the deployed site
   (2026-10-21); accessibility is 100 too.
 - Performance (deployed, mobile, 2026-10-23): `/` 89–90 (was 72; FCP
