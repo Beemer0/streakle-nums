@@ -173,7 +173,7 @@ function WeaveBoard({ seedDate, isToday, palette, hc }) {
   const [focusIdx, setFocusIdx] = useState(ACTIVE[0]) // the board's one tab stop
 
   const tileEls = useRef([])
-  const press = useRef(null)      // { idx, x, y, id, dragging }
+  const press = useRef(null)      // { idx, x, y, id, type, slot, dragging }
   const flip = useRef(null)       // { a, b, ghost } — the swap to animate after render
   const suppressClickUntil = useRef(0)
   const timeouts = useRef([])
@@ -266,14 +266,23 @@ function WeaveBoard({ seedDate, isToday, palette, hc }) {
   }
 
   // ── Pointer: a primary press becomes a drag after DRAG_START_PX; otherwise
-  // the click that follows is a tap. Capture starts only once dragging, so
-  // taps keep their normal click target. Any press, a released button or a
-  // lost capture ends a drag, so a tile can never stay stuck mid-air. ──
+  // the click that follows is a tap. The grid captures the pointer only once
+  // dragging, so taps keep their normal click target. A new primary press, a
+  // released button, a cancel of the press's pointer or the grid losing its
+  // capture ends a drag, so a tile can never stay stuck mid-air. A touch or
+  // pen press starts out captured by its tile, so the grid taking over fires
+  // lostpointercapture at the tile, which bubbles here and must not end the
+  // drag; nor may a second finger's events. ──
   const cellAt = (x, y) => {
     const el = document.elementFromPoint(x, y)?.closest?.('[data-idx]')
     return el ? Number(el.dataset.idx) : -1
   }
   const endDrag = () => { press.current = null; setDrag(null) }
+  const isPressPointer = (e) => press.current?.id === e.pointerId
+  const onPointerCancel = (e) => { if (isPressPointer(e)) endDrag() }
+  const onLostPointerCapture = (e) => {
+    if (e.target === e.currentTarget && isPressPointer(e)) endDrag()
+  }
   const onPointerDown = (e) => {
     if (!e.isPrimary) return
     suppressClickUntil.current = 0
@@ -281,7 +290,7 @@ function WeaveBoard({ seedDate, isToday, palette, hc }) {
     const el = e.target.closest?.('[data-idx]')
     const i = el ? Number(el.dataset.idx) : -1
     if (i < 0 || !movable(i) || (e.pointerType === 'mouse' && e.button !== 0)) return
-    press.current = { idx: i, x: e.clientX, y: e.clientY, id: e.pointerId, type: e.pointerType, dragging: false }
+    press.current = { idx: i, x: e.clientX, y: e.clientY, id: e.pointerId, type: e.pointerType, slot: el.getBoundingClientRect(), dragging: false }
   }
   const onPointerMove = (e) => {
     const p = press.current
@@ -305,8 +314,12 @@ function WeaveBoard({ seedDate, isToday, palette, hc }) {
     const target = cellAt(e.clientX, e.clientY)
     const drop = { dx: e.clientX - p.x, dy: e.clientY - p.y }
     endDrag()
-    // Dropped back on itself: a jittery tap, so treat it as one.
-    if (target === p.idx) tap(p.idx)
+    // Dropped back on its own slot: a jittery tap, so treat it as one. The
+    // dragged tile ignores hit-testing (.wv-drag), so its slot hits no tile;
+    // the tile's rect from the press finds it.
+    const { left, right, top, bottom } = p.slot
+    const home = target === p.idx || (target < 0 && e.clientX >= left && e.clientX <= right && e.clientY >= top && e.clientY <= bottom)
+    if (home) tap(p.idx)
     else if (target >= 0 && movable(target)) commit(p.idx, target, drop)
   }
   const onClick = (e) => {
@@ -393,8 +406,8 @@ function WeaveBoard({ seedDate, isToday, palette, hc }) {
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
-        onPointerCancel={endDrag}
-        onLostPointerCapture={endDrag}
+        onPointerCancel={onPointerCancel}
+        onLostPointerCapture={onLostPointerCapture}
         onClick={onClick}
         onFocus={onFocus}
         onKeyDown={onKeyDown}
