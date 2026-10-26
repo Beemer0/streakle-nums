@@ -157,6 +157,27 @@ puzzles every day; signed-in players build streaks.
   unsolvable board, repeat within 365 days from the cutover (2025–2030), or a
   cold first board slower than 300 ms; then update the post-cutover pins.
   Any cutover/era date must be one no time zone has reached when it deploys.
+- Phone layout: every game's controls must be on screen on load at 375x548
+  (iPhone SE in Safari) and nothing may clip or scroll sideways at 320px;
+  desktop and tablet stay as they are. Check in a real browser (happy-dom has
+  no layout). How each game does it:
+  - Grids: centred by their own `margin-inline:auto`, never the scroller's
+    `justify-content:center` (that hid the row labels past the left edge);
+    phone columns are `minmax(64px,88px)`. A pick closes the match list in
+    all three games, so the submit button sits right under the search box.
+  - Link: `repeat(4, minmax(0, 1fr))` columns; each word is sized to its
+    tile by `GLYPH_EM` (DM Sans 700 widths) in `cqi`, between 9px and its old
+    size, and a run wider than 6.5em gets a CSS soft hyphen (`.lk-shy`, an
+    empty aria-hidden marker, so the tile's text stays exactly the word).
+    `check-link.mjs` warns about words over 10 letters in new puzzles.
+  - Scramble: on phones (≤480px) `--sc-cell` is also capped by the visible
+    height (`dvh`, `vh` fallback) minus fixed reserves (`ABOVE_BOARD` etc. in
+    `Scramble.jsx`, which copy GameShell's 147px header — re-measure them if
+    the header changes; the slack is ~5px). Short phones (≤760px tall) put
+    the streak, chips and timer on one row. Cells stop at 22px.
+  - Words: the board and keyboard are sized to fit under the header with no
+    room to spare, so nothing may sit between them; the streak shares the
+    date line (`DateLine`, live day only).
 
 ## Recent work (last session)
 A full code audit + fix pass: bug fixes, route code-splitting, accessibility
