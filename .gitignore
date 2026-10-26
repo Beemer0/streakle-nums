@@ -12,10 +12,9 @@ dist
 dist-ssr
 *.local
 
-# Environment variables
+# Environment variables (.env.development, .env.staging, … too)
 .env
-.env.local
-.env.production
+.env.*
 
 # Editor directories and files
 .vscode/*
@@ -28,8 +27,12 @@ dist-ssr
 *.sln
 *.sw?
 
-# Claude Code
+# Claude Code and its MCP tools (local config, personal rules, browser logs;
+# .claude/launch.json stays tracked)
 .claude/worktrees/
+.claude/rules/
+.mcp.json
+.playwright-mcp/
 
 # Supabase CLI scratch
 supabase/.temp/
