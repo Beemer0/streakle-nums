@@ -47,7 +47,6 @@ function memoryStorage() {
   }
 }
 vi.stubGlobal('localStorage', memoryStorage())
-globalThis.IS_REACT_ACT_ENVIRONMENT = true
 
 // The site's tokens (Vitest stubs CSS imports, so read the file; a literal
 // new URL(…, import.meta.url) would be rewritten to a served URL), loaded so
