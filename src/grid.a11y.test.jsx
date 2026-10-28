@@ -58,24 +58,24 @@ const KO_LABEL = { ...knockoutData.PROMOTIONS, ...knockoutData.WEIGHT_CLASSES, .
 const GAMES = [
   {
     name: 'Faceoff', Game: FaceoffGame, grid: '.faceoff-grid', opt: 'faceoff-opt', list: 'Matching players',
-    search: 'Search NHL player for ', submit: 'Submit "', none: 'No player found', hasCancel: true, offersUsed: true,
-    searchClass: 'faceoff-search', showsNone: true,
+    search: 'Search NHL player for ', submit: 'Submit "', none: 'No player found', hasCancel: true,
+    searchClass: 'faceoff-search', showsNone: true, headline: 'Final Score: ',
     pool: faceoff.PLAYERS, puzzle: faceoff.getDailyPuzzle(TODAY), fits: faceoff.fitsOn(TODAY),
     label: (k) => faceoffData.AWARDS[k] || faceoffData.TEAMS[k] || k,
     score: (p) => Math.max(5, Math.round(100 - p.f)),
   },
   {
     name: 'Gridiron', Game: GridironGame, grid: '.gridiron-grid', opt: 'gridiron-opt', list: 'Matching players',
-    search: 'Search NFL player for ', submit: 'Submit "', none: 'No player found', hasCancel: true, offersUsed: true,
-    searchClass: 'gridiron-search', showsNone: true,
+    search: 'Search NFL player for ', submit: 'Submit "', none: 'No player found', hasCancel: true,
+    searchClass: 'gridiron-search', showsNone: true, headline: 'Final Score: ',
     pool: gridiron.PLAYERS, puzzle: gridiron.getDailyPuzzle(TODAY), fits: gridiron.fitsOn(TODAY),
     label: (k) => gridironData.AWARDS[k] || gridironData.TEAMS[k] || k,
     score: (p) => Math.max(5, Math.round(100 - p.f)),
   },
   {
     name: 'Knockout', Game: KnockoutGame, grid: '.ko-grid', opt: 'ko-opt', list: 'Matching fighters',
-    search: 'Search MMA fighter for ', submit: 'Confirm:', none: 'No fighter found', hasCancel: false, offersUsed: false,
-    searchClass: 'ko-search', showsNone: false, // Knockout has no written no-match line
+    search: 'Search MMA fighter for ', submit: 'Confirm:', none: 'No fighter found', hasCancel: false,
+    searchClass: 'ko-search', showsNone: false, headline: 'Final score: ', // Knockout has no written no-match line
     pool: knockout.FIGHTERS, puzzle: knockout.getDailyPuzzle(TODAY), fits: knockout.fitsOn(TODAY),
     label: (k) => KO_LABEL[k],
     score: (p) => Math.max(5, Math.min(100, Math.round(115 - p.f))),
@@ -145,6 +145,18 @@ for (const g of GAMES) {
   const fitsCell = (p, r, c) => g.fits(p, g.puzzle.rows[r]) && g.fits(p, g.puzzle.cols[c])
   const rightFor = (r, c) => g.pool.find(p => fitsCell(p, r, c))
   const wrongFor = (r, c) => g.pool.find(p => !fitsCell(p, r, c))
+  const hitsFor = (q) => g.pool.filter(o => o.n.toLowerCase().includes(q.toLowerCase()))
+  // A right answer whose full name finds him alone.
+  const loneFor = (r, c) => g.pool.find(p => fitsCell(p, r, c) && hitsFor(p.n).length === 1)
+  // A right answer and one word of his name that also finds 1-7 others, so
+  // every match shows (the list stops at 8).
+  function sharedFor(r, c) {
+    for (const p of g.pool.filter(x => fitsCell(x, r, c))) {
+      const query = p.n.split(' ').find(w => w.length >= 3 && hitsFor(w).length >= 2 && hitsFor(w).length <= 8)
+      if (query) return { player: p, query }
+    }
+    throw new Error(`no answer for ${g.name} ${r}-${c} shares a name with another player`)
+  }
   // What a sighted player reads in the search panel (no screen-reader-only text).
   const panelText = () => {
     const copy = input().parentElement.cloneNode(true)
@@ -410,16 +422,47 @@ for (const g of GAMES) {
       expect(input().value).toBe('')
     })
 
-    if (g.offersUsed) {
-      it('announces a player already on the board', async () => {
-        await mount(g.Game)
-        const right = rightFor(0, 0)
-        await answer(0, 0, right)
-        await answer(1, 1, right)
-        expect(spoken()).toContain(`${right.n} is already on the board. 7 guesses remaining.`)
-        expect(focused()).toBe(input())
-      })
-    }
+    // With exactly nine guesses for nine cells, a guess spent on a player
+    // already placed lost the board: he is never offered again, and a search
+    // that finds only him says so rather than "no match".
+    it('never offers a player already on the board, and says why when he is all a search finds', async () => {
+      await mount(g.Game)
+      const placed = loneFor(0, 0)
+      await answer(0, 0, placed)
+      await openCell(1, 1)
+      await type(placed.n)
+      expect(rows()).toHaveLength(0)
+      if (g.showsNone) {
+        expect(panelText()).toContain(`${placed.n} is already on the board`)
+        expect(panelText()).not.toContain(g.none)
+      }
+      await tick(800)
+      expect(spoken()).toContain(`${placed.n} is already on the board`)
+      expect(spoken()).not.toContain(g.none)
+      expect(button(g.submit)?.disabled ?? true).toBe(true)
+      expect(host.textContent).toContain('8 guesses left')
+      expect(focused()).toBe(input())
+    })
+
+    it('leaves a placed player out of a search that finds others too', async () => {
+      await mount(g.Game)
+      const { player, query } = sharedFor(0, 0)
+      await openCell(0, 0)
+      await type(query)
+      expect(rows().map(rowName)).toContain(player.n)
+      await click(rows().find(row => rowName(row) === player.n))
+      await click(button(g.submit))
+      expect(host.textContent).toContain('8 guesses left')
+
+      await openCell(1, 1)
+      await type(query)
+      const names = rows().map(rowName)
+      expect(names.length).toBe(hitsFor(query).length - 1)
+      expect(names).not.toContain(player.n)
+      await tick(800)
+      expect(spoken()).toContain(`${names.length} ${names.length === 1 ? 'match' : 'matches'} shown`)
+      expect(host.textContent).toContain('8 guesses left')
+    })
 
     it('moves focus to the result when the last guess ends the game', async () => {
       await mount(g.Game)
@@ -435,6 +478,13 @@ for (const g of GAMES) {
       // Every cell is locked now, and still named.
       expect(host.querySelectorAll(`${g.grid} [role="button"]`)).toHaveLength(0)
       expect(cellEl(0, 0).querySelector('[role="img"]').getAttribute('aria-label')).toBe(`${cellName(0, 0)}: empty`)
+      // The last cell tried no longer looks open: no gold, no "Type below"
+      // pointing at a search box that has gone.
+      expect(input()).toBeNull()
+      expect(host.querySelector(g.grid).textContent).not.toContain('Type below')
+      expect(cellEl(2, 2).style.background).toBe('var(--surface)')
+      expect(cellEl(2, 2).getAttribute('style')).not.toContain('var(--gold)')
+      expect(cellEl(2, 2).textContent).toBe('?')
     })
 
     it('announces a right last guess as the end, and moves focus to the result', async () => {
@@ -452,6 +502,10 @@ for (const g of GAMES) {
       const result = host.querySelector('.rc')
       expect(result).not.toBeNull()
       expect(focused()).toBe(result)
+      // The saved score counts that last right answer, as the card does.
+      expect(result.querySelector('.rc-headline').textContent).toBe(`${g.headline}${score}`)
+      expect(saveResult).toHaveBeenCalledTimes(1)
+      expect(saveResult).toHaveBeenCalledWith({ game: g.name.toLowerCase(), puzzleDate: TODAY, completed: false, score })
     })
 
     it('announces a completed board with its final score, and moves focus to the result', async () => {
@@ -470,6 +524,18 @@ for (const g of GAMES) {
       expect(result).not.toBeNull()
       expect(result.classList.contains('rc-won')).toBe(true)
       expect(focused()).toBe(result)
+      // No out-of-reach "/ 855": a board's best total is far lower, and
+      // differs from day to day.
+      expect(result.querySelector('.rc-headline').textContent).toBe(`${g.headline}${total}`)
+    })
+
+    it('promises no score the data cannot reach in its how-to', async () => {
+      await mount(g.Game)
+      await click(host.querySelector('button[aria-label="How to play"]'))
+      const how = host.querySelector('section[aria-label="How to play"]').textContent
+      const best = Math.max(...g.pool.map(g.score))
+      expect(how).toContain(`up to ${best} points a cell`)
+      expect(how).not.toMatch(/max score/i)
     })
 
     it('Space on a match picks it without scrolling the page', async () => {

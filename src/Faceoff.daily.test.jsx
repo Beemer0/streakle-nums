@@ -80,7 +80,10 @@ function solve(date) {
   if (!go(0)) throw new Error(`no solution for ${date}`)
   return picks
 }
-const wrongFor = (date, r, c) => PLAYERS.find(p => !fitsCell(getDailyPuzzle(date), p, r, c)).n
+// A player who doesn't fit the cell, other than any already placed (`placed`):
+// those are no longer offered.
+const wrongFor = (date, r, c, placed = []) =>
+  PLAYERS.find(p => !placed.includes(p.n) && !fitsCell(getDailyPuzzle(date), p, r, c)).n
 
 const SOL = solve(TODAY)
 const WRONG = wrongFor(TODAY, 2, 2)
@@ -179,6 +182,18 @@ async function guess(r, c, name) {
   await click(button('Submit "'))
 }
 
+// Whether a search for `name` in cell (r, c) lists him; leaves the search open.
+async function offered(r, c, name) {
+  await click(cell(r, c))
+  await tick(100)
+  const input = host.querySelector('input[placeholder^="Search"]')
+  await act(async () => {
+    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(input, name)
+    input.dispatchEvent(new Event('input', { bubbles: true }))
+  })
+  return [...input.parentElement.querySelectorAll('[role="button"]')].some(el => el.textContent === name)
+}
+
 async function pickArchiveDay(date) {
   await click(host.querySelector('button[aria-label="Archive"]'))
   await tick(0)
@@ -213,15 +228,16 @@ describe('Faceoff daily checkpoint', () => {
     expect(ended()).toBe(false)
     expect(saveResult).not.toHaveBeenCalled()
 
-    // A restored player can't be used again, and a new cell still reveals.
-    await guess(0, 1, SOL[0])
-    expect(host.textContent).toContain('5 guesses left')
-    await tick(600) // let the miss's shake finish
+    // A restored player isn't offered again (and costs nothing), and a new
+    // cell still reveals.
+    expect(await offered(0, 1, SOL[0])).toBe(false)
+    expect(host.textContent).toContain('6 guesses left')
     await guess(0, 1, SOL[1])
+    expect(host.textContent).toContain('5 guesses left')
     expect(cell(0, 1).style.animation).toMatch(/^cellReveal/)
 
     // Finishing after the reload saves once, scored from the restored cells.
-    for (let i = 0; i < 4; i++) await guess(2, 2, WRONG)
+    for (let i = 0; i < 5; i++) await guess(2, 2, WRONG)
     expect(ended()).toBe(true)
     expect(saveResult).toHaveBeenCalledTimes(1)
     expect(saveResult).toHaveBeenCalledWith({
@@ -248,7 +264,7 @@ describe('Faceoff daily checkpoint', () => {
     await reload()
     expect(ended()).toBe(true)
     expect(host.querySelector('.rc-title').textContent).toContain('Board Complete!')
-    expect(host.textContent).toContain(`Final Score: ${total} / 855`)
+    expect(host.querySelector('.rc-headline').textContent).toBe(`Final Score: ${total}`)
     expect(host.textContent).toContain('9/9 cells filled')
     expect(host.textContent).toContain('Complete!')
     expect(button('📋')).toBeTruthy() // Share
@@ -279,6 +295,18 @@ describe('Faceoff daily checkpoint', () => {
     expect(button('📋')).toBeTruthy()
     await tick(5000)
     expect(saveResult).not.toHaveBeenCalled()
+  })
+
+  it('saves the points of a right last guess that ends a lost board', async () => {
+    await mount()
+    await guess(2, 2, WRONG)
+    await tick(600)
+    for (let k = 0; k < 8; k++) await guess(Math.floor(k / 3), k % 3, SOL[k])
+    const total = SOL.slice(0, 8).reduce((sum, n) => sum + scoreOf(n), 0)
+    expect(ended()).toBe(true)
+    expect(host.querySelector('.rc-headline').textContent).toBe(`Final Score: ${total}`)
+    expect(saveResult).toHaveBeenCalledTimes(1)
+    expect(saveResult).toHaveBeenCalledWith({ game: 'faceoff', puzzleDate: TODAY, completed: false, score: total })
   })
 
   it('never reads or writes the checkpoint on an Archive replay', async () => {
@@ -410,8 +438,8 @@ describe('Faceoff daily checkpoint', () => {
     vi.setSystemTime(new Date(2026, 9, 21, 0, 5))
     const yesterday = solve(YESTERDAY)
     await guess(0, 0, yesterday[0])
-    await guess(1, 1, wrongFor(YESTERDAY, 1, 1))
-    await guess(2, 2, wrongFor(YESTERDAY, 2, 2))
+    await guess(1, 1, wrongFor(YESTERDAY, 1, 1, [yesterday[0]]))
+    await guess(2, 2, wrongFor(YESTERDAY, 2, 2, [yesterday[0]]))
     expect(host.textContent).toContain('6 guesses left')
     expect(cell(0, 0).textContent).toContain(yesterday[0])
     expect(localStorage.getItem(KEY)).toBe(today)

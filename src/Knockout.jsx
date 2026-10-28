@@ -36,6 +36,10 @@ function calcScore(fighter) {
   return Math.max(5, Math.min(100, Math.round(115 - fighter.f)));
 }
 
+// The most one cell can score (the least famous answer's points). The how-to
+// quotes it rather than a board total: a board's best depends on its cells.
+const CELL_MAX = Math.max(...FIGHTERS.map(f => calcScore(f)));
+
 function formatDate(dateStr) {
   if (!dateStr) return '';
   const [y,m,d] = dateStr.split('-').map(Number);
@@ -100,6 +104,13 @@ function boardFrom(cp) {
 // How long typing must pause before screen readers hear the match count.
 const COUNT_DELAY_MS = 700;
 const guessesText = (n) => `${n} ${n === 1 ? 'guess' : 'guesses'} remaining`;
+
+// The fighters already on the board whose names a search matches. They are
+// never offered again, so a search that finds only them says so.
+const placedMatching = (cells, q) => Object.values(cells).map(c => c.player.n).filter(n => n.toLowerCase().includes(q));
+const alreadyText = (names) => names.length === 1
+  ? `${names[0]} is already on the board`
+  : `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]} are already on the board`;
 
 // The first empty cell after `key` in reading order (wrapping round), or null.
 function nextEmpty(key, cells) {
@@ -234,6 +245,7 @@ export default function KnockoutGame() {
     clearTimeout(countTimer.current);
     if (!val.trim()) { setSuggestions([]); return; }
     const q = val.toLowerCase();
+    // Each fighter is used once: nobody already on the board is offered.
     const used = new Set(Object.values(cells).map(c => c.player.n));
     const results = FIGHTERS
       .filter(f => f.n.toLowerCase().includes(q) && !used.has(f.n))
@@ -241,7 +253,9 @@ export default function KnockoutGame() {
       .slice(0, 8);
     setSuggestions(results);
     const n = results.length;
-    countTimer.current = setTimeout(() => announce(n ? `${n} ${n === 1 ? 'match' : 'matches'} shown` : 'No fighter found'), COUNT_DELAY_MS);
+    const placed = placedMatching(cells, q);
+    const none = placed.length ? alreadyText(placed) : 'No fighter found';
+    countTimer.current = setTimeout(() => announce(n ? `${n} ${n === 1 ? 'match' : 'matches'} shown` : none), COUNT_DELAY_MS);
   }
 
   // A pick closes the matches and fills the box with the name, as in Faceoff
@@ -298,6 +312,15 @@ export default function KnockoutGame() {
   function handleConfirm() {
     if (!pendingPlayer || !activeCell) return;
     clearTimeout(countTimer.current);
+    // Never offered (see handleQuery); should a placed fighter get here anyway,
+    // he costs no guess: with nine guesses for nine cells, that would cost the board.
+    if (Object.values(cells).some(c => c.player.n === pendingPlayer.n)) {
+      setPendingPlayer(null);
+      setQuery('');
+      announce(`${alreadyText([pendingPlayer.n])}. ${guessesText(guessesLeft)}.`);
+      focusNext.current = () => inputRef.current;
+      return;
+    }
     const [ri, ci] = activeCell;
     const key = `${ri}-${ci}`;
     const row = rowHeaders[ri];
@@ -311,6 +334,8 @@ export default function KnockoutGame() {
       const newGuesses = guessesLeft - 1;
       setGuessesLeft(newGuesses);
       if (newGuesses === 0) {
+        // The search closes with the board: no cell is left waiting for a guess.
+        setActiveCell(null);
         setGameOver(true);
         if (isToday) saveResult({ game: 'knockout', puzzleDate: seedDate, completed: false, score: totalScore });
       }
@@ -399,7 +424,7 @@ export default function KnockoutGame() {
       Fill the 3×3 grid with MMA fighters. Each answer must satisfy <b>both</b> the row and column criteria.<br/><br/>
       Criteria can be a <b>promotion</b> (fighter competed there), a <b>weight class</b> (fighter competed at that weight), or an <b>achievement</b>.<br/><br/>
       Each fighter can only be used <b>once</b>. You have <b>9 guesses</b> — one per cell.<br/><br/>
-      🏆 Rarer answers score higher. Max score: ~900.
+      🏆 Rarer answers score higher: up to {CELL_MAX} points a cell.
     </>
   )
 
@@ -466,9 +491,10 @@ export default function KnockoutGame() {
               {colHeaders.map((col,ci)=>{
                 const key=`${ri}-${ci}`;
                 const filled=cells[key];
-                const isActive=activeCell&&activeCell[0]===ri&&activeCell[1]===ci;
-                const isShaking=shakeCell===key;
                 const isOpen=!(filled||gameOver||won);
+                // An ended board shows no cell as waiting for a guess.
+                const isActive=isOpen&&activeCell&&activeCell[0]===ri&&activeCell[1]===ci;
+                const isShaking=shakeCell===key;
                 // Open cells are buttons named by their criteria; a locked
                 // cell names itself through its content (an image role).
                 const cellLabel=`${cellName(ri,ci)}: ${filled?`${filled.player.n}, +${filled.score} points`:'empty'}`;

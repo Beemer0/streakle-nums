@@ -23,6 +23,10 @@ function getScore(fame) {
   return Math.max(5, Math.round(100 - fame));
 }
 
+// The most one cell can score (the least famous answer's points). The how-to
+// quotes it rather than a board total: a board's best depends on its cells.
+const CELL_MAX = Math.max(...PLAYERS.map(p => getScore(p.f)));
+
 const MAX_GUESSES = 9;
 const CHECKPOINT_KEY = 'streakle-gridiron';
 const PLAYERS_BY_NAME = new Map(PLAYERS.map(p => [p.n, p]));
@@ -77,6 +81,13 @@ function writeCheckpoint(date, cells, guessesLeft) {
 const COUNT_DELAY_MS = 700;
 const guessesText = (n) => `${n} ${n === 1 ? 'guess' : 'guesses'} remaining`;
 
+// The players already on the board whose names a search matches. They are
+// never offered again, so a search that finds only them says so.
+const placedMatching = (cells, q) => Object.values(cells).map(v => v.player.n).filter(n => n.toLowerCase().includes(q));
+const alreadyText = (names) => names.length === 1
+  ? `${names[0]} is already on the board`
+  : `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]} are already on the board`;
+
 // The first empty cell after `key` in reading order (wrapping round), or null.
 function nextEmpty(key, cells) {
   const start = Number(key[0]) * 3 + Number(key[2]);
@@ -121,7 +132,7 @@ export default function GridironGame() {
       Fill the 3×3 grid with NFL players. Each player must satisfy <b>both</b> the row and column criteria.<br/><br/>
       Rows and columns can be <b>NFL teams</b> (player played for that franchise — a St. Louis Rams player counts for the Rams) or <b>awards</b> (player won that award).<br/><br/>
       Each player can only be used <b>once</b>. You have <b>9 guesses</b> — one per cell.<br/><br/>
-      🏆 Rarer answers = higher score. Max score: ~855.
+      🏆 Rarer answers = higher score: up to {CELL_MAX} points a cell.
     </>
   )
 
@@ -220,7 +231,6 @@ function GridironBoard({ seedDate, isToday, streak }) {
 
   const rowHeaders = puzzle.rows;
   const colHeaders = puzzle.cols;
-  const totalPossible = 9 * 95;
 
   const spawnConfetti = () => {
     const items = Array.from({length:30},(_,i)=>({id:i,x:20+Math.random()*60,delay:Math.random()*600,color:['var(--success)','var(--gold)','var(--gold)','var(--danger)','var(--star)'][i%5],size:5+Math.random()*8}));
@@ -256,10 +266,14 @@ function GridironBoard({ seedDate, isToday, streak }) {
     clearTimeout(countTimer.current);
     if (val.length < 2) { setSuggestions([]); return; }
     const q = val.toLowerCase();
-    const matches = PLAYERS.filter(p => p.n.toLowerCase().includes(q)).slice(0, 8);
+    // Each player is used once: nobody already on the board is offered.
+    const used = new Set(Object.values(cells).map(v => v.player.n));
+    const matches = PLAYERS.filter(p => p.n.toLowerCase().includes(q) && !used.has(p.n)).slice(0, 8);
     setSuggestions(matches);
     const n = matches.length;
-    countTimer.current = setTimeout(() => announce(n ? `${n} ${n === 1 ? 'match' : 'matches'} shown` : 'No player found'), COUNT_DELAY_MS);
+    const placed = placedMatching(cells, q);
+    const none = placed.length ? alreadyText(placed) : 'No player found';
+    countTimer.current = setTimeout(() => announce(n ? `${n} ${n === 1 ? 'match' : 'matches'} shown` : none), COUNT_DELAY_MS);
   };
 
   const handleSelect = (player) => {
@@ -313,6 +327,15 @@ function GridironBoard({ seedDate, isToday, streak }) {
   const handleSubmit = () => {
     if (!activeCell || !pendingPlayer) return;
     clearTimeout(countTimer.current);
+    // Never offered (see handleQuery); should a placed player get here anyway,
+    // he costs no guess: with nine guesses for nine cells, that would cost the board.
+    if (Object.values(cells).some(v => v.player.n === pendingPlayer.n)) {
+      setPendingPlayer(null);
+      setQuery('');
+      announce(`${alreadyText([pendingPlayer.n])}. ${guessesText(guessesLeft)}.`);
+      focusNext.current = () => inputRef.current;
+      return;
+    }
     const [r, c] = activeCell;
     const key = `${r}-${c}`;
     const rowCrit = rowHeaders[r];
@@ -320,25 +343,25 @@ function GridironBoard({ seedDate, isToday, streak }) {
     const newGuesses = guessesLeft - 1;
     setGuessesLeft(newGuesses);
 
-    const usedNames = Object.values(cells).map(v => v.player.n);
-    const alreadyUsed = usedNames.includes(pendingPlayer.n);
-    const valid = !alreadyUsed && fitsOn(seedDate)(pendingPlayer, rowCrit) && fitsOn(seedDate)(pendingPlayer, colCrit);
+    const valid = fitsOn(seedDate)(pendingPlayer, rowCrit) && fitsOn(seedDate)(pendingPlayer, colCrit);
 
     if (valid) {
       const score = getScore(pendingPlayer.f);
       const newCells = {...cells, [key]: {player: pendingPlayer, score}};
+      // One total for the card, both saves and the announcement.
+      const newTotal = totalScore + score;
       setCells(newCells);
-      setTotalScore(s => s + score);
+      setTotalScore(newTotal);
       setActiveCell(null);
       setQuery('');
       setPendingPlayer(null);
       setSuggestions([]);
       if (Object.keys(newCells).length === 9) {
-        if (isToday) saveResult({ game: 'gridiron', puzzleDate: seedDate, completed: true, score: totalScore + score });
+        if (isToday) saveResult({ game: 'gridiron', puzzleDate: seedDate, completed: true, score: newTotal });
         setWon(true);
         spawnConfetti();
       } else if (newGuesses === 0) {
-        if (isToday) saveResult({ game: 'gridiron', puzzleDate: seedDate, completed: false, score: totalScore });
+        if (isToday) saveResult({ game: 'gridiron', puzzleDate: seedDate, completed: false, score: newTotal });
         setGameOver(true);
       }
       // After any save above: saveResult queues the result on disk
@@ -346,8 +369,8 @@ function GridironBoard({ seedDate, isToday, streak }) {
       if (isToday) writeCheckpoint(seedDate, newCells, newGuesses);
       const next = nextEmpty(key, newCells);
       const right = `Correct: ${pendingPlayer.n}, +${score} points.`;
-      if (!next) announce(`${right} Board complete! Final score ${totalScore + score}.`);
-      else if (newGuesses === 0) announce(`${right} Out of guesses. Final score ${totalScore + score}.`);
+      if (!next) announce(`${right} Board complete! Final score ${newTotal}.`);
+      else if (newGuesses === 0) announce(`${right} Out of guesses. Final score ${newTotal}.`);
       else announce(`${right} ${guessesText(newGuesses)}.`);
       focusNext.current = next && newGuesses > 0 ? () => cellEl(next) : () => resultRef.current;
     } else {
@@ -361,7 +384,7 @@ function GridironBoard({ seedDate, isToday, streak }) {
         setGameOver(true);
       }
       if (isToday) writeCheckpoint(seedDate, cells, newGuesses);
-      const wrong = alreadyUsed ? `${pendingPlayer.n} is already on the board.` : `Not a match: ${pendingPlayer.n}.`;
+      const wrong = `Not a match: ${pendingPlayer.n}.`;
       announce(newGuesses === 0 ? `${wrong} Out of guesses. Final score ${totalScore}.` : `${wrong} ${guessesText(newGuesses)}.`);
       focusNext.current = newGuesses === 0 ? () => resultRef.current : () => inputRef.current;
     }
@@ -372,6 +395,11 @@ function GridironBoard({ seedDate, isToday, streak }) {
     const filled = Object.keys(cells).length;
     return `GRIDIRON by Streakle 🏈 — ${formatDate(seedDate)}\nScore: ${totalScore} | ${filled}/9 cells\n${grid}\n\nPlay at: playstreakle.com/gridiron`;
   };
+
+  // Under a search that lists nobody: either nobody matches, or only players
+  // already on the board do.
+  const placedHits = placedMatching(cells, query.toLowerCase());
+  const noMatchText = placedHits.length ? alreadyText(placedHits) : 'No player found';
 
   return (
     <>
@@ -419,9 +447,10 @@ function GridironBoard({ seedDate, isToday, streak }) {
               {colHeaders.map((col,ci)=>{
                 const key=`${ri}-${ci}`;
                 const filled=cells[key];
-                const isActive=activeCell&&activeCell[0]===ri&&activeCell[1]===ci;
-                const isShaking=shakeCell===key;
                 const isOpen=!(filled||gameOver||won);
+                // An ended board shows no cell as waiting for a guess.
+                const isActive=isOpen&&activeCell&&activeCell[0]===ri&&activeCell[1]===ci;
+                const isShaking=shakeCell===key;
                 // Open cells are buttons named by their criteria; a locked
                 // cell names itself through its content (an image role).
                 const cellLabel=`${cellName(ri,ci)}: ${filled?`${filled.player.n}, +${filled.score} points`:'empty'}`;
@@ -489,7 +518,7 @@ function GridironBoard({ seedDate, isToday, streak }) {
             </div>
           )}
           {query.length>=2&&suggestions.length===0&&!pendingPlayer&&(
-            <div style={{color:'var(--text-2)',fontSize:12,textAlign:'center',marginTop:8}}>No player found</div>
+            <div style={{color:'var(--text-2)',fontSize:12,textAlign:'center',marginTop:8}}>{noMatchText}</div>
           )}
           <div style={{display:'flex',gap:8,marginTop:8}}>
             <button onClick={cancelSearch} style={{flex:1,background:'none',border:'1px solid var(--border)',borderRadius:6,color:'var(--gold)',cursor:'pointer',fontSize:12,padding:'8px'}}>Cancel</button>
@@ -502,7 +531,7 @@ function GridironBoard({ seedDate, isToday, streak }) {
 
       {(won||gameOver)&&(
         <ResultCard ref={resultRef} game="gridiron" outcome={won?'won':'lost'} title={won?'🎉 Board Complete!':'Game Over!'} shareText={buildShareText}>
-          <div className="rc-headline">Final Score: {totalScore} / {totalPossible}</div>
+          <div className="rc-headline">Final Score: {totalScore}</div>
           <div className="rc-detail">{Object.keys(cells).length}/9 cells filled</div>
         </ResultCard>
       )}
