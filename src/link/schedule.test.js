@@ -18,9 +18,15 @@ describe('Link schedule', () => {
   // wrong fact, a second valid split): made before its next day starts in any
   // time zone, never while it is anyone's today, and logged here with the pin.
   //   2026-10-27  #43 Go off on a ___: LIMB -> TIRADE (LIMB read as a tree part)
+  //   2026-10-28  24 puzzles, each before its next day (11-05 on): filler words
+  //               that didn't fit their label (#50 #53 #56 #65 #67 #32 #33 #36
+  //               #37), false labels (#51 #55 #57 #16 #18 #19 #25 #26 #30 #1),
+  //               second valid splits (#17 #33 #36 #37 #53 #56) and groups
+  //               repeated from another puzzle (#61 #4, and 3-word overlaps
+  //               #0 #3). Each change is in that commit's message.
   it("changes a shipped puzzle's content only by a logged correction", () => {
     expect(createHash('sha256').update(JSON.stringify(PUZZLES.slice(0, 71))).digest('hex'))
-      .toBe('9bd9db534fa26491d5788b84ede9719b5d045d9ff3de9e432235852856164be1')
+      .toBe('9455c26d7ca4860e76fc1ceabb253b40b21c6e748e32128e8c4eeb4675b89133')
   })
 
   it('pins the rotation from the cutover', () => {

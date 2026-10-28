@@ -9,7 +9,7 @@
 export const PUZZLES = [
   {
     categories: [
-      { label: "Planets", words: ["MARS", "VENUS", "SATURN", "NEPTUNE"] },
+      { label: "Planets", words: ["MARS", "JUPITER", "SATURN", "NEPTUNE"] },
       { label: "Card games", words: ["POKER", "BRIDGE", "SNAP", "SOLITAIRE"] },
       { label: "Things that are blue", words: ["SKY", "OCEAN", "SAPPHIRE", "BLUEBELL"] },
       { label: "___berry", words: ["STRAW", "BLUE", "RASP", "GOOSE"] },
@@ -20,7 +20,7 @@ export const PUZZLES = [
       { label: "Dog breeds", words: ["POODLE", "BOXER", "HUSKY", "BEAGLE"] },
       { label: "Olympic sports", words: ["JUDO", "FENCING", "LUGE", "ARCHERY"] },
       { label: "Types of cheese", words: ["BRIE", "GOUDA", "FETA", "HAVARTI"] },
-      { label: "Famous Leonardos", words: ["DAVINCI", "DICAPRIO", "FIBONACCI", "NIMOY"] },
+      { label: "Famous Leonardos", words: ["DAVINCI", "DICAPRIO", "FIBONACCI", "BONUCCI"] },
     ]
   },
   {
@@ -34,7 +34,7 @@ export const PUZZLES = [
   {
     categories: [
       { label: "African countries", words: ["CHAD", "MALI", "TOGO", "BENIN"] },
-      { label: "Types of pasta", words: ["PENNE", "RIGATONI", "ORZO", "FUSILLI"] },
+      { label: "Types of pasta", words: ["PENNE", "RIGATONI", "ORZO", "LINGUINE"] },
       { label: "Famous scientists", words: ["CURIE", "DARWIN", "NEWTON", "TESLA"] },
       { label: "Things with rings", words: ["SATURN", "BOXING", "WEDDING", "CIRCUS"] },
     ]
@@ -42,7 +42,7 @@ export const PUZZLES = [
   {
     categories: [
       { label: "Jazz musicians", words: ["COLTRANE", "DAVIS", "PARKER", "MONK"] },
-      { label: "Types of clouds", words: ["CUMULUS", "STRATUS", "CIRRUS", "NIMBUS"] },
+      { label: "Types of hat", words: ["FEDORA", "BERET", "BOWLER", "TRILBY"] },
       { label: "Robin ___", words: ["HOOD", "WILLIAMS", "WRIGHT", "THICKE"] },
       { label: "Cocktail ingredients", words: ["VERMOUTH", "BITTERS", "GRENADINE", "KAHLUA"] },
     ]
@@ -139,13 +139,13 @@ export const PUZZLES = [
     categories: [
       { label: "Pizza toppings", words: ["PEPPERONI", "MUSHROOM", "ANCHOVY", "OLIVE"] },
       { label: "Chess pieces", words: ["KING", "QUEEN", "BISHOP", "ROOK"] },
-      { label: "Worker bee roles", words: ["FORAGER", "DRONE", "SCOUT", "NURSE"] },
+      { label: "Honey bee roles", words: ["FORAGER", "DRONE", "SCOUT", "NURSE"] },
       { label: "Stephen King novels", words: ["IT", "CARRIE", "MISERY", "CUJO"] },
     ]
   },
   {
     categories: [
-      { label: "Citrus fruits", words: ["LEMON", "LIME", "ORANGE", "YUZU"] },
+      { label: "Citrus fruits", words: ["LEMON", "LIME", "KUMQUAT", "YUZU"] },
       { label: "Bond actors", words: ["CONNERY", "MOORE", "CRAIG", "DALTON"] },
       { label: "Shades of orange", words: ["AMBER", "CORAL", "TANGERINE", "RUST"] },
       { label: "Rocky ___", words: ["ROAD", "BALBOA", "MOUNTAIN", "HORROR"] },
@@ -156,13 +156,13 @@ export const PUZZLES = [
       { label: "Units of time", words: ["WEEK", "HOUR", "DECADE", "MONTH"] },
       { label: "Coffee drinks", words: ["LATTE", "MOCHA", "AMERICANO", "CORTADO"] },
       { label: "Tiny amounts", words: ["MINUTE", "TRACE", "SPECK", "DASH"] },
-      { label: "Track events", words: ["SPRINT", "HURDLES", "RELAY", "MARATHON"] },
+      { label: "Running events", words: ["SPRINT", "HURDLES", "RELAY", "MARATHON"] },
     ]
   },
   {
     categories: [
       { label: "Continents", words: ["ASIA", "EUROPE", "AFRICA", "OCEANIA"] },
-      { label: "Boxing punches", words: ["JAB", "CROSS", "UPPERCUT", "COMBO"] },
+      { label: "Boxing terms", words: ["JAB", "CROSS", "UPPERCUT", "COMBO"] },
       { label: "Pirate things", words: ["HOOK", "PARROT", "PLANK", "CUTLASS"] },
       { label: "Peter ___", words: ["PAN", "PARKER", "PIPER", "PRINCIPLE"] },
     ]
@@ -210,7 +210,7 @@ export const PUZZLES = [
   {
     categories: [
       { label: "Norse gods", words: ["ODIN", "THOR", "LOKI", "FREYA"] },
-      { label: "Avengers", words: ["HULK", "VISION", "FALCON", "GROOT"] },
+      { label: "Marvel heroes", words: ["HULK", "VISION", "FALCON", "GROOT"] },
       { label: "___ hammer", words: ["SLEDGE", "JACK", "CLAW", "MC"] },
       { label: "Famous Chrises", words: ["EVANS", "PRATT", "PINE", "ROCK"] },
     ]
@@ -219,7 +219,7 @@ export const PUZZLES = [
     categories: [
       { label: "Salad ingredients", words: ["LETTUCE", "CROUTON", "TOMATO", "CUCUMBER"] },
       { label: "Roman emperors", words: ["NERO", "AUGUSTUS", "TRAJAN", "HADRIAN"] },
-      { label: "Types of cipher", words: ["SHIFT", "VIGENERE", "ENIGMA", "MORSE"] },
+      { label: "Codes & ciphers", words: ["SHIFT", "VIGENERE", "ENIGMA", "MORSE"] },
       { label: "Caesar ___", words: ["SALAD", "PALACE", "SECTION", "DRESSING"] },
     ]
   },
@@ -251,7 +251,7 @@ export const PUZZLES = [
     categories: [
       { label: "Yoga poses", words: ["COBRA", "CHILD", "PIGEON", "CAMEL"] },
       { label: "Construction beams", words: ["PLANK", "JOIST", "RAFTER", "GIRDER"] },
-      { label: "Fictional bridges", words: ["KHAZAD", "KWAI", "TERABITHIA", "MADISON"] },
+      { label: "Bridges in novels", words: ["KHAZAD", "KWAI", "TERABITHIA", "MADISON"] },
       { label: "Card games", words: ["RUMMY", "HEARTS", "WAR", "EUCHRE"] },
     ]
   },
@@ -268,7 +268,7 @@ export const PUZZLES = [
       { label: "Leg joints & parts", words: ["SHIN", "ANKLE", "KNEE", "CALF"] },
       { label: "Macbeth characters", words: ["DUNCAN", "BANQUO", "MACDUFF", "MALCOLM"] },
       { label: "Donut shapes", words: ["RING", "TWIST", "HOLE", "BALL"] },
-      { label: "Grease ___", words: ["MONKEY", "PAINT", "PROOF", "SPOON"] },
+      { label: "Grease ___", words: ["MONKEY", "PAINT", "PROOF", "GUN"] },
     ]
   },
   {
@@ -276,7 +276,7 @@ export const PUZZLES = [
       { label: "Wind instruments", words: ["FLUTE", "OBOE", "CLARINET", "BASSOON"] },
       { label: "Breakfast foods", words: ["TOAST", "CEREAL", "BACON", "WAFFLE"] },
       { label: "Toasts (cheers!)", words: ["SALUD", "PROST", "SKOL", "KANPAI"] },
-      { label: "Champagne ___", words: ["BRUNCH", "SOCKET", "BOTTLE", "CORK"] },
+      { label: "Champagne ___", words: ["SUPERNOVA", "SOCIALIST", "BOTTLE", "CORK"] },
     ]
   },
   {
@@ -297,9 +297,9 @@ export const PUZZLES = [
   },
   {
     categories: [
-      { label: "High card values", words: ["ACE", "JACK", "QUEEN", "TEN"] },
+      { label: "High card values", words: ["KING", "JACK", "QUEEN", "TEN"] },
       { label: "Tennis terms", words: ["LOVE", "DEUCE", "SERVE", "RALLY"] },
-      { label: "Cracker ___", words: ["BARREL", "BOX", "NUT", "WHEAT"] },
+      { label: "___ cracker", words: ["SAFE", "FIRE", "NUT", "WISE"] },
       { label: "Flapjack ingredients", words: ["OATS", "BUTTER", "SYRUP", "SUGAR"] },
     ]
   },
@@ -308,7 +308,7 @@ export const PUZZLES = [
       { label: "Italian cities", words: ["ROME", "MILAN", "VENICE", "NAPLES"] },
       { label: "Window blinds", words: ["VENETIAN", "ROLLER", "VERTICAL", "PLEATED"] },
       { label: "Salad dressings", words: ["RANCH", "ITALIAN", "CAESAR", "FRENCH"] },
-      { label: "When in ___", words: ["DOUBT", "DROUGHT", "VEGAS", "CHARGE"] },
+      { label: "In ___", words: ["DOUBT", "DANGER", "VAIN", "CHARGE"] },
     ]
   },
   {
@@ -410,7 +410,7 @@ export const PUZZLES = [
   {
     categories: [
       { label: "Berries", words: ["STRAWBERRY", "BLACKBERRY", "RASPBERRY", "MULBERRY"] },
-      { label: "Halle ___", words: ["BERRY", "LUJAH", "BANANA", "STORM"] },
+      { label: "Halle ___", words: ["BERRY", "LUJAH", "BAILEY", "STORM"] },
       { label: "Old phone brands", words: ["NOKIA", "MOTOROLA", "ERICSSON", "PALM"] },
       { label: "Chuck ___", words: ["NORRIS", "ROAST", "WAGON", "STEAK"] },
     ]
@@ -418,7 +418,7 @@ export const PUZZLES = [
   {
     categories: [
       { label: "Pool / billiards", words: ["CUE", "CHALK", "POCKET", "RACK"] },
-      { label: "Theatre prompts", words: ["LINE", "MARK", "EXIT", "ASIDE"] },
+      { label: "Stage terms", words: ["LINE", "MARK", "EXIT", "ASIDE"] },
       { label: "Pocket ___", words: ["MONEY", "WATCH", "KNIFE", "ROCKET"] },
       { label: "Spice ___", words: ["GIRL", "JAR", "TRADE", "ISLANDS"] },
     ]
@@ -433,10 +433,10 @@ export const PUZZLES = [
   },
   {
     categories: [
-      { label: "Ocean depth zones", words: ["SUNLIGHT", "HADAL", "MIDNIGHT", "ABYSS"] },
+      { label: "Ocean depth zones", words: ["SUNLIGHT", "HADAL", "MIDNIGHT", "ABYSSAL"] },
       { label: "Movie sagas", words: ["TWILIGHT", "MATRIX", "HOBBIT", "ROCKY"] },
       { label: "Danger ___", words: ["MOUSE", "CLOSE", "SIGN", "MONEY"] },
-      { label: "___ zone", words: ["END", "OZONE", "TIME", "COMFORT"] },
+      { label: "___ zone", words: ["END", "WAR", "TIME", "COMFORT"] },
     ]
   },
   {
@@ -449,17 +449,17 @@ export const PUZZLES = [
   },
   {
     categories: [
-      { label: "Punctuation", words: ["COMMA", "APOSTROPHE", "DASH", "SEMICOLON"] },
-      { label: "Sprint races", words: ["HUNDRED", "RELAY", "HURDLE", "FURLONG"] },
-      { label: "Large intestine etc", words: ["COLON", "LIVER", "SPLEEN", "KIDNEY"] },
+      { label: "Punctuation", words: ["COMMA", "APOSTROPHE", "HYPHEN", "SEMICOLON"] },
+      { label: "Sprint races", words: ["HUNDRED", "RELAY", "HURDLE", "DASH"] },
+      { label: "Organs", words: ["COLON", "LIVER", "SPLEEN", "KIDNEY"] },
       { label: "History ___", words: ["BOOK", "BUFF", "CLASS", "MAKER"] },
     ]
   },
   {
     categories: [
-      { label: "Fencing actions", words: ["LUNGE", "PARRY", "RIPOSTE", "FOIL"] },
-      { label: "Kitchen wraps", words: ["CLING", "WAX", "GREASE", "PARCHMENT"] },
-      { label: "Wrap ___", words: ["AROUND", "PAPER", "PARTY", "SHEET"] },
+      { label: "Fencing actions", words: ["LUNGE", "PARRY", "RIPOSTE", "FEINT"] },
+      { label: "Kitchen wraps", words: ["CLING", "WAX", "FOIL", "PARCHMENT"] },
+      { label: "Wrap ___", words: ["AROUND", "UP", "PARTY", "DRESS"] },
       { label: "Rap ___", words: ["BATTLE", "STAR", "SCALLION", "MUSIC"] },
     ]
   },
@@ -467,7 +467,7 @@ export const PUZZLES = [
     categories: [
       { label: "Shades of blue", words: ["NAVY", "TEAL", "AZURE", "COBALT"] },
       { label: "Armed forces", words: ["ARMY", "MARINES", "AIRFORCE", "COASTGUARD"] },
-      { label: "Hard metals", words: ["NICKEL", "ZINC", "CHROME", "TITANIUM"] },
+      { label: "Hard metals", words: ["NICKEL", "TUNGSTEN", "CHROME", "TITANIUM"] },
       { label: "Clothing stores", words: ["GAP", "ZARA", "UNIQLO", "MANGO"] },
     ]
   },
@@ -497,7 +497,7 @@ export const PUZZLES = [
   },
   {
     categories: [
-      { label: "Martial arts", words: ["KARATE", "JUDO", "AIKIDO", "KENDO"] },
+      { label: "Cat breeds", words: ["PERSIAN", "SIAMESE", "SPHYNX", "BENGAL"] },
       { label: "Rock subgenres", words: ["PUNK", "GRUNGE", "INDIE", "GLAM"] },
       { label: "Heavy ___", words: ["METAL", "WEIGHT", "DUTY", "HANDED"] },
       { label: "Kid ___", words: ["CUDI", "GLOVES", "SISTER", "BROTHER"] },
@@ -530,8 +530,8 @@ export const PUZZLES = [
   {
     categories: [
       { label: "Fast food chains", words: ["WENDYS", "ARBYS", "POPEYES", "CHIPOTLE"] },
-      { label: "Tinker ___", words: ["BELL", "TOY", "TON", "ER"] },
-      { label: "Le Carré roles", words: ["TAILOR", "SOLDIER", "SAILOR", "SPY"] },
+      { label: "Tinker ___", words: ["BELL", "TOY", "ING", "ER"] },
+      { label: "Tinker Tailor rhyme", words: ["TAILOR", "SOLDIER", "SAILOR", "THIEF"] },
       { label: "Peter Pan", words: ["WENDY", "HOOK", "NANA", "SMEE"] },
     ]
   },
@@ -548,7 +548,7 @@ export const PUZZLES = [
       { label: "Volcano parts", words: ["CRATER", "MAGMA", "VENT", "CONE"] },
       { label: "Pokemon trainers", words: ["MISTY", "BROCK", "GARY", "OAK"] },
       { label: "Air ___", words: ["PORT", "PLANE", "BORNE", "FARE"] },
-      { label: "Ash ___", words: ["TRAY", "WEDNESDAY", "CLOUD", "POT"] },
+      { label: "Ash ___", words: ["TRAY", "WEDNESDAY", "CLOUD", "BLONDE"] },
     ]
   },
   {
