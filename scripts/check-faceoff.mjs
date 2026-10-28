@@ -8,18 +8,23 @@
 // - a page's first board at the end of the range, built cold in a fresh
 //   process (the no-repeat schedule replays every day from the cutover), takes
 //   under COLD_LIMIT_MS — when it doesn't, snapshot the served history.
-// Run: node scripts/check-faceoff.mjs [Faceoff|Gridiron|Knockout] [--from YYYY-MM-DD] [--to YYYY-MM-DD]
+// - no answer is listed twice.
+// Run: node scripts/check-faceoff.mjs [Faceoff|Gridiron|Knockout] [--from YYYY-MM-DD] [--to YYYY-MM-DD] [--no-timing]
 import { execFileSync } from 'node:child_process'
 import { GRID_CUTOVER, canFillBoard, gridKey } from '../src/grid/engine.js'
 import { dateDay } from '../src/dateMath.js'
+import { NO_TIMING, badInput, dateArg, readArgs } from './cli.mjs'
 
-const game = process.argv[2] ?? 'Faceoff'
-const arg = (flag, fallback) => {
-  const i = process.argv.indexOf(flag)
-  return i > 0 ? process.argv[i + 1] : fallback
-}
-const FROM = arg('--from', '2025-01-01')
-const TO = arg('--to', '2030-12-31')
+const { values: args, positionals } = readArgs({
+  from: { type: 'string', default: '2025-01-01' },
+  to: { type: 'string', default: '2030-12-31' },
+  ...NO_TIMING,
+}, { positionals: 1 })
+const game = positionals[0] ?? 'Faceoff'
+const FROM = dateArg(args.from, '--from')
+const TO = dateArg(args.to, '--to')
+if (FROM > TO) badInput(`--from ${FROM} is after --to ${TO}`)
+const TIMING = !args['no-timing']
 const REPEAT_WINDOW = 365
 const COLD_LIMIT_MS = 300
 
@@ -28,7 +33,7 @@ const modules = {
   Gridiron: '../src/gridiron/puzzle.js',
   Knockout: '../src/knockout/puzzle.js',
 }
-if (!modules[game]) throw new Error(`unknown game ${game}`)
+if (!modules[game]) badInput(`unknown game ${game}: pick ${Object.keys(modules).join(', ')}`)
 const puzzle = await import(modules[game])
 const answers = puzzle.PLAYERS ?? puzzle.FIGHTERS
 const fitsNow = puzzle.matchesHeader ?? puzzle.isValid
@@ -78,6 +83,7 @@ const moduleUrl = new URL(modules[game], import.meta.url).href
 const coldMs = Number(execFileSync(process.execPath, ['--input-type=module', '-e',
   `const t = performance.now(); const m = await import(${JSON.stringify(moduleUrl)}); m.getDailyPuzzle(${JSON.stringify(TO)}); console.log(Math.round(performance.now() - t))`,
 ], { encoding: 'utf8' }).trim())
-const slow = coldMs > COLD_LIMIT_MS ? 1 : 0
-console.log(`cold first board for ${TO}: ${coldMs} ms (limit ${COLD_LIMIT_MS})${slow ? ' — TOO SLOW' : ''}`)
-process.exit(fallbacks + unsolvable + repeats + slow > 0 ? 1 : 0)
+const slow = TIMING && coldMs > COLD_LIMIT_MS ? 1 : 0
+console.log(`cold first board for ${TO}: ${coldMs} ms (limit ${COLD_LIMIT_MS}${TIMING ? '' : ', not gated: --no-timing'})${slow ? ' — TOO SLOW' : ''}`)
+console.log(`duplicate answers: ${dupes.length}`)
+process.exit(fallbacks + unsolvable + repeats + slow + dupes.length > 0 ? 1 : 0)

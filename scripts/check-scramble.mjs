@@ -17,6 +17,8 @@
 //   node scripts/check-scramble.mjs --days 4017          # → 2035-12-31, past the first epoch
 //   node scripts/check-scramble.mjs --from 2026-10-01 --days 30
 //   node scripts/check-scramble.mjs --dump 2026-10-18    # prints the board + the FALLBACK literal
+//   --no-timing: report the warm max without failing on it and skip the cold
+//   loads, which only measure time (the deploy gate)
 import { readFileSync } from 'node:fs'
 import { WORDS } from '../src/scramble/words.js'
 import {
@@ -25,12 +27,18 @@ import {
   SCRAMBLE_CUTOVER, GROUP_BLOCK_DAYS, ROOT_GAP, EPOCH_DAYS, SERVED_BOARDS,
   generatePuzzle, cellsOf, boardCells, cellKey, spellable,
 } from '../src/scramble/engine.js'
+import { NO_TIMING, dateArg, daysArg, readArgs } from './cli.mjs'
 
-const args = process.argv.slice(2)
-const opt = (name, dflt) => { const i = args.indexOf(name); return i === -1 ? dflt : args[i + 1] }
-const FROM = opt('--from', '2025-01-01')
-const DAYS = parseInt(opt('--days', '2191'), 10)
-const DUMP = opt('--dump', null)
+const { values: args } = readArgs({
+  from: { type: 'string', default: '2025-01-01' },
+  days: { type: 'string', default: '2191' },
+  dump: { type: 'string' },
+  ...NO_TIMING,
+})
+const FROM = dateArg(args.from, '--from')
+const DAYS = daysArg(args.days)
+const DUMP = args.dump && dateArg(args.dump, '--dump')
+const TIMING = !args['no-timing']
 // Per-day cost once its block is warm, and the worst cold page load: the
 // last day of a block in a fresh engine instance, which first generates every
 // earlier day of its block. That work is deterministic and machine noise only
@@ -240,7 +248,7 @@ const firstDay = utcDay(FROM), lastDay = firstDay + DAYS - 1
 const coldDays = [1, 2, 3].map(b => epoch0 + (b + 1) * ROOT_BLOCK_DAYS - 1)
 for (let b = Math.max(0, groupBlock(firstDay)); cut + b * GROUP_BLOCK_DAYS <= lastDay; b++) coldDays.push(cut + (b + 1) * GROUP_BLOCK_DAYS - 1)
 let coldMs = 0, coldWorst = '', instance = 0
-for (const n of coldDays) {
+for (const n of TIMING ? coldDays : []) {
   let best = Infinity
   for (let t = 0; t < COLD_TRIES; t++) {
     const fresh = await import(new URL(`../src/scramble/engine.js?cold=${instance++}`, import.meta.url))
@@ -259,14 +267,14 @@ for (const ds of wordUses.values()) {
 const ms = times.slice().sort((x, y) => x - y)
 const mean = ms.length ? ms.reduce((x, y) => x + y, 0) / ms.length : 0
 const max = ms.length ? ms[ms.length - 1] : 0
-const slow = max > MAX_MS || coldMs > COLD_MAX_MS
+const slow = TIMING && (max > MAX_MS || coldMs > COLD_MAX_MS)
 const bankSize = Object.values(WORDS).reduce((n, l) => n + l.length, 0)
 const top = (m, n) => [...m].sort((x, y) => y[1] - x[1]).slice(0, n).map(([s, k]) => `${s}:${k}`).join(' ')
 const gap = (g) => (g === Infinity ? '–' : g)
 const repeats = (e) => `${e.repeats} repeated boards${e.repeats ? ` (closest ${e.closest} days apart)` : ''}`
 
 console.log(`\n${bankSize} words (${Object.entries(WORDS).map(([k, l]) => `${k}:${l.length}`).join(' ')}), ${bankBad} bank problems`)
-console.log(`${DAYS} days from ${FROM}  ${elapsed.toFixed(1)}s · ${mean.toFixed(2)}ms mean / ${(ms[Math.floor(ms.length * 0.99)] ?? 0).toFixed(2)} p99 / ${max.toFixed(2)} max warm · ${coldMs.toFixed(1)}ms worst cold load (${coldWorst})`)
+console.log(`${DAYS} days from ${FROM}  ${elapsed.toFixed(1)}s · ${mean.toFixed(2)}ms mean / ${(ms[Math.floor(ms.length * 0.99)] ?? 0).toFixed(2)} p99 / ${max.toFixed(2)} max warm · ${TIMING ? `${coldMs.toFixed(1)}ms worst cold load (${coldWorst})` : 'cold loads skipped (--no-timing)'}`)
 console.log(`roots used ${rootUses.size}/${WORDS[POOL_SIZE].length} (most uses ${Math.max(0, ...rootUses.values())}) · shorter words used ${wordUses.size} (most uses ${maxWordUses}, repeats within a week ${weekRepeats})`)
 console.log(`length mixes ${top(mixes, 6)} · board shapes ${top(shapes, 6)}`)
 console.log(`from the cutover (${SCRAMBLE_CUTOVER}): root gap ≥ ${gap(after.rootGap)} days (ROOT_GAP ${ROOT_GAP}; ${gap(crossGap)} across the cutover) · shorter-word gap ≥ ${gap(after.wordGap)} (${after.wordsWithin} back within ${WORD_BLOCK_DAYS} days, all across a block edge) · ${repeats(after)}; a board may only return in a later epoch (${EPOCH_DAYS} days), ${MIN_RETURN}+ days on`)

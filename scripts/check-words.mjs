@@ -14,6 +14,9 @@ import { createHash } from 'node:crypto'
 import { WORDS } from '../src/words/bank.js'
 import { dailyWordIndex, WORDS_CUTOVER, SHIPPED_COUNT, ERAS } from '../src/words/schedule.js'
 import { addDays, dateDay } from '../src/dateMath.js'
+import { readArgs } from './cli.mjs'
+
+readArgs() // takes no arguments
 
 const FIRST_DAY = '2025-01-01'
 const LAST_DAY = '2030-12-31'

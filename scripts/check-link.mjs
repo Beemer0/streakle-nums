@@ -9,6 +9,9 @@
 import { PUZZLES } from '../src/link/puzzles.js'
 import { dailyPuzzleIndex, LINK_CUTOVER, ERAS } from '../src/link/schedule.js'
 import { addDays, dateDay } from '../src/dateMath.js'
+import { readArgs } from './cli.mjs'
+
+readArgs() // takes no arguments
 
 const MIN_GAP = 71
 // A tile on a 320px phone fits about 10 letters at its smallest size; a longer

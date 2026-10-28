@@ -7,17 +7,25 @@
 //   node scripts/check-mines.mjs --from 2026-09-01 --days 30
 //   node scripts/check-mines.mjs --dump 2026-09-04    # prints the boards + the FALLBACKS literal
 //   node scripts/check-mines.mjs --bench              # 3 timing passes over 60 days, best reported
+//   --no-timing: report the Hard max time without failing on it (the deploy gate)
 import {
   RUNGS, GEN_LAYOUTS, GEN_REPAIRS, FALLBACKS,
   generateBoard, solve, boardToString, boardFromString, neighbors, REVEALED,
 } from '../src/mines/engine.js'
+import { NO_TIMING, dateArg, daysArg, readArgs } from './cli.mjs'
 
-const args = process.argv.slice(2)
-const opt = (name, dflt) => { const i = args.indexOf(name); return i === -1 ? dflt : args[i + 1] }
-const FROM = opt('--from', '2025-01-01')
-const DAYS = parseInt(opt('--days', '2191'), 10)
-const DUMP = opt('--dump', null)
-const BENCH = args.includes('--bench')
+const { values: args } = readArgs({
+  from: { type: 'string', default: '2025-01-01' },
+  days: { type: 'string', default: '2191' },
+  dump: { type: 'string' },
+  bench: { type: 'boolean' },
+  ...NO_TIMING,
+})
+const FROM = dateArg(args.from, '--from')
+const DAYS = daysArg(args.days)
+const DUMP = args.dump && dateArg(args.dump, '--dump')
+const TIMING = !args['no-timing']
+const BENCH = args.bench
 const HARD_MAX_MS = 60
 
 function* dates(from, days) {
@@ -151,6 +159,6 @@ for (let rung = 0; rung < RUNGS.length; rung++) {
     ` · ${mean.toFixed(1)}ms mean / ${p99.toFixed(1)} p99 / ${max.toFixed(1)} max` +
     ` · needs rule2 ${(100 * s.rule2 / s.n).toFixed(0)}% rule3 ${(100 * s.rule3 / s.n).toFixed(0)}%`)
 }
-const slow = hardMax > HARD_MAX_MS
+const slow = TIMING && hardMax > HARD_MAX_MS
 console.log(`\n${bad} bad boards, ${fbBad} bad fallbacks${slow ? `, Hard max ${hardMax.toFixed(0)}ms > ${HARD_MAX_MS}ms` : ''}`)
 process.exit(bad > 0 || fbBad > 0 || slow ? 1 : 0)

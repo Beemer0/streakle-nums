@@ -8,6 +8,7 @@
 //   node scripts/check-weave.mjs                      # 2025-01-01, 2191 days (→ 2030-12-31)
 //   node scripts/check-weave.mjs --from 2026-10-01 --days 30
 //   node scripts/check-weave.mjs --dump 2026-10-17    # prints the grid + the FALLBACK literal
+//   --no-timing: report the max time without failing on it (the deploy gate)
 import { readFileSync } from 'node:fs'
 import { ANSWERS } from '../src/weave/answers.js'
 import {
@@ -15,12 +16,18 @@ import {
   BLOCK_EPOCH, BLOCK_DAYS,
   generatePuzzle, minSwaps, wordsOf, isActive,
 } from '../src/weave/engine.js'
+import { NO_TIMING, dateArg, daysArg, readArgs } from './cli.mjs'
 
-const args = process.argv.slice(2)
-const opt = (name, dflt) => { const i = args.indexOf(name); return i === -1 ? dflt : args[i + 1] }
-const FROM = opt('--from', '2025-01-01')
-const DAYS = parseInt(opt('--days', '2191'), 10)
-const DUMP = opt('--dump', null)
+const { values: args } = readArgs({
+  from: { type: 'string', default: '2025-01-01' },
+  days: { type: 'string', default: '2191' },
+  dump: { type: 'string' },
+  ...NO_TIMING,
+})
+const FROM = dateArg(args.from, '--from')
+const DAYS = daysArg(args.days)
+const DUMP = args.dump && dateArg(args.dump, '--dump')
+const TIMING = !args['no-timing']
 const MAX_MS = 50
 
 function* dates(from, days) {
@@ -132,7 +139,7 @@ for (const days of uses.values()) {
 const ms = times.slice().sort((x, y) => x - y)
 const mean = ms.reduce((x, y) => x + y, 0) / ms.length
 const max = ms[ms.length - 1]
-const slow = max > MAX_MS
+const slow = TIMING && max > MAX_MS
 
 console.log(`\n${ANSWERS.length} answers, ${bankBad} bank problems`)
 console.log(`${DAYS} days from ${FROM}  ${elapsed.toFixed(1)}s · ${mean.toFixed(2)}ms mean / ${ms[Math.floor(ms.length * 0.99)].toFixed(2)} p99 / ${max.toFixed(2)} max · fill attempts max ${fillsMax + 1}`)
