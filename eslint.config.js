@@ -5,7 +5,10 @@ import reactRefresh from 'eslint-plugin-react-refresh'
 import { defineConfig, globalIgnores } from 'eslint/config'
 
 export default defineConfig([
-  globalIgnores(['dist']),
+  // .claude holds session worktrees (whole copies of the repo) and coverage
+  // the optional HTML report's own scripts. supabase/functions is Deno
+  // TypeScript: lint it with `deno lint` if the sync function is revived.
+  globalIgnores(['**/dist', '.claude', 'coverage', 'supabase/functions']),
   {
     files: ['**/*.{js,jsx}'],
     extends: [
@@ -17,5 +20,10 @@ export default defineConfig([
       globals: globals.browser,
       parserOptions: { ecmaFeatures: { jsx: true } },
     },
+  },
+  {
+    files: ['scripts/**/*.mjs'],
+    extends: [js.configs.recommended],
+    languageOptions: { globals: globals.node },
   },
 ])

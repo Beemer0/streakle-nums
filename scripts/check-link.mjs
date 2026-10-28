@@ -38,7 +38,7 @@ PUZZLES.forEach((p, i) => {
   })
   const dupes = [...new Set(all.filter((w, j) => all.indexOf(w) !== j))]
   if (dupes.length) errs.push(`DUP WORDS: ${dupes.join(', ')}`)
-  const nonAscii = all.filter(w => /[^\x00-\x7F]/.test(w))
+  const nonAscii = all.filter(w => /[\u0080-\uffff]/.test(w))
   if (nonAscii.length) errs.push(`NON-ASCII: ${nonAscii.join(', ')}`)
   if (errs.length) { bad++; console.log(`PUZZLE ${i}: ${errs.join(' | ')}`) }
   const long = i < SHIPPED_PUZZLES ? [] : all.filter(w => w.split(' ').some(run => run.length > LONG_WORD_LETTERS))
