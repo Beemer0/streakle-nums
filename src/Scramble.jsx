@@ -76,7 +76,8 @@ const css = `
 .sc-ctl-primary{background:var(--gold);color:var(--bg);border-color:var(--gold)}
 .sc-ctl[aria-disabled="true"]{opacity:.4;cursor:default}
 .sc-chip{min-width:26px;padding:3px 6px;border-radius:6px;border:1px solid var(--border);font-size:12px;font-weight:700;color:var(--text-2);text-align:center;font-variant-numeric:tabular-nums}
-.sc-toast{position:fixed;top:80px;left:50%;transform:translateX(-50%);background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px 20px;font-size:14px;font-weight:600;color:var(--ink);z-index:60;animation:scSlideUp .2s ease;white-space:nowrap}
+/* The toast floats over the header's How to play and Archive: taps go through it. */
+.sc-toast{position:fixed;top:80px;left:50%;transform:translateX(-50%);background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px 20px;font-size:14px;font-weight:600;color:var(--ink);z-index:60;animation:scSlideUp .2s ease;white-space:nowrap;pointer-events:none}
 .sc-sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 @media ${PHONE}{
 .sc-board{--sc-vh:100vh;--sc-reserve:calc(${ABOVE_BOARD + BELOW_BOARD}px + var(--sc-streak-h) + ${RACK_TILE_H});--sc-height-cell:calc((var(--sc-vh) - var(--sc-reserve) - (var(--sc-rows) - 1) * var(--sc-gap)) / var(--sc-rows));--sc-cell:min(var(--sc-width-cell),max(${MIN_CELL}px,var(--sc-height-cell)))}

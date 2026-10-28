@@ -360,6 +360,8 @@ describe('Octagon messages and fields', () => {
     const toast = alert.firstElementChild
     expect(toast.style.whiteSpace).toBe('normal')
     expect(toast.style.maxWidth).toBe('calc(100vw - 32px)')
+    // It floats over the page's head, so taps go through it to what's under it (F299).
+    expect(getComputedStyle(toast).pointerEvents).toBe('none')
 
     // Same failure again: a fresh node, so screen readers announce it again.
     await click(fighter(c, 'Topuria'))

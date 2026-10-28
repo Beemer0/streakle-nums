@@ -11,16 +11,19 @@ import { GAMES, GROUPS } from './games'
 
 vi.mock('./saveResult', () => ({ saveResult: vi.fn() }))
 
-// Home reads the player's results; the account menu asks which pools they're in.
+// Home reads the player's results (none, unless a test sets some); the account
+// menu asks which pools they're in.
+const db = vi.hoisted(() => ({ results: [] }))
 vi.mock('./supabase', () => {
   const query = () => {
-    const q = { select: () => q, eq: () => q, then: (res, rej) => Promise.resolve({ data: [], error: null }).then(res, rej) }
+    const q = { select: () => q, eq: () => q, then: (res, rej) => Promise.resolve({ data: db.results, error: null }).then(res, rej) }
     return q
   }
   return { supabase: { from: query, rpc: async () => ({ data: true, error: null }) } }
 })
 
 const { default: Home } = await import('./Home.jsx')
+const { default: AppRoutes } = await import('./App.jsx')
 const { refreshPoolMemberships } = await import('./usePoolMemberships.js')
 
 const source = (file) => readFileSync(new URL(file, import.meta.url), 'utf8')
@@ -82,6 +85,7 @@ beforeEach(() => {
   vi.useFakeTimers({ toFake: ['Date'] })
   vi.setSystemTime(new Date('2026-10-23T12:00:00'))
   refreshPoolMemberships()
+  db.results = []
 })
 afterEach(() => {
   act(() => root.unmount())
@@ -152,6 +156,59 @@ describe('Home game list focus ring', () => {
       for (let up = el.parentElement; up && up !== document.body; up = up.parentElement) {
         expect(['visible', ''], `${el.textContent.trim()} inside a clipping box`).toContain(getComputedStyle(up).overflow)
       }
+    }
+  })
+})
+
+describe('Home rows\' call to action (F64)', () => {
+  const cta = (path) => host.querySelector(`a.game-row[href="${path}"] .game-cta`).textContent
+
+  it('says what a row opens: Play, Play Again, and a lost day\'s finished board', async () => {
+    db.results = [
+      { game: 'link', puzzle_date: '2026-10-23', completed: false },
+      { game: 'words', puzzle_date: '2026-10-23', completed: true },
+      { game: 'weave', puzzle_date: '2026-10-22', completed: false }, // yesterday's
+    ]
+    await render({ id: 'u-1', email: 'u-1@example.com', user_metadata: {} })
+
+    const link = host.querySelector('a.game-row[href="/link"]')
+    expect(link.textContent).toContain('✗ Tried')
+    // The row opens today's game, where the finished board and its result
+    // show — not the Archive, which only that page's own button opens.
+    expect(cta('/link')).toBe('See result →')
+    expect(cta('/words')).toBe('Play Again →')
+    expect(cta('/weave')).toBe('Play →')
+    expect(GAMES.filter(g => !['link', 'words'].includes(g.key)).every(g => cta(g.path) === 'Play →')).toBe(true)
+    expect(host.textContent).not.toContain('Archive')
+  })
+})
+
+describe('Home\'s Sign in link for guests (F263)', () => {
+  async function renderApp() {
+    window.history.replaceState(null, '', '/')
+    host = document.createElement('div')
+    document.body.appendChild(host)
+    root = createRoot(host)
+    await act(async () => {
+      root.render(
+        <AuthContext.Provider value={{ user: null, loading: false, signOut: async () => true }}>
+          <AppRoutes />
+        </AuthContext.Provider>,
+      )
+    })
+  }
+
+  it('scrolls away with the page instead of floating over the game rows', async () => {
+    await renderApp()
+    const link = host.querySelector('a.sign-in-banner')
+    expect(link.getAttribute('href')).toBe('/login')
+    const style = getComputedStyle(link)
+    // Pinned to the page's top-right corner, where it always sat, rather than
+    // to the screen, where a scrolled row's Play button slid under it.
+    expect(style.position).toBe('absolute')
+    expect([style.top, style.right]).toEqual(['16px', '16px'])
+    for (let up = link.parentElement; up && up !== document.body; up = up.parentElement) {
+      expect(['fixed', 'sticky']).not.toContain(getComputedStyle(up).position)
     }
   })
 })

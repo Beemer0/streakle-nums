@@ -42,7 +42,11 @@
   padding: 6px 0;
   transition: color 0.15s;
 }
-.gs-back:hover { color: var(--gold-hover); }
+/* Hover styles here apply only where a pointer can hover: on a touch screen a
+   tap leaves :hover stuck on what was tapped until the next tap elsewhere. */
+@media (hover: hover) {
+  .gs-back:hover { color: var(--gold-hover); }
+}
 .gs-signin {
   color: var(--gold);
   text-decoration: none;
@@ -54,9 +58,11 @@
   padding: 7px 14px;
   transition: background 0.15s, border-color 0.15s;
 }
-.gs-signin:hover {
-  background: rgba(var(--gold-rgb), 0.14);
-  border-color: var(--gold);
+@media (hover: hover) {
+  .gs-signin:hover {
+    background: rgba(var(--gold-rgb), 0.14);
+    border-color: var(--gold);
+  }
 }
 
 /* ── Title row ──────────────────────────────────────────────────────────── */
@@ -111,10 +117,17 @@
   transition: background 0.15s, border-color 0.15s;
 }
 .gs-btn:disabled { opacity: 0.45; cursor: default; }
-.gs-btn:not(:disabled):hover,
+@media (hover: hover) {
+  .gs-btn:not(:disabled):not([aria-expanded="true"]):hover {
+    background: rgba(var(--gold-rgb), 0.08);
+    border-color: rgba(var(--gold-rgb), 0.45);
+  }
+}
+/* Open (How to play's panel is showing): a firmer tint and the full gold
+   edge, so it never reads as a passing hover, under the pointer or not. */
 .gs-btn[aria-expanded="true"] {
-  background: rgba(var(--gold-rgb), 0.08);
-  border-color: rgba(var(--gold-rgb), 0.45);
+  background: rgba(var(--gold-rgb), 0.16);
+  border-color: var(--gold);
 }
 .gs-date {
   font-size: 13px;
@@ -187,7 +200,9 @@
   text-decoration: none;
   transition: color 0.15s;
 }
-.gs-foot a:hover { color: var(--gold); }
+@media (hover: hover) {
+  .gs-foot a:hover { color: var(--gold); }
+}
 
 /* ── <main>: the page's content, between the top bar and the footer ─────── */
 .gs-main {

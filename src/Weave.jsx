@@ -46,7 +46,8 @@ const css = `
 .wv-over{border-color:var(--ink);box-shadow:0 0 0 3px rgba(var(--ink-rgb),.25)}
 .wv-drag{z-index:3;pointer-events:none;box-shadow:0 10px 24px rgba(0,0,0,.55);transition:none}
 .wv-reveal{background:var(--surface-gold) !important;color:var(--gold) !important}
-.wv-toast{position:fixed;top:80px;left:50%;transform:translateX(-50%);background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px 20px;font-size:14px;font-weight:600;color:var(--ink);z-index:60;animation:wvSlideUp .2s ease;white-space:nowrap}
+/* The toast floats over the header's How to play and Archive: taps go through it. */
+.wv-toast{position:fixed;top:80px;left:50%;transform:translateX(-50%);background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px 20px;font-size:14px;font-weight:600;color:var(--ink);z-index:60;animation:wvSlideUp .2s ease;white-space:nowrap;pointer-events:none}
 .wv-sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 `
 

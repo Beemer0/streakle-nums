@@ -133,8 +133,11 @@ a:focus-visible,
 @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.45} }
 
 /* ── Sign-in banner (pages without GameShell's top bar) ──────────────────── */
+/* Pinned to the page's top-right corner (#root), like the signed-in account
+   menu, so it scrolls away with the header. Fixed to the screen, it floated
+   over the game rows and took taps meant for their Play buttons. */
 .sign-in-banner {
-  position: fixed; top: 16px; right: 16px; z-index: 200;
+  position: absolute; top: 16px; right: 16px; z-index: 200;
   background: rgba(var(--gold-rgb), 0.08);
   border: 1px solid rgba(var(--gold-rgb), 0.4);
   border-radius: 8px; padding: 7px 14px;
@@ -144,9 +147,11 @@ a:focus-visible,
   -webkit-backdrop-filter: blur(6px);
   transition: background 0.15s, border-color 0.15s;
 }
-.sign-in-banner:hover {
-  background: rgba(var(--gold-rgb), 0.16);
-  border-color: var(--gold);
+@media (hover: hover) {
+  .sign-in-banner:hover {
+    background: rgba(var(--gold-rgb), 0.16);
+    border-color: var(--gold);
+  }
 }
 
 /* ── Loading screen (auth check, route chunks) ───────────────────────────── */

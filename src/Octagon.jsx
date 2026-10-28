@@ -350,9 +350,10 @@ export default function Octagon() {
         <button type="button" onClick={() => setShowRules(true)} style={{ background: 'none', border: `1px solid ${BORDER}`, borderRadius: 6, color: GOLD, cursor: 'pointer', fontSize: 12, padding: '3px 12px', marginTop: 10 }}>
           📖 Rules
         </button>
+        {/* The toast floats over the page's head: taps go through it. */}
         <div role="alert" aria-atomic="true">
           {flash && (
-            <div key={flash.n} style={{ position: 'fixed', top: 80, left: '50%', transform: 'translateX(-50%)', background: CARD, border: `1px solid ${BORDER}`, borderRadius: 8, padding: '8px 20px', fontSize: 14, fontWeight: 600, color: RED, zIndex: 50, animation: 'slideUp 0.3s ease', whiteSpace: 'normal', width: 'max-content', maxWidth: 'calc(100vw - 32px)', boxSizing: 'border-box', textAlign: 'center' }}>
+            <div key={flash.n} style={{ position: 'fixed', top: 80, left: '50%', transform: 'translateX(-50%)', background: CARD, border: `1px solid ${BORDER}`, borderRadius: 8, padding: '8px 20px', fontSize: 14, fontWeight: 600, color: RED, zIndex: 50, animation: 'slideUp 0.3s ease', whiteSpace: 'normal', width: 'max-content', maxWidth: 'calc(100vw - 32px)', boxSizing: 'border-box', textAlign: 'center', pointerEvents: 'none' }}>
               {flash.text}
             </div>
           )}

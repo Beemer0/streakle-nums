@@ -101,6 +101,8 @@ export default function Home() {
         /* The narrowest phones: a long badge beside Play Again may wrap. */
         @media (max-width: 359px) {
           .game-badge { white-space: normal !important; }
+          /* ...and a long name (KNOCKOUT, SCRAMBLE) beside See result / Play Again needs the room. */
+          .game-row { column-gap: 10px !important; }
         }
       `}</style>
 
@@ -272,7 +274,8 @@ function GameRow({ game: g, isLast, delayMs, result, streak = 0 }) {
           transition: 'background 0.15s',
         }}
       >
-        {completed ? 'Play Again →' : failed ? 'Archive →' : 'Play →'}
+        {/* The row opens today's game: once lost, its finished board and result. */}
+        {completed ? 'Play Again →' : failed ? 'See result →' : 'Play →'}
       </div>
     </a>
   )

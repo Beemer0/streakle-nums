@@ -24,7 +24,9 @@ const NotFound = lazy(() => import('./NotFound.jsx'))
 
 // Home is the one page without a top bar (the games have GameShell's, every
 // other page PageShell's, which carries the Sign in link — sign-in itself,
-// by design, has none), so only Home gets a floating Sign in link.
+// by design, has none), so only Home gets this Sign in link. It sits in the
+// page's top-right corner and scrolls away with it (index.css), as the
+// account menu does, so it never covers a game row.
 function SignInBanner() {
   const { user } = useAuth()
   const { pathname } = useLocation()
