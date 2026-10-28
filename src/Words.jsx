@@ -358,11 +358,12 @@ function WordsBoard({ seedDate, isToday, hc, palette, keysBlocked }) {
       // on-screen key reached with Tab). Only with letters typed, on a button
       // the mouse pressed (it kept focus), does Enter submit the guess instead.
       // Links and switches always keep their Enter.
-      if (e.key==='Enter'&&e.target instanceof HTMLElement) {
-        const control=e.target.closest(CONTROL);
+      // With no control focused (the page itself), Enter always submits.
+      const control=e.key==='Enter'&&e.target instanceof Element?e.target.closest(CONTROL):null;
+      if (control) {
         const submits=input.length>0&&control===pointerControlRef.current&&!control.matches('a[href], [role="switch"]');
-        if (control&&!submits) return;
-        if (control) e.preventDefault();
+        if (!submits) return;
+        e.preventDefault();
       }
       handleKey(e.key.toUpperCase());
     };
@@ -414,8 +415,9 @@ function WordsBoard({ seedDate, isToday, hc, palette, keysBlocked }) {
         <div key={c.id} style={{position:'fixed',left:`${c.x}%`,top:'28%',width:c.size,height:c.size,background:c.color,borderRadius:c.size>10?'50%':2,animation:`confetti 1.3s ${c.delay}ms ease forwards`,pointerEvents:'none',zIndex:100}}/>
       ))}
 
+      {/* Over the header's How to play and Archive: taps go through it. */}
       {message&&(
-        <div style={{position:'fixed',top:80,left:'50%',transform:'translateX(-50%)',background:'var(--ink)',borderRadius:8,padding:'8px 20px',fontSize:14,fontWeight:700,color:'var(--bg)',zIndex:50,animation:'slideUp 0.2s ease',whiteSpace:'nowrap'}}>
+        <div style={{position:'fixed',top:80,left:'50%',transform:'translateX(-50%)',background:'var(--ink)',borderRadius:8,padding:'8px 20px',fontSize:14,fontWeight:700,color:'var(--bg)',zIndex:50,animation:'slideUp 0.2s ease',whiteSpace:'nowrap',pointerEvents:'none'}}>
           {message}
         </div>
       )}

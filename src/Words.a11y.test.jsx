@@ -389,6 +389,24 @@ describe('Words: Enter on a focused page button with letters typed (F160)', () =
     expect(live()).toBe('')
   })
 
+  it('submits the guess typed on the page itself, the way a browser sends keys with nothing focused', async () => {
+    // A real keydown with no control focused targets <body>, not window (which
+    // the other tests use); Enter there threw on a null control and never
+    // submitted.
+    await mount()
+    for (const letter of MISSES[0]) await press(letter, document.body)
+    await press('Enter', document.body)
+    await tick(2000)
+    expect(live()).toBe(`${rowResult(0, MISSES[0])}. 5 guesses left.`)
+
+    // ...also after a click somewhere that is not a control.
+    await act(async () => { document.body.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true })) })
+    for (const letter of MISSES[1]) await press(letter, document.body)
+    await press('Enter', document.body)
+    await tick(2000)
+    expect(live()).toBe(`${rowResult(1, MISSES[1])}. 4 guesses left.`)
+  })
+
   it('still submits the guess when the focused key or button was pressed with the mouse', async () => {
     await mount()
     const first = MISSES[0][0]
@@ -471,6 +489,20 @@ describe('Words with the account menu open', () => {
     await press('C', avatar())
     expect(avatar().getAttribute('aria-expanded')).toBe('false')
     expect(spokenRows()[0]).toBe('Guess 1: C')
+  })
+})
+
+// A message floats over the header's How to play and Archive; happy-dom's
+// click() does no hit-testing, so pointer-events is what guards the taps (F299).
+describe('Words messages (F299)', () => {
+  it('never catches taps meant for the header buttons under it', async () => {
+    await mount()
+    await submit('CR')
+    const toast = [...host.querySelectorAll('div')].find(d => d.textContent === 'Not enough letters' && d !== liveRegion())
+    expect(getComputedStyle(toast).position).toBe('fixed')
+    expect(getComputedStyle(toast).pointerEvents).toBe('none')
+    await click(howToButton())
+    expect(howToButton().getAttribute('aria-expanded')).toBe('true')
   })
 })
 
