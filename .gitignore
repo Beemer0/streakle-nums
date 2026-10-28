@@ -12,6 +12,9 @@ dist
 dist-ssr
 *.local
 
+# Vitest coverage HTML report (npm run test:coverage -- --coverage.reporter=html)
+coverage
+
 # Environment variables (.env.development, .env.staging, … too)
 .env
 .env.*

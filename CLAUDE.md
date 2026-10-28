@@ -6,9 +6,28 @@ puzzles every day; signed-in players build streaks.
 ## Stack & commands
 - React 19 + Vite 8, React Router 7, plain inline styles (no CSS framework).
 - Supabase — Google OAuth + a `game_results` table (RLS is configured & verified).
-- Deployed on Vercel; **pushing to `master` auto-deploys**.
+- Deployed on Vercel; **pushing to `master` auto-deploys, through a gate**:
+  `vercel.json`'s `buildCommand` is `npm run verify` = `npm run lint` →
+  `npm run test:coverage` (Vitest + the v8 coverage thresholds in
+  `vite.config.js`) → `node scripts/check-all.mjs --no-timing` (all eight
+  puzzle checkers, in parallel, correctness only: their time limits were set
+  on a desktop, not Vercel's builders) → `npm run build`. Any failure fails
+  the deploy and the previous one stays live, which is easy to miss: run
+  `npm run verify` (~35 s) before pushing, and check the deploy went READY.
+  Never lower a coverage threshold to get a deploy through.
 - `npm run dev` (the dev preview can be flaky — prefer `npm run build` to verify),
-  `npm run build`, `npm test` (Vitest), `npm run lint`.
+  `npm run build`, `npm test` (Vitest), `npm run lint`, `npm run check` (every
+  puzzle checker with its time limits, one at a time), `npm run test:coverage`
+  (`-- --coverage.reporter=html` writes a per-file report to `coverage/`).
+  Vitest loads `src/test-setup.js` (sets `IS_REACT_ACT_ENVIRONMENT`, so React
+  reports state updates outside `act()` — keep stderr clean) and skips
+  `.claude/**` and `dist/**`. The checkers' flags are strict
+  (`scripts/cli.mjs`): an unknown flag or a bad `--from`/`--to`/`--days`/
+  `--dump` exits 2 before checking anything.
+- After a deploy, `bash scripts/check-deploy.sh` checks every route's status
+  and title, the pools' rewrites, the 404 page and the static files on
+  playstreakle.com (or a base URL given; exit 1 on any FAIL). Routing only
+  exists on Vercel, so nothing in the gate can catch a rewrite that 404s.
 
 ## Layout (src/)
 - Nine game routes: `Faceoff` (NHL), `Gridiron` (NFL), `Knockout` (MMA) — these

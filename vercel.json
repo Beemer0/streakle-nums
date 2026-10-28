@@ -1,4 +1,5 @@
 {
+  "buildCommand": "npm run verify",
   "cleanUrls": true,
   "rewrites": [
     { "source": "/(bracket|octagon|pools)", "destination": "/" },
