@@ -54,6 +54,7 @@ beforeEach(() => {
   vi.setSystemTime(new Date(2026, 9, 21, 12))
   saveResult.mockClear()
   localStorage.clear()
+  missCount = 0
 })
 afterEach(() => {
   vi.restoreAllMocks()
@@ -99,12 +100,20 @@ async function solveGroup(cat) {
   await select(cat.words)
   await tick(1000)
 }
+// A wrong group as the checkpoint keeps it: its words, sorted.
+const keyOf = (words) => [...words].sort().join('|')
 // One word from each unsolved group in turn, so it never matches a group.
+// Each miss in a test takes the next word of each group, so no two are the
+// same guess (a repeat costs nothing). Returns the words guessed.
+let missCount = 0
 async function miss(puzzle, solved = []) {
   const open = puzzle.categories.filter((_, i) => !solved.includes(i))
-  await select([0, 1, 2, 3].map(i => open[i % open.length].words[Math.floor(i / open.length)]))
+  const k = missCount++
+  const words = [0, 1, 2, 3].map(i => open[i % open.length].words[(Math.floor(i / open.length) + k) % 4])
+  await select(words)
   await tick(700)
   if (button('Deselect')) await click(button('Deselect'))
+  return words
 }
 
 async function pickArchiveDay(date) {
@@ -126,8 +135,8 @@ describe('Link daily checkpoint', () => {
     const p = linkFor(TODAY)
     await mount()
     await solveGroup(p.categories[0])
-    await miss(p, [0])
-    expect(stored()).toEqual({ v: 1, date: TODAY, sig: sigOf(p), solved: [0], lives: 3, history: [true, false] })
+    const missed = await miss(p, [0])
+    expect(stored()).toEqual({ v: 1, date: TODAY, sig: sigOf(p), solved: [0], lives: 3, history: [true, false], wrong: [keyOf(missed)] })
 
     await reload()
     expect(host.textContent).toContain(p.categories[0].label)
@@ -237,8 +246,10 @@ describe('Link daily checkpoint', () => {
   it('charges no fifth life when Submit is tapped again during the game-over delay', async () => {
     const p = linkFor(TODAY)
     await mount()
-    for (let i = 0; i < 3; i++) await miss(p)
-    await select(p.categories.map(c => c.words[3]))
+    const missed = []
+    for (let i = 0; i < 3; i++) missed.push(await miss(p))
+    const last = p.categories.map(c => c.words[3])
+    await select(last)
     await click(button('Submit')) // same guess again before the card appears
     // No lives left: the tiles stop taking taps while the card is on its way.
     expect(tiles().filter(t => t.getAttribute('role') === 'button')).toHaveLength(0)
@@ -247,7 +258,10 @@ describe('Link daily checkpoint', () => {
     expect(livesLeft()).toBe(0)
     expect(saveResult).toHaveBeenCalledTimes(1)
     expect(saveResult).toHaveBeenCalledWith(LOSS)
-    expect(stored()).toEqual({ v: 1, date: TODAY, sig: sigOf(p), solved: [], lives: 0, history: [false, false, false, false] })
+    expect(stored()).toEqual({
+      v: 1, date: TODAY, sig: sigOf(p), solved: [], lives: 0, history: [false, false, false, false],
+      wrong: [...missed, last].map(keyOf),
+    })
 
     // The share grid shows the four misses, not a fifth.
     const writeText = vi.spyOn(navigator.clipboard, 'writeText').mockResolvedValue()
@@ -260,6 +274,99 @@ describe('Link daily checkpoint', () => {
     await reload()
     expect(title()).toBe('Game over!')
     expect(saveResult).not.toHaveBeenCalled()
+  })
+})
+
+// A wrong four is remembered, in the checkpoint too: the same four again (a
+// double tap on Submit, or the words picked in another order) says so and
+// costs nothing.
+describe('Link repeated wrong guesses', () => {
+  const p = linkFor(TODAY)
+  const first = p.categories.map(c => c.words[0])
+  const second = p.categories.map(c => c.words[1])
+  const toast = () => [...host.querySelectorAll('div')].find(d => d.style.position === 'fixed' && d.style.top === '80px')?.textContent ?? null
+
+  it('charges nothing for a double tap on Submit or the same four in another order', async () => {
+    await mount()
+    await select(first)
+    expect(livesLeft()).toBe(3)
+    await click(button('Submit')) // the hand is still selected
+    expect(livesLeft()).toBe(3)
+    expect(toast()).toBe('Already guessed!')
+
+    await click(button('Deselect'))
+    await select([...first].reverse())
+    expect(livesLeft()).toBe(3)
+    expect(toast()).toBe('Already guessed!')
+    expect(stored()).toEqual({ v: 1, date: TODAY, sig: sigOf(p), solved: [], lives: 3, history: [false], wrong: [keyOf(first)] })
+
+    // Another wrong four still costs a life.
+    await click(button('Deselect'))
+    await select(second)
+    expect(livesLeft()).toBe(2)
+    expect(stored()).toMatchObject({ lives: 2, history: [false, false], wrong: [keyOf(first), keyOf(second)] })
+
+    // The share grid has a red row per life lost, none for the repeats.
+    await click(button('Deselect'))
+    for (const c of p.categories) await solveGroup(c)
+    expect(title()).toBe('🎉 Solved!')
+    expect(host.textContent).toContain('6 guesses · 2 lives remaining')
+    const writeText = vi.spyOn(navigator.clipboard, 'writeText').mockResolvedValue()
+    await click(button('📋'))
+    expect(writeText.mock.calls[0][0].match(/🟥🟥🟥🟥/g)).toHaveLength(2)
+  })
+
+  it('remembers a wrong four across a reload', async () => {
+    await mount()
+    await select(first)
+    await reload()
+    await select(first)
+    expect(livesLeft()).toBe(3)
+    expect(toast()).toBe('Already guessed!')
+    expect(stored()).toMatchObject({ lives: 3, history: [false], wrong: [keyOf(first)] })
+  })
+
+  it('resumes a checkpoint saved before wrong fours were kept, and keeps them from then on', async () => {
+    // The earlier build's checkpoint: a miss and a found group, but not which four missed.
+    store({ v: 1, date: TODAY, sig: sigOf(p), solved: [1], lives: 3, history: [false, true] })
+    await mount()
+    expect(tiles()).toHaveLength(12)
+    expect(livesLeft()).toBe(3)
+
+    const open = [0, 2, 3].map(i => p.categories[i])
+    const guess = [...open.map(c => c.words[0]), open[0].words[1]]
+    await select(guess)
+    expect(livesLeft()).toBe(2)
+    expect(stored()).toEqual({ v: 1, date: TODAY, sig: sigOf(p), solved: [1], lives: 2, history: [false, true, false], wrong: [keyOf(guess)] })
+
+    // Fewer wrong fours than lives lost: still today's board.
+    await reload()
+    expect(livesLeft()).toBe(2)
+    await select(guess)
+    expect(livesLeft()).toBe(2)
+    expect(toast()).toBe('Already guessed!')
+  })
+})
+
+// The order of the tiles is the date's alone (src/link/deal.js, tested in
+// link/deal.test.js): the same for every player and every load.
+describe('Link tile deal', () => {
+  // Each tile's place in the puzzle's group-order word list.
+  const dealOf = (p) => tiles().map(t => p.categories.flatMap(c => c.words).indexOf(t.textContent))
+
+  it('deals the same board on every load, and a resumed board keeps its order', async () => {
+    const p = linkFor(TODAY)
+    await mount()
+    // Pinned (a day before the deal's cutover keeps the order it was shown in).
+    expect(dealOf(p)).toEqual([13, 6, 1, 10, 3, 7, 15, 9, 12, 0, 5, 4, 14, 2, 11, 8])
+    const dealt = tiles().map(t => t.textContent)
+
+    // A checkpoint keeps groups, not tile order: it resumes on the deal.
+    store({ v: 1, date: TODAY, sig: sigOf(p), solved: [2], lives: 3, history: [false, true] })
+    await reload()
+    expect(tiles().map(t => t.textContent)).toEqual(dealt.filter(w => !p.categories[2].words.includes(w)))
+    expect(host.textContent).toContain(p.categories[2].label)
+    expect(livesLeft()).toBe(3)
   })
 })
 
@@ -359,6 +466,9 @@ describe('Link checkpoint and the Archive', () => {
 describe('Link checkpoint validation', () => {
   const today = linkFor(TODAY)
   const good = { v: 1, date: TODAY, sig: sigOf(today), solved: [1], lives: 3, history: [false, true] }
+  // good's one miss: a word from each group.
+  const wrongKey = keyOf(today.categories.map(c => c.words[0]))
+  const otherKey = keyOf(today.categories.map(c => c.words[1]))
   // Today's puzzle after a same-day bank fix: one word swapped, or two groups reordered.
   const edited = { categories: today.categories.map((c, i) => i === 2 ? { ...c, words: [...c.words.slice(0, 3), 'ZEBRA'] } : c) }
   const reordered = { categories: [today.categories[1], today.categories[0], ...today.categories.slice(2)] }
@@ -390,6 +500,14 @@ describe('Link checkpoint validation', () => {
     ['won with no lives, last guess right', { ...good, solved: [0, 1, 2, 3], lives: 0, history: [false, false, false, false, true, true, true, true] }],
     ['a guess after the win', { ...good, solved: [0, 1, 2, 3], lives: 3, history: [true, true, true, true, false] }],
     ['a guess after the loss', { ...good, solved: [0], lives: 0, history: [false, false, false, false, true] }],
+    ['wrong groups not a list', { ...good, wrong: wrongKey }],
+    ['a wrong group that is not text', { ...good, wrong: [7] }],
+    ['a wrong group of three words', { ...good, wrong: [keyOf(today.categories.slice(1).map(c => c.words[0]))] }],
+    ['a wrong group naming a word twice', { ...good, wrong: [keyOf([...today.categories.slice(1).map(c => c.words[0]), today.categories[1].words[0]])] }],
+    ['a wrong group with a word from another puzzle', { ...good, wrong: [keyOf([...today.categories.slice(1).map(c => c.words[0]), 'ZEBRA'])] }],
+    ['a wrong group out of order', { ...good, wrong: [today.categories.map(c => c.words[0]).sort().reverse().join('|')] }],
+    ['the same wrong group twice', { ...good, lives: 2, history: [false, true, false], wrong: [wrongKey, wrongKey] }],
+    ['more wrong groups than lives lost', { ...good, wrong: [wrongKey, otherKey] }],
   ]
 
   it.each(BAD)('ignores %s and starts fresh', async (_, cp) => {
@@ -398,12 +516,15 @@ describe('Link checkpoint validation', () => {
     freshBoard()
 
     // The board still plays, and the next guess replaces the bad checkpoint.
-    await miss(today)
-    expect(stored()).toEqual({ v: 1, date: TODAY, sig: sigOf(today), solved: [], lives: 3, history: [false] })
+    const missed = await miss(today)
+    expect(stored()).toEqual({ v: 1, date: TODAY, sig: sigOf(today), solved: [], lives: 3, history: [false], wrong: [keyOf(missed)] })
   })
 
-  it('accepts a well-formed checkpoint', async () => {
-    store(good)
+  it.each([
+    ['without wrong groups (as written before they were kept)', good],
+    ['with its wrong group', { ...good, wrong: [wrongKey] }],
+  ])('accepts a well-formed checkpoint %s', async (_, cp) => {
+    store(cp)
     await mount()
     expect(tiles()).toHaveLength(12)
     expect(livesLeft()).toBe(3)
@@ -415,8 +536,8 @@ describe('Link checkpoint validation', () => {
     store({ v: 1, date: YESTERDAY, sig: good.sig, solved: [], lives: 0, history: [false, false, false, false] })
     await mount()
     freshBoard()
-    await miss(today)
-    expect(stored()).toEqual({ v: 1, date: TODAY, sig: sigOf(today), solved: [], lives: 3, history: [false] })
+    const missed = await miss(today)
+    expect(stored()).toEqual({ v: 1, date: TODAY, sig: sigOf(today), solved: [], lives: 3, history: [false], wrong: [keyOf(missed)] })
   })
 
   // A puzzle edit deployed mid-day (a word fixed, a group reworded) changes
@@ -435,7 +556,7 @@ describe('Link checkpoint validation', () => {
 
     // The new puzzle plays from scratch and the checkpoint now names it.
     await solveGroup(today.categories[0])
-    expect(stored()).toEqual({ v: 1, date: TODAY, sig: sigOf(today), solved: [0], lives: 4, history: [true] })
+    expect(stored()).toEqual({ v: 1, date: TODAY, sig: sigOf(today), solved: [0], lives: 4, history: [true], wrong: [] })
     expect(saveResult).not.toHaveBeenCalled()
   })
 

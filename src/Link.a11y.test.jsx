@@ -97,8 +97,9 @@ async function submit() {
   b.focus()
   await click(b)
 }
-// One word from each group: matches no group and is never "one away".
-const missGuess = (p) => p.categories.map((c, i) => c.words[i])
+// One word from each group: matches no group and is never "one away". The nth
+// miss takes different words, since the same four again costs nothing.
+const missGuess = (p, n = 0) => p.categories.map((c, i) => c.words[(i + n) % 4])
 // A found group's fly-in (four 700 ms flips, 60 ms apart, plus 100 ms), and
 // a beat after it: the solve message waits until focus has moved, so the
 // screen reader's focus speech doesn't cut it off.
@@ -184,6 +185,30 @@ describe('Link accessibility', () => {
     await submit()
     expect(live()).toBe('One away, 2 lives left.')
     expect(lives().getAttribute('aria-label')).toBe('2 of 4 lives left')
+  })
+
+  it('reads out the same wrong four again as already guessed, with no life lost', async () => {
+    const p = linkFor(TODAY)
+    await mount()
+    await select(missGuess(p))
+    await submit()
+    expect(live()).toBe('Not quite, 3 lives left.')
+    // Submit again on the hand it kept.
+    await submit()
+    expect(live()).toBe('Already guessed, 3 lives left.')
+    expect(lives().getAttribute('aria-label')).toBe('3 of 4 lives left')
+    expect(document.activeElement).toBe(button('Submit'))
+  })
+
+  it("shows its messages without taking taps meant for the controls under them", async () => {
+    const p = linkFor(TODAY)
+    await mount()
+    await select(missGuess(p))
+    await submit()
+    // Fixed just under the header, so on a phone it sits over How to play and Archive.
+    const toast = [...host.querySelectorAll('div')].find(d => d.style.position === 'fixed' && d.textContent === 'Not quite! Try again.')
+    expect(toast).toBeDefined()
+    expect(toast.style.pointerEvents).toBe('none')
   })
 
   it('reads out a found group and moves focus to the first word left once it lands', async () => {
@@ -285,7 +310,7 @@ describe('Link accessibility', () => {
     const p = linkFor(TODAY)
     await mount()
     for (let i = 0; i < 4; i++) {
-      await select(missGuess(p))
+      await select(missGuess(p, i))
       await submit()
       if (i < 3) { await tick(700); await click(button('Deselect')) }
     }
@@ -302,7 +327,7 @@ describe('Link accessibility', () => {
     const p = linkFor(TODAY)
     await mount()
     for (let i = 0; i < 4; i++) {
-      await select(missGuess(p))
+      await select(missGuess(p, i))
       await submit()
       if (i < 3) { await tick(700); await click(button('Deselect')) }
     }

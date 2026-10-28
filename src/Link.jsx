@@ -9,23 +9,13 @@ import { clickableProps } from './a11y';
 import { useSeo, PAGE_SEO } from './seo';
 import { slotHoldsLaterDay } from './checkpointSlot';
 import { getDailyPuzzle } from './link/schedule';
+import { dealWords } from './link/deal';
 import { useAnnouncer } from './useAnnouncer';
 
 function formatDate(dateStr) {
   let d = new Date();
   if (dateStr) { const [y,m,day] = dateStr.split('-').map(Number); d = new Date(y, m-1, day); }
   return d.toLocaleDateString('en-US', { month:'long', day:'numeric', year:'numeric' });
-}
-
-function seededShuffle(arr, seed) {
-  const a = [...arr];
-  let s = seed;
-  for (let i = a.length - 1; i > 0; i--) {
-    s = (s * 1664525 + 1013904223) & 0xffffffff;
-    const j = Math.abs(s) % (i + 1);
-    [a[i], a[j]] = [a[j], a[i]];
-  }
-  return a;
 }
 
 // A group's colour comes from its place in the puzzle: categories run from
@@ -145,15 +135,32 @@ function focusDropped() {
   return !el || el === document.body || !el.isConnected || el.disabled;
 }
 
-// ── Today's checkpoint: the solved groups (in solve order), lives left and
-// each guess's outcome (true = a group found), so a reload can never refund a
-// life or revive a finished puzzle. won/gameOver are derived. Archive replays
-// never touch it.
+// A wrong four as it is remembered: its words, sorted, so the same four in any
+// order is the same guess.
+const guessKey = (words) => [...words].sort().join('|');
+
+// ── Today's checkpoint: the solved groups (in solve order), lives left, each
+// guess's outcome (true = a group found) and the wrong fours, so a reload can
+// never refund a life, revive a finished puzzle or charge for a repeat.
+// won/gameOver are derived. Archive replays never touch it.
 // The puzzle a checkpoint belongs to: `solved` holds category indices, so a
 // same-day bank edit (a new puzzle shifts the daily pick, a fixed word or
 // reordered group changes it) gives a different signature and the old
 // progress is dropped rather than replayed onto another puzzle.
 const puzzleSig = (puzzle) => puzzle.categories.map(c => `${c.label}:${c.words.join(',')}`).join('|');
+
+// The checkpoint's wrong fours: each one four different words of this puzzle
+// in key form, none twice, and no more than the lives lost (a checkpoint
+// saved before they were kept has none for its earlier misses).
+function validWrongGuesses(wrong, puzzle, livesLost) {
+  if (!Array.isArray(wrong) || wrong.length > livesLost || new Set(wrong).size !== wrong.length) return false;
+  const words = puzzle.categories.flatMap(c => c.words);
+  return wrong.every(key => {
+    if (typeof key !== 'string') return false;
+    const four = key.split('|');
+    return four.length === 4 && new Set(four).size === 4 && four.every(w => words.includes(w)) && guessKey(four) === key;
+  });
+}
 
 function readCheckpoint(date, puzzle) {
   try {
@@ -162,7 +169,7 @@ function readCheckpoint(date, puzzle) {
     const cp = JSON.parse(raw);
     if (!cp || cp.v !== 1 || cp.date !== date || cp.sig !== puzzleSig(puzzle)) return null;
     const groups = puzzle.categories.length;
-    const { solved, lives, history } = cp;
+    const { solved, lives, history, wrong = [] } = cp;
     if (!Array.isArray(solved) || !Array.isArray(history) || !Number.isInteger(lives)) return null;
     if (lives < 0 || lives > LIVES || solved.length > groups || new Set(solved).size !== solved.length) return null;
     if (!solved.every(i => Number.isInteger(i) && i >= 0 && i < groups)) return null;
@@ -174,17 +181,18 @@ function readCheckpoint(date, puzzle) {
     const won = solved.length === groups;
     if (won && lives === 0) return null;
     if ((won || lives === 0) && history[history.length - 1] !== won) return null;
-    return { solved, lives, guessHistory: history.map(correct => ({ correct })) };
+    if (!validWrongGuesses(wrong, puzzle, LIVES - lives)) return null;
+    return { solved, lives, guessHistory: history.map(correct => ({ correct })), wrong };
   } catch { return null; }
 }
 
 // One slot for every tab. A tab left open since an earlier day keeps the board
 // it was dealt, so its next guess must not overwrite a later day's checkpoint:
 // today's board would reload fresh, refunding lives or wiping a finish.
-function writeCheckpoint(date, puzzle, { solved, lives, guessHistory }) {
+function writeCheckpoint(date, puzzle, { solved, lives, guessHistory, wrong }) {
   try {
     if (slotHoldsLaterDay(CHECKPOINT_KEY, date)) return;
-    localStorage.setItem(CHECKPOINT_KEY, JSON.stringify({ v: 1, date, sig: puzzleSig(puzzle), solved, lives, history: guessHistory.map(g => g.correct) }));
+    localStorage.setItem(CHECKPOINT_KEY, JSON.stringify({ v: 1, date, sig: puzzleSig(puzzle), solved, lives, history: guessHistory.map(g => g.correct), wrong }));
   } catch { /* storage unavailable */ }
 }
 
@@ -267,9 +275,8 @@ export default function GridGame() {
 // isToday: the live board, not an Archive replay (replays never save).
 function LinkBoard({ seedDate, isToday, streak }) {
   const puzzle = useMemo(() => {
-    const seed = parseInt(seedDate.replace(/-/g, ''))
     const p = getDailyPuzzle(seedDate)
-    return { ...p, shuffled: seededShuffle(p.categories.flatMap(c => c.words), seed) }
+    return { ...p, shuffled: dealWords(p.categories.flatMap(c => c.words), seedDate) }
   }, [seedDate])
 
   // Today's board resumes from its checkpoint (never an Archive replay).
@@ -287,6 +294,9 @@ function LinkBoard({ seedDate, isToday, streak }) {
   const [flyingTiles, setFlyingTiles] = useState([]);
   const [animating, setAnimating] = useState(false);
   const [hiddenWords, setHiddenWords] = useState([]);
+  // The wrong fours tried so far (guessKey form): trying one again is free.
+  const wrongGuesses = useRef(restored?.wrong ?? []);
+  const messageTimer = useRef(null);
 
   const gridRef = useRef(null);
   const solvedRef = useRef(null);
@@ -364,7 +374,12 @@ function LinkBoard({ seedDate, isToday, streak }) {
     refocusBoard.current = left > 0;
   };
 
-  const showMsg = (msg, dur = 1800) => { setMessage(msg); setTimeout(() => setMessage(null), dur); };
+  // Each message gets its full time: an earlier one's timer can't clear it.
+  const showMsg = (msg, dur = 1800) => {
+    clearTimeout(messageTimer.current);
+    setMessage(msg);
+    messageTimer.current = setTimeout(() => setMessage(null), dur);
+  };
 
   const spawnConfetti = () => {
     const items = Array.from({ length: 30 }, (_, i) => ({
@@ -397,7 +412,7 @@ function LinkBoard({ seedDate, isToday, streak }) {
       // keeps the group and the day's result.
       const nextSolved = [...solved, catIdx];
       if (nextSolved.length === 4 && isToday) saveResult({ game: 'link', puzzleDate: seedDate, completed: true });
-      checkpoint({ solved: nextSolved, lives, guessHistory: [...guessHistory, { correct: true }] });
+      checkpoint({ solved: nextSolved, lives, guessHistory: [...guessHistory, { correct: true }], wrong: wrongGuesses.current });
 
       if (!container) {
         setSolved(prev => {
@@ -444,6 +459,18 @@ function LinkBoard({ seedDate, isToday, streak }) {
         groupLanded(cat, nextSolved);
       }, 700 + 3 * 60 + 100);
     } else {
+      // The same wrong four again (Submit tapped twice, or the words picked
+      // in another order): say so, keep the hand, charge nothing.
+      const key = guessKey(selected);
+      if (wrongGuesses.current.includes(key)) {
+        setOneAway(false);
+        showMsg('Already guessed!');
+        announce(`Already guessed, ${livesLeftText(lives)}.`);
+        return;
+      }
+      const nextWrong = [...wrongGuesses.current, key];
+      wrongGuesses.current = nextWrong;
+
       const bestMatch = puzzle.categories
         .filter((_, i) => !solvedRef2.current.includes(i))
         .map(c => selected.filter(w => c.words.includes(w)).length)
@@ -461,7 +488,7 @@ function LinkBoard({ seedDate, isToday, streak }) {
       announce(`${bestMatch === 3 ? 'One away' : 'Not quite'}, ${livesLeftText(newLives)}.`);
 
       if (newLives === 0) { if (isToday) saveResult({ game: 'link', puzzleDate: seedDate, completed: false }); setTimeout(() => setGameOver(true), 600); }
-      checkpoint({ solved, lives: newLives, guessHistory: [...guessHistory, { correct: false }] });
+      checkpoint({ solved, lives: newLives, guessHistory: [...guessHistory, { correct: false }], wrong: nextWrong });
     }
   };
 
@@ -490,8 +517,9 @@ function LinkBoard({ seedDate, isToday, streak }) {
         </div>
       )}
 
+      {/* Over the header's How to play and Archive on a phone: taps go through. */}
       {message && (
-        <div style={{ position: 'fixed', top: 80, left: '50%', transform: 'translateX(-50%)', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8, padding: '8px 20px', fontSize: 14, fontWeight: 600, color: oneAway ? 'var(--gold)' : 'var(--ink)', zIndex: 50, animation: 'slideUp 0.3s ease', whiteSpace: 'nowrap' }}>
+        <div style={{ position: 'fixed', top: 80, left: '50%', transform: 'translateX(-50%)', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8, padding: '8px 20px', fontSize: 14, fontWeight: 600, color: oneAway ? 'var(--gold)' : 'var(--ink)', zIndex: 50, animation: 'slideUp 0.3s ease', whiteSpace: 'nowrap', pointerEvents: 'none' }}>
           {message}
         </div>
       )}
