@@ -27,11 +27,14 @@ describe('Words schedule', () => {
     }
   })
 
-  it('never changes a shipped word, its entry or its place in the bank', () => {
+  // A shipped word never changes. Its def or fact may be corrected (a wrong
+  // fact or etymology), logged here with the second pin:
+  //   2026-10-27  XYLEM fact (phloem carries sugars both ways), KIOSK fact (Persian origin, not Turkish)
+  it('never changes a shipped word or its place in the bank, and its text only by a logged correction', () => {
     const shipped = WORDS.slice(0, 144)
     expect(shipped).toHaveLength(144)
     expect(sha256(shipped.map(w => w.word).join(','))).toBe('bf0d02715f5eb91db10c7ee7f0debe6d6dec45b6f4ea0ef152d48a47a00b8a15')
-    expect(sha256(JSON.stringify(shipped))).toBe('ff96c31fcb7a1729423445218622a8bc8c6d7e0ad2a4b5ef2c0a7eff1b3ac31c')
+    expect(sha256(JSON.stringify(shipped))).toBe('e12bd03275d347a24e6cd3a5c00f7bcb8ca683406efd910ac274a5ebe10c759d')
   })
 
   it('pins the answer of every day served before the cutover', () => {

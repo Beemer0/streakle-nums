@@ -14,9 +14,13 @@ describe('Link schedule', () => {
     }
   })
 
-  it("never changes a shipped puzzle's content", () => {
+  // A shipped puzzle changes only by a content correction (a filler word, a
+  // wrong fact, a second valid split): made before its next day starts in any
+  // time zone, never while it is anyone's today, and logged here with the pin.
+  //   2026-10-27  #43 Go off on a ___: LIMB -> TIRADE (LIMB read as a tree part)
+  it("changes a shipped puzzle's content only by a logged correction", () => {
     expect(createHash('sha256').update(JSON.stringify(PUZZLES.slice(0, 71))).digest('hex'))
-      .toBe('f12a377b5a40e02d4108c29f311731ff7e912e387e9cfbedba25c54e92d40281')
+      .toBe('9bd9db534fa26491d5788b84ede9719b5d045d9ff3de9e432235852856164be1')
   })
 
   it('pins the rotation from the cutover', () => {

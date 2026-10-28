@@ -2,7 +2,9 @@
 // game colours a group by its position, so no puzzle carries colours. Every
 // split must be unique: a word that fits two labels has to be forced into one
 // group by the others. Order matters to ./schedule.js — append new puzzles at
-// the end and see its notes before reordering or removing any.
+// the end and see its notes before reordering or removing any. A shipped
+// puzzle's words or labels change only by a content correction logged in
+// ./schedule.test.js, made before its next day starts in any time zone.
 
 export const PUZZLES = [
   {
@@ -352,7 +354,7 @@ export const PUZZLES = [
   {
     categories: [
       { label: "Trigonometry", words: ["SINE", "COSINE", "TANGENT", "SECANT"] },
-      { label: "Go off on a ___", words: ["WHIM", "RANT", "LIMB", "JAUNT"] },
+      { label: "Go off on a ___", words: ["WHIM", "RANT", "TIRADE", "JAUNT"] },
       { label: "Tree parts", words: ["BRANCH", "BOUGH", "TWIG", "TRUNK"] },
       { label: "Bank ___", words: ["ROLL", "NOTE", "RUPT", "ROBBER"] },
     ]

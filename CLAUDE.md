@@ -97,10 +97,18 @@ puzzles every day; signed-in players build streaks.
   or the PRNG (`words/schedule.test.js` pins the rotation). To add entries,
   append them and add an `ERAS` entry starting on a cycle boundary no time
   zone has reached: the new era serves them first, so served dates never
-  change and no gap shrinks. Never edit, reorder or remove a shipped entry
-  (the schedule tests fingerprint them; `check-words.mjs` keeps its own
-  frozen hash of the shipped words). The grids, `Nums`, `Mines`, `Weave` and
-  `Scramble` generate fresh daily.
+  change and no gap shrinks. Never reorder or remove a shipped entry or
+  change a Words answer (the schedule tests fingerprint them; `check-words.mjs`
+  keeps its own frozen hash of the shipped words). The one exception is a
+  content correction, approved by the owner on 2026-10-27: a Link filler word,
+  wrong label or second valid split, or a wrong Words def/fact. Make it before
+  the entry's next day starts in any time zone, never while it is anyone's
+  today (a Link checkpoint is bound to the puzzle's words, so a mid-day edit
+  resets boards in progress), log it next to the pin in
+  `link/schedule.test.js` / `words/schedule.test.js` and update the pin
+  deliberately. Archive replays of the entry's earlier days show the
+  corrected text. The grids, `Nums`, `Mines`, `Weave` and `Scramble`
+  generate fresh daily.
   Validate edits with `node scripts/check-words.mjs`, `node scripts/check-link.mjs`
   (also fails on a puzzle outside the schedule or any repeat within 71 days),
   `node scripts/check-mines.mjs`, `node scripts/check-weave.mjs` and

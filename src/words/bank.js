@@ -3,8 +3,10 @@
 // entry a date gets.
 //
 // Append-only: a new word goes at the end, with an era in schedule.js. Never
-// edit, reorder or remove an entry — dates already served would change their
-// answer (schedule.test.js fingerprints the shipped 144 and every served day).
+// reorder or remove an entry or change its word — dates already served would
+// change their answer (schedule.test.js fingerprints the shipped 144 and every
+// served day). A wrong def or fact may be corrected before the word's next
+// day starts anywhere; log it in schedule.test.js with the new pin.
 export const WORDS = [
   { word: "BRINY", def: "Salty like the sea.", fact: "The ocean contains about 35 grams of salt per litre. Ancient sailors called the sea 'the briny deep', and the phrase stuck around for centuries." },
   { word: "STOIC", def: "Enduring hardship without complaint.", fact: "Marcus Aurelius, a Roman emperor, wrote his private Stoic journals never intending them to be published. We know them as Meditations." },
@@ -102,7 +104,7 @@ export const WORDS = [
   { word: "HUTCH", def: "A cage for small animals, or a cupboard.", fact: "From Latin 'hutica', a chest. Rabbit hutches and china hutches share the same 'storage box' idea." },
   { word: "INGOT", def: "A block of cast metal.", fact: "Possibly from 'in' plus Old English 'goten', poured. National gold reserves are stored as standardised ingots, or bars." },
   { word: "JETTY", def: "A structure projecting into water.", fact: "From French 'jetée', thrown out. A jetty is literally 'thrown out' from shore to break waves or moor boats." },
-  { word: "KIOSK", def: "A small open booth.", fact: "From Turkish 'köşk', a garden pavilion, via Persian. The meaning shrank from grand pavilion to humble newsstand." },
+  { word: "KIOSK", def: "A small open booth.", fact: "From Persian 'kushk', a palace pavilion, via Turkish 'köşk' and French 'kiosque'. The meaning shrank from grand garden pavilion to humble newsstand." },
   { word: "MOTIF", def: "A recurring theme or element.", fact: "From French, related to 'motive'. In music a motif is a short idea — like the four notes opening Beethoven's Fifth." },
   { word: "NOMAD", def: "A wanderer with no fixed home.", fact: "From Greek 'nomas', roaming for pasture. An estimated 30 to 40 million people still live nomadically today." },
   { word: "OASIS", def: "A fertile spot in a desert.", fact: "From an Egyptian word via Greek. Oases form where underground water reaches the surface. The plural is 'oases'." },
@@ -139,7 +141,7 @@ export const WORDS = [
   { word: "TRACT", def: "An expanse of land; or a short pamphlet.", fact: "From Latin 'tractus', a stretch. The digestive 'tract' and a 'tract of land' both describe an extent." },
   { word: "VIXEN", def: "A female fox; or a fierce woman.", fact: "From Old English 'fyxen'. It preserves a rare feminine '-en' ending, turning 'fox' into 'vixen'." },
   { word: "WALTZ", def: "A ballroom dance in triple time.", fact: "From German 'walzen', to roll or revolve. When it arrived around 1800, its close hold scandalised polite society." },
-  { word: "XYLEM", def: "Water-conducting tissue in plants.", fact: "From Greek 'xylon', wood. Xylem carries water up from the roots while its partner, phloem, carries sugars down." },
+  { word: "XYLEM", def: "Water-conducting tissue in plants.", fact: "From Greek 'xylon', wood. Xylem carries water up from the roots, while its partner, phloem, carries sugars from the leaves to wherever the plant needs them." },
   { word: "YEARN", def: "To long for something intensely.", fact: "From Old English 'giernan', to desire. It is distantly related to the Greek 'chairein', to rejoice." },
   { word: "BRAVO", def: "A shout of approval.", fact: "Italian for 'skilful'. In opera 'bravo' praises a man, 'brava' a woman and 'bravi' a group — though English uses 'bravo' for all." },
   { word: "CIVIC", def: "Relating to a city or its citizens.", fact: "From Latin 'civis', citizen — the root of 'city', 'civil' and 'citizen'. The word itself is a palindrome." },
