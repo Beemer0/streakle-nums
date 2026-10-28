@@ -52,7 +52,8 @@ puzzles every day; signed-in players build streaks.
   Bracket, Octagon) the same frame: GameShell's exported `TopBar` and
   `ShellFooter` around a `title` / `subtitle` / `date` head and a `width`-capped
   column (no `title` = the page names nothing yet). Every page but Home has a
-  top bar, so the floating `SignInBanner` shows only on `/`. `NotFound.jsx`
+  top bar, so `SignInBanner` (pinned to the top-right corner; it scrolls away
+  with the page, like the account menu) shows only on `/`. `NotFound.jsx`
   (the `path="*"` route) is a PageShell page too.
 - `ResultCard.jsx` (+ `.css`) is every game's end-of-game card: outcome
   title, the game's own stats as children (`.rc-headline` / `.rc-detail`),
@@ -114,7 +115,11 @@ puzzles every day; signed-in players build streaks.
   seeded shuffle (the strict order kept the bank's alphabetical runs) whose
   first returns come at least `MIN_GAP` (120) days after the old formula's
   last use, then every 144 days — never change its seed, `MIN_GAP`, the fill
-  or the PRNG (`words/schedule.test.js` pins the rotation). To add entries,
+  or the PRNG (`words/schedule.test.js` pins the rotation). A Link board's
+  tile order comes from `src/link/deal.js`: boards before `DEAL_CUTOVER`
+  (2026-10-30) keep the LCG deal they were shown, which put the easiest group
+  top-left on ~45% of days; from it a mulberry32 stream (both sides pinned in
+  `link/deal.test.js`). To add entries,
   append them and add an `ERAS` entry starting on a cycle boundary no time
   zone has reached: the new era serves them first, so served dates never
   change and no gap shrinks. Never reorder or remove a shipped entry or
@@ -174,6 +179,9 @@ puzzles every day; signed-in players build streaks.
   then each batch from its `from`). Pages check answers with
   `fitsOn(boardDate)`: the current data, or whatever the data the board was
   dealt from accepted — so a correction never makes a dealt board harder.
+  Search never offers a player already on the board, and one re-submitted
+  anyway costs no guess. Result cards show the plain total (a board's best
+  possible total varies from day to day).
   A team header means the franchise: relocated predecessors count for it
   (`FRANCHISES` in each `puzzle.js`, e.g. STL Rams → LAR, QUE → COL; stints for
   code-less predecessors like the North Stars are corrections adding the
@@ -330,15 +338,23 @@ mine writes `completed: false`. `game_results.score` = seconds,
   (`streakle-mines`: rung, attempts, times, phase — never cell state) so a
   third mine ends the day across reloads. Archive replays never touch it and
   never call `saveResult`; picking today in the Archive maps back to the
-  persisted ladder (`useBoardDate`'s live board).
+  persisted ladder (`useBoardDate`'s live board). Leaving today for the
+  Archive (`pickDate`) first folds the running clock into the checkpoint;
+  today's dug cells are held in memory only (`heldToday`) and come back, clock
+  running, if the checkpoint hasn't changed meanwhile. A hidden tab pauses the
+  clock and `resume()` restarts it when the page is visible again.
   The board is a delegated-handler WAI-ARIA grid (roving tabindex, arrows,
-  Enter digs, F flags; tap/hold/right-click on pointers) — it deliberately
+  Enter does what a tap does — digs, or flags in Flag mode — F flags, and keys
+  with Ctrl/Cmd/Alt pass through to the browser; tap/hold/right-click on
+  pointers) — it deliberately
   does NOT use `clickableProps`. Undug and flagged tiles are told apart from
   dug cells by a 2px `--mines-tile-edge` (3:1+ against dug cells and the page,
   WCAG 1.4.11); the tile colours are `--mines-*` tokens in `index.css`, and the
   focus ring is drawn inside that edge (`outline-offset: -6px`). At ≤520px
-  the bar is fixed to the bottom; its height (`--mn-bar-h`) is reserved as the
-  root's scroll padding and below the page, so focus never sits under it.
+  the bar is fixed to the bottom while the day is in play (hidden once it ends,
+  reservations and all; wider screens keep it in the flow); its height
+  (`--mn-bar-h`) is reserved as the root's scroll padding and below the page,
+  so focus never sits under it.
   Focus moves after a clear (to Next), Next (to the new board's opening cell)
   and the day's end (to the result) go through the `afterMove` ref, which
   names the render it waits for — keep that, or a clock tick's effects can
