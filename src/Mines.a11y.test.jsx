@@ -10,7 +10,11 @@ import { generateBoard, openingState, dig, isWon, HIDDEN, MAX_ATTEMPTS } from '.
 // the Dig / Flag toggle's focus ring is drawn where its clipped box shows it,
 // dark on the pressed gold button (F159). Focus is never hidden behind the
 // phone layout's fixed bar (2.4.11), and moves on when a clear, a new rung or
-// the day's end removes or disables the control that had it (2.4.3).
+// the day's end removes or disables the control that had it (2.4.3). The bar
+// goes once the day ends (F305) and the toast never takes a tap (F299).
+// Keys with a modifier are the browser's (F41). The clock: an Archive
+// round-trip keeps today's time and board (F38), and the clock runs again
+// when the page is shown (F43).
 
 const { saveResult } = vi.hoisted(() => ({ saveResult: vi.fn() }))
 vi.mock('./saveResult', () => ({ saveResult }))
@@ -59,6 +63,7 @@ beforeEach(() => {
 afterEach(() => {
   act(() => root.unmount())
   host.remove()
+  delete document.visibilityState // back to the document's own (see setVisibility)
   vi.restoreAllMocks()
   vi.unstubAllGlobals()
   vi.useRealTimers()
@@ -563,5 +568,255 @@ describe('Mines focus after a clear, a new rung and the end of the day (2.4.3)',
     }
     expect(result().querySelector('.rc-title').textContent).toBe('Game over!')
     expect(document.activeElement).toBe(result())
+  })
+})
+
+// ── The day's end and the toast (F305, F299) ──
+describe('Mines bar and toast once the day is over (F305, F299)', () => {
+  const loseTheDay = async () => {
+    const mine = generateBoard(TODAY, 0).mine.findIndex(Boolean)
+    for (let k = 0; k < MAX_ATTEMPTS; k++) {
+      await press(cell(mine))
+      await tick(BOOM_MS)
+    }
+  }
+
+  // On a phone the finished bar is hidden; wider screens keep it in the
+  // page's flow as before, so nothing there moves when the day ends.
+  const barDone = () => host.querySelector('.mn-bar')?.classList.contains('mn-bar-done')
+  const HIDDEN_ON_PHONES = '@media(max-width:520px){.mn-bar-done{display:none}}'
+
+  it('hides the Dig / Flag bar on phones and drops its bottom reservations once the day is lost, reload included', async () => {
+    await mount({ strict: true })
+    expect(barDone()).toBe(false)
+    expect(pageCss()).toMatch(NARROW)
+    await loseTheDay()
+    expect(result()).not.toBeNull()
+    // Nothing left to dig or flag: no dead toggle fixed over the result on a
+    // phone, and no room kept below the page or as scroll padding for it.
+    expect(barDone()).toBe(true)
+    expect(pageCss()).toContain(HIDDEN_ON_PHONES)
+    expect(pageCss()).not.toContain('--mn-bar-h')
+
+    await remount()
+    expect(result()).not.toBeNull()
+    expect(barDone()).toBe(true)
+    expect(pageCss()).not.toContain('--mn-bar-h')
+  })
+
+  it('drops the bar once the last board clears, and keeps it between rungs', async () => {
+    await mount({ strict: true })
+    for (const r of [0, 1, 2]) {
+      await clearRung(r)
+      if (r < 2) {
+        // Between rungs the day goes on: the bar stays for the next board.
+        expect(barDone()).toBe(false)
+        await press(nextButton())
+      }
+    }
+    expect(result().querySelector('.rc-title').textContent).toBe('🎉 All clear!')
+    expect(barDone()).toBe(true)
+    expect(pageCss()).not.toContain('--mn-bar-h')
+    // The result is still where focus goes.
+    expect(document.activeElement).toBe(result())
+  })
+
+  it('lets taps through the "back to the opening" toast to the header under it', async () => {
+    await mount()
+    const mine = generateBoard(TODAY, 0).mine.findIndex(Boolean)
+    await press(cell(mine))
+    await tick(BOOM_MS)
+    const toast = host.querySelector('.mn-toast')
+    expect(toast?.textContent).toBe(`Back to the opening — ${MAX_ATTEMPTS - 1} attempts left`)
+    // It is fixed over the header's How to play / Archive buttons for 2.2 s;
+    // the blast itself was announced, so the toast is only something to see.
+    expect(decl('.mn-toast', 'position')).toBe('fixed')
+    expect(decl('.mn-toast', 'pointer-events')).toBe('none')
+  })
+})
+
+// ── Keys the browser owns, and what Enter does (F41) ──
+const keyWith = async (el, k, mods = {}) => {
+  const e = new KeyboardEvent('keydown', { key: k, bubbles: true, cancelable: true, ...mods })
+  await act(async () => { el.dispatchEvent(e) })
+  return e
+}
+// Moves the board's roving focus onto an undug tile with the arrow keys, as
+// a keyboard player does, and returns its index.
+async function focusHiddenTile() {
+  const board = generateBoard(TODAY, 0)
+  await act(async () => { cell(board.open).focus() })
+  for (const k of ['ArrowRight', 'ArrowDown', 'ArrowLeft', 'ArrowUp']) {
+    for (let n = 0; n < board.cols && !document.activeElement.classList.contains('mn-hidden'); n++) await key(grid(), k)
+  }
+  expect(document.activeElement.classList.contains('mn-hidden')).toBe(true)
+  return Number(document.activeElement.dataset.idx)
+}
+
+describe('Mines keyboard: modified keys and Enter (F41)', () => {
+  it('leaves Ctrl/Cmd/Alt + F to the browser: no flag, find still opens', async () => {
+    await mount()
+    const idx = await focusHiddenTile()
+    for (const mods of [{ ctrlKey: true }, { metaKey: true }, { altKey: true }]) {
+      const e = await keyWith(grid(), 'f', mods)
+      expect(e.defaultPrevented, JSON.stringify(mods)).toBe(false)
+      expect(cell(idx).getAttribute('aria-label'), JSON.stringify(mods)).toMatch(/, hidden$/)
+    }
+    // A plain F still flags (Shift+F too: it is the same key).
+    await keyWith(grid(), 'F', { shiftKey: true })
+    expect(cell(idx).getAttribute('aria-label')).toMatch(/, flagged$/)
+  })
+
+  it('leaves modified arrows, Home and End to the browser', async () => {
+    await mount()
+    const board = generateBoard(TODAY, 0)
+    const start = cell(board.open)
+    await act(async () => { start.focus() })
+    const k = board.open % board.cols < board.cols - 1 ? 'ArrowRight' : 'ArrowLeft'
+    for (const [name, mods] of [[k, { altKey: true }], [k, { ctrlKey: true }], ['End', { metaKey: true }], ['Home', { ctrlKey: true }]]) {
+      const e = await keyWith(grid(), name, mods)
+      expect(e.defaultPrevented, `${name} ${JSON.stringify(mods)}`).toBe(false)
+      expect(document.activeElement).toBe(start)
+    }
+  })
+
+  it('makes Enter do what a tap does, as the how-to says: it flags in Flag mode', async () => {
+    await mount()
+    await click(host.querySelector('button[aria-label="How to play"]'))
+    const how = host.querySelector('section[aria-label="How to play"]').textContent
+    expect(how).toMatch(/Enter[^.]*flags in Flag mode/)
+    expect(how).toMatch(/F flags/)
+
+    await click(toggle('Flag'))
+    const idx = await focusHiddenTile()
+    await keyWith(grid(), 'Enter')
+    expect(cell(idx).getAttribute('aria-label')).toMatch(/, flagged$/)
+    // In Dig mode, Enter digs (here a flagged tile: Enter leaves it be).
+    await click(toggle('Dig'))
+    await keyWith(grid(), 'Enter')
+    expect(cell(idx).getAttribute('aria-label')).toMatch(/, flagged$/)
+  })
+})
+
+// ── The clock (F38, F43) ──
+const clock = () => host.querySelector('[aria-label^="Time "]').getAttribute('aria-label')
+const checkpoint = () => JSON.parse(localStorage.getItem('streakle-mines'))
+const PAST = '2026-10-18'
+async function pickArchiveDay(date) {
+  await click(host.querySelector('button[aria-label="Archive"]'))
+  await tick(0)
+  await click(host.querySelector(`button[title="${date}"]`))
+  await tick(200)
+}
+// A safe tile on rung `r`'s opening whose dig doesn't clear the board.
+function firstDig(r) {
+  const board = generateBoard(TODAY, r)
+  const open = openingState(board)
+  return open.findIndex((s, i) => s === HIDDEN && !board.mine[i] && !isWon(board, dig(board, open, i).cells))
+}
+// happy-dom's page is always visible; this stands in for a tab switch.
+async function setVisibility(state) {
+  Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => state })
+  await act(async () => { document.dispatchEvent(new Event('visibilitychange')) })
+}
+
+describe('Mines clock across an Archive replay (F38)', () => {
+  it('keeps the time and dug tiles of today when the player looks at a past day and comes back', async () => {
+    await mount({ strict: true })
+    const safe = firstDig(0)
+    await press(cell(safe))
+    await tick(90_000)
+    expect(clock()).toBe('Time 1:30')
+
+    await pickArchiveDay(PAST)
+    expect(host.textContent).toContain('October 18, 2026')
+    // The replay has its own clock; the time of today is on disk before it shows.
+    expect(clock()).toBe('Time 0:00')
+    // (The Archive closes 150 ms after the pick, which counts too.)
+    expect(checkpoint()).toMatchObject({ date: TODAY, rung: 0, phase: 'ready' })
+    expect(checkpoint().acc.map(ms => Math.floor(ms / 1000))).toEqual([90, 0, 0])
+    // Time spent on the replay does not count for today.
+    await tick(60_000)
+
+    await pickArchiveDay(TODAY)
+    expect(host.textContent).toContain('October 21, 2026')
+    expect(clock()).toBe('Time 1:30')
+    expect(cell(safe).classList.contains('mn-hidden')).toBe(false)
+    // The rung is still in play, so its clock runs on.
+    await tick(10_000)
+    expect(clock()).toBe('Time 1:40')
+  })
+
+  it('never lets the round-trip zero the clock: a scouted board keeps its time even after a reload', async () => {
+    await mount({ strict: true })
+    await press(cell(firstDig(0)))
+    await tick(45_000)
+    await pickArchiveDay(PAST)
+    await pickArchiveDay(TODAY)
+    await remount()
+    // A reload costs the board (the checkpoint never holds tiles), not the time.
+    expect(clock()).toBe('Time 0:45')
+    expect(cell(firstDig(0)).classList.contains('mn-hidden')).toBe(true)
+  })
+
+  it('takes the checkpoint over the held board if another tab moved the ladder on meanwhile', async () => {
+    await mount({ strict: true })
+    const safe = firstDig(0)
+    await press(cell(safe))
+    await tick(30_000)
+    await pickArchiveDay(PAST)
+    // Another tab of the same day hits a mine (its board resets to the opening).
+    localStorage.setItem('streakle-mines', JSON.stringify({ ...checkpoint(), hits: [1, 0, 0], acc: [40_000, 0, 0] }))
+    await pickArchiveDay(TODAY)
+    expect(host.querySelector('.mn-pips').getAttribute('aria-label')).toBe(`${MAX_ATTEMPTS - 1} attempts left`)
+    expect(cell(safe).classList.contains('mn-hidden')).toBe(true)
+    expect(clock()).toBe('Time 0:40')
+  })
+})
+
+describe('Mines clock after the tab is hidden (F43)', () => {
+  it('stops while the page is hidden and runs again when it is shown, the rung still in play', async () => {
+    await mount({ strict: true })
+    const safe = firstDig(0)
+    await press(cell(safe))
+    await tick(10_000)
+    await setVisibility('hidden')
+    // Hidden: the segment is folded in and checkpointed, the clock stops.
+    expect(checkpoint()).toMatchObject({ acc: [10_000, 0, 0], phase: 'ready' })
+    await tick(300_000)
+    expect(clock()).toBe('Time 0:10')
+
+    await setVisibility('visible')
+    // Back on screen, thinking time counts again without waiting for a dig.
+    await tick(30_000)
+    expect(clock()).toBe('Time 0:40')
+    expect(cell(safe).classList.contains('mn-hidden')).toBe(false)
+  })
+
+  it('runs again after a back/forward-cache return (pagehide, then pageshow)', async () => {
+    await mount()
+    await press(cell(firstDig(0)))
+    await tick(5_000)
+    await act(async () => { window.dispatchEvent(new Event('pagehide')) })
+    await tick(60_000)
+    await act(async () => { window.dispatchEvent(new Event('pageshow')) })
+    await tick(5_000)
+    expect(clock()).toBe('Time 0:10')
+  })
+
+  it('leaves a board nobody has dug yet, and a cleared one, with the clock stopped', async () => {
+    await mount()
+    await setVisibility('hidden')
+    await setVisibility('visible')
+    await tick(20_000)
+    // The clock starts at the first dig, as on a fresh load.
+    expect(clock()).toBe('Time 0:00')
+
+    await clearRung(0)
+    const cleared = clock()
+    await setVisibility('hidden')
+    await setVisibility('visible')
+    await tick(20_000)
+    expect(clock()).toBe(cleared)
   })
 })

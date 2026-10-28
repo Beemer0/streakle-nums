@@ -76,8 +76,18 @@ const css = `
 .mn-pips{display:inline-flex;gap:4px;vertical-align:middle}
 .mn-pip{width:7px;height:7px;border-radius:50%;background:var(--border-strong)}
 .mn-pip.on{background:var(--gold)}
-.mn-toast{position:fixed;top:80px;left:50%;transform:translateX(-50%);background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px 20px;font-size:14px;font-weight:600;color:var(--ink);z-index:60;animation:mnSlideUp 0.2s ease;white-space:nowrap}
+/* It sits over the header's How to play / Archive for 2.2 s, so taps go
+   through it; what it says was already announced with the blast. */
+.mn-toast{position:fixed;top:80px;left:50%;transform:translateX(-50%);background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px 20px;font-size:14px;font-weight:600;color:var(--ink);z-index:60;animation:mnSlideUp 0.2s ease;white-space:nowrap;pointer-events:none}
 .mn-sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+`
+
+// The phone layout's bar, added to the page's <style> only while the day is
+// in play: once it ends there is nothing to dig or flag, so on a phone the bar
+// goes (barDoneCss), and both reservations for it with it. Wider screens keep
+// the bar in the page's flow as it was.
+const barDoneCss = `@media(max-width:520px){.mn-bar-done{display:none}}`
+const barCss = `
 /* Here the bar is fixed over the bottom of the screen, which a browser's
    focus scrolling ignores. Its height is set once (1px border + 10px + the
    46px toggle + 10px, plus the home-bar inset, which stays 0 until the
@@ -156,6 +166,17 @@ function writeCheckpoint(seedDate, d) {
   } catch { /* storage unavailable */ }
 }
 
+function storedCheckpoint() {
+  try { return localStorage.getItem(CHECKPOINT_KEY) } catch { return null }
+}
+
+// The board held in memory while the player is away on another day comes
+// back only to the day it was dealt, and only while the checkpoint still says
+// what it said when they left: one another tab moved on wins.
+function heldGameFor(held, seedDate) {
+  return held && held.date === seedDate && storedCheckpoint() === held.saved ? held.game : null
+}
+
 function freshGame(seedDate, rung = 0) {
   const board = generateBoard(seedDate, rung)
   return { board, cells: openingState(board), rung, hits: [0, 0, 0], acc: [0, 0, 0], phase: 'ready', hit: -1 }
@@ -211,7 +232,7 @@ export default function Mines() {
   const { streak } = useStreak('mines')
   useSeo(PAGE_SEO.mines)
   const [showArchive, setShowArchive] = useState(false)
-  const { seedDate, isToday, boardKey, selectDate } = useBoardDate()
+  const { seedDate, isToday, boardKey, keyFor, selectDate } = useBoardDate()
 
   // One object for the whole game so every transition is a single setState.
   const [g, setG] = useState(() => bootstrap(seedDate, readCheckpoint(seedDate)))
@@ -238,10 +259,13 @@ export default function Mines() {
   // `rung`), what to focus once that render lands (`target`), whether the
   // ladder goes to the top first, and what to say.
   const afterMove = useRef(null)
+  // Today's board while the player is on another day (see pickDate).
+  const heldToday = useRef(null)
 
   const { board, cells, rung, hits, acc, phase, hit } = g
   const spec = RUNGS[rung]
   const inputOpen = phase === 'ready' || phase === 'playing'
+  const dayOver = phase === 'won' || phase === 'lost'
   const attemptsLeft = MAX_ATTEMPTS - hits[rung]
   const mistakes = sum(hits)
   const minesLeft = board.mines - flagCount(cells)
@@ -262,17 +286,22 @@ export default function Mines() {
   }, [])
 
   // Archive replay: a fresh ladder for that date, never persisted. Coming
-  // back to today re-bootstraps from the checkpoint, so a lost day stays lost.
+  // back to today finds the board pickDate held, or else re-bootstraps from
+  // the checkpoint, so a lost day stays lost.
   const prevKey = useRef(boardKey)
   useEffect(() => {
     if (prevKey.current === boardKey) return
     prevKey.current = boardKey
     timeouts.current.forEach(clearTimeout)
     timeouts.current = []
-    const next = isToday ? bootstrap(seedDate, readCheckpoint(seedDate)) : freshGame(seedDate)
+    const held = isToday ? heldGameFor(heldToday.current, seedDate) : null
+    if (isToday) heldToday.current = null
+    const next = held ?? (isToday ? bootstrap(seedDate, readCheckpoint(seedDate)) : freshGame(seedDate))
+    // A held board still in play carries on, and its clock with it.
+    const start = next.phase === 'playing' && document.visibilityState !== 'hidden' ? Date.now() : null
     setG(next)
-    setSegStart(null)
-    setNow(0)
+    setSegStart(start)
+    setNow(start ?? 0)
     setFocusIdx(next.board.open)
     setConfetti([])
     setLive({ n: 0, text: '' })
@@ -423,26 +452,54 @@ export default function Mines() {
   }
 
   // Pause when the tab hides or the page unloads so backgrounded time never
-  // counts and the ladder survives a reload.
+  // counts and the ladder survives a reload. The board stays in play here
+  // ('ready' only on disk, as after a reload), so resume can tell it apart.
   const pause = useCallback(() => {
     if (segStart === null) return
     const accNext = acc.slice()
     accNext[rung] += Math.max(0, Date.now() - segStart)
-    const next = { ...g, acc: accNext, phase: 'ready' }
+    const next = { ...g, acc: accNext }
     setG(next)
     setSegStart(null)
-    if (isToday) writeCheckpoint(seedDate, next)
+    if (isToday) writeCheckpoint(seedDate, { ...next, phase: 'ready' })
   }, [segStart, acc, rung, g, isToday, seedDate])
 
+  // Back on screen, a board in play runs its clock again without waiting for
+  // a dig: thinking time is play time. A board nobody has dug yet still
+  // starts at its first dig; a cleared or finished one stays stopped.
+  const resume = useCallback(() => {
+    if (phase !== 'playing' || segStart !== null) return
+    const t = Date.now()
+    setSegStart(t)
+    setNow(t)
+  }, [phase, segStart])
+
   useEffect(() => {
-    const onVis = () => { if (document.visibilityState === 'hidden') pause() }
+    const onVis = () => (document.visibilityState === 'hidden' ? pause() : resume())
     document.addEventListener('visibilitychange', onVis)
     window.addEventListener('pagehide', pause)
+    window.addEventListener('pageshow', resume)
     return () => {
       document.removeEventListener('visibilitychange', onVis)
       window.removeEventListener('pagehide', pause)
+      window.removeEventListener('pageshow', resume)
     }
-  }, [pause])
+  }, [pause, resume])
+
+  // Leaving today's board for another day (a replay, or after midnight the
+  // new day's board) folds its running clock segment in and checkpoints it
+  // first, as a tab hide does, so a round-trip never zeroes the clock. The
+  // board itself is held in memory, never on disk (the checkpoint holds no
+  // cells), so coming back finds it as it was; a reload still costs it. A
+  // blast in progress isn't held: its checkpoint already has the outcome.
+  const pickDate = (date) => {
+    if (isToday && keyFor(date) !== boardKey) {
+      const kept = { ...g, acc: foldTime() }
+      if (segStart !== null) writeCheckpoint(seedDate, { ...kept, phase: 'ready' })
+      heldToday.current = phase === 'exploded' ? null : { date: seedDate, game: kept, saved: storedCheckpoint() }
+    }
+    selectDate(date)
+  }
 
   // ── Pointer + keyboard, delegated from the grid ──
   const cellFromEvent = (e) => {
@@ -487,6 +544,9 @@ export default function Mines() {
     if (idx >= 0) onFlag(idx)
   }
   const onKeyDown = (e) => {
+    // A key with a modifier is the browser's (Ctrl/Cmd+F finds, Alt+arrows
+    // go back and forward), never a move here.
+    if (e.ctrlKey || e.metaKey || e.altKey) return
     const { cols, rows } = board
     let i = focusIdx
     switch (e.key) {
@@ -547,14 +607,14 @@ export default function Mines() {
       Three minefields a day — <b>Easy</b>, <b>Medium</b> and <b>Hard</b>. Clear one to unlock the next; clear Hard to keep your streak.<br/><br/>
       A number shows how many of its 8 neighbours hide a mine. <b>Tap</b> to dig, <b>hold</b> (or right-click) to flag — or switch with the Dig / Flag toggle. Tap a number whose flags are all placed to dig everything else around it.<br/><br/>
       Every board is solvable by logic alone from the open area — <b>no guessing, ever</b>. Hit a mine and the board resets to its opening; three mines on one board ends your day.<br/><br/>
-      The clock only runs while you dig.<br/>
-      <span style={{ color: MUTED }}>Keyboard: arrow keys move, Enter digs, F flags.</span>
+      The clock runs from your first dig while the page is on screen.<br/>
+      <span style={{ color: MUTED }}>Keyboard: arrow keys move, Enter does what a tap does (digs, or flags in Flag mode), F flags.</span>
     </>
   )
 
   return (
     <GameShell game="mines" date={formatDate(seedDate)} howTo={howTo} onArchive={() => setShowArchive(true)} className="mn-main">
-      <style>{css}</style>
+      <style>{css + (dayOver ? barDoneCss : barCss)}</style>
       {confetti.map(c => (
         <div key={c.id} style={{ position: 'fixed', left: `${c.x}%`, top: '28%', width: c.size, height: c.size, background: c.color, borderRadius: c.size > 10 ? '50%' : 2, animation: `mnConfetti 1.3s ${c.delay}ms ease forwards`, pointerEvents: 'none', zIndex: 100 }} />
       ))}
@@ -591,7 +651,7 @@ export default function Mines() {
           })}
         </div>
 
-        <div className="mn-bar">
+        <div className={`mn-bar${dayOver ? ' mn-bar-done' : ''}`}>
           <span style={{ fontSize: 14, fontWeight: 700, color: INK, minWidth: 52 }}>💣 {minesLeft}</span>
           <span style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 700, color: INK, minWidth: 64 }} aria-label={`Time ${formatTime(rungMs)}`}>⏱ {formatTime(rungMs)}</span>
           <div className="mn-seg" role="group" aria-label="Tap action">
@@ -660,7 +720,7 @@ export default function Mines() {
       {showArchive && (
         <Archive
           game="mines"
-          onSelectDate={selectDate}
+          onSelectDate={pickDate}
           onClose={() => setShowArchive(false)}
         />
       )}
