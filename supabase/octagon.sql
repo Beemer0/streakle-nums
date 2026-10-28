@@ -51,6 +51,7 @@ create unique index one_lock_per_event on fight_picks (user_id, event_id)
 
 -- event_id is denormalized so RLS/index checks don't need a join per row.
 -- DEFINER so the lookup works regardless of the caller's RLS view of fights.
+-- (Replaced 2026-10-27, with created_at pinned too: see "Hardening" at the end.)
 create or replace function set_pick_event() returns trigger
 language plpgsql security definer set search_path = public as $$
 begin
@@ -101,6 +102,8 @@ grant execute on function is_admin_of(text) to authenticated;
 
 -- Overloads of the wc RPCs, dispatched by named args ({pool,code} vs {code}),
 -- so the zero/one-arg wc2026 functions and every wc policy stay byte-identical.
+-- (The revokes "from public" here never removed anon, and join_pool now
+-- refuses a signed-out caller: see "Hardening" at the end.)
 create or replace function join_pool(pool text, code text) returns boolean
 language plpgsql security definer set search_path = public as $$
 declare ok boolean;
@@ -130,6 +133,8 @@ revoke all on function get_pool_members(text) from public;
 grant execute on function get_pool_members(text) to authenticated;
 
 -- ── RLS ─────────────────────────────────────────────────────────────────────
+-- (Since 2026-10-27 these are TO authenticated, with auth.uid() and the
+-- helpers wrapped in (select …): see "Hardening" at the end.)
 
 alter table ufc_events  enable row level security;
 alter table fights      enable row level security;
@@ -190,3 +195,112 @@ on conflict (pool_id, user_id) do update set is_admin = true;
 
 -- To change the invite code later:
 --   update pool_config set invite_code = 'NEW-CODE' where pool_id = 'octagon';
+
+-- ════════════════════════════════════════════════════════════════════════════
+-- Hardening (applied 2026-10-27)
+-- ════════════════════════════════════════════════════════════════════════════
+
+-- 1. Function privileges. The `revoke all ... from public` lines above never
+--    removed anon: postgres's default privileges in public grant anon EXECUTE
+--    on every new function directly. So a signed-out caller could run
+--    join_pool, an unthrottled invite-code oracle, and the membership
+--    helpers. Now only authenticated (and service_role) can. The trigger
+--    function is callable by nobody, since a trigger fires without EXECUTE.
+--    join_pool also refuses a caller with no account before it reads the code.
+create or replace function join_pool(pool text, code text) returns boolean
+language plpgsql security definer set search_path = public as $$
+declare ok boolean;
+begin
+  if auth.uid() is null then return false; end if;
+  select invite_code = code into ok from pool_config where pool_id = pool;
+  if not coalesce(ok, false) then return false; end if;
+  insert into pool_members (pool_id, user_id) values (pool, auth.uid())
+    on conflict do nothing;
+  return true;
+end $$;
+revoke execute on function join_pool(text, text), get_pool_members(text),
+  is_member_of(text), is_admin_of(text), is_pool_member(), is_pool_admin()
+  from anon, public;
+
+--    Functions postgres creates from now on are not executable by anon or
+--    PUBLIC. In public, authenticated and service_role still get EXECUTE, so
+--    a new RPC that guests must call needs an explicit grant to anon; in any
+--    other schema nobody but postgres does, so an RLS helper there needs a
+--    grant to authenticated. PUBLIC's EXECUTE is Postgres's built-in global
+--    default, which a per-schema revoke can't remove; only the schema-less
+--    one does.
+alter default privileges for role postgres in schema public
+  revoke execute on functions from anon, public;
+alter default privileges for role postgres
+  revoke execute on functions from public;
+
+-- 2. Picks: the server sets event_id (from the fight) and created_at (now()
+--    on insert, kept on every update). Before, the trigger ran only on insert
+--    or a fight_id change and never touched created_at, so a member could
+--    PATCH created_at back in time and win every tie-break (standings and the
+--    belt rank on it), or move a pick's event_id to a later event to dodge
+--    the start-time lock on deletes and the one-lock-per-event index.
+create or replace function set_pick_event() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  select event_id into new.event_id from fights where id = new.fight_id;
+  if new.event_id is null then
+    raise exception 'unknown fight %', new.fight_id;
+  end if;
+  if tg_op = 'INSERT' then
+    new.created_at := now();
+  else
+    new.created_at := old.created_at;
+  end if;
+  return new;
+end $$;
+create or replace trigger fight_picks_event
+  before insert or update on fight_picks
+  for each row execute function set_pick_event();
+revoke execute on function set_pick_event() from public, anon, authenticated, service_role;
+
+-- 3. RLS: signed-in users only (a signed-out read gets no rows, rather than
+--    a permission error from the helpers it can no longer call), with
+--    auth.uid() and the helpers wrapped in (select …) so they run once per
+--    statement instead of once per row. Otherwise unchanged.
+alter policy ev_select on ufc_events to authenticated
+  using ((select is_member_of('octagon')));
+alter policy ev_admin on ufc_events to authenticated
+  using ((select is_admin_of('octagon'))) with check ((select is_admin_of('octagon')));
+alter policy f_select on fights to authenticated
+  using ((select is_member_of('octagon')));
+alter policy f_admin on fights to authenticated
+  using ((select is_admin_of('octagon'))) with check ((select is_admin_of('octagon')));
+alter policy fp_select on fight_picks to authenticated
+  using (
+    user_id = (select auth.uid())
+    or ((select is_member_of('octagon'))
+        and exists (select 1 from ufc_events e
+                    where e.id = event_id and e.starts_at <= now()))
+  );
+alter policy fp_insert_own on fight_picks to authenticated
+  with check (
+    user_id = (select auth.uid())
+    and (select is_member_of('octagon'))
+    and exists (select 1 from fights f
+                join ufc_events e on e.id = f.event_id
+                where f.id = fight_id
+                  and e.starts_at > now()
+                  and not f.scratched)
+  );
+alter policy fp_update_own on fight_picks to authenticated
+  using (user_id = (select auth.uid()))
+  with check (
+    user_id = (select auth.uid())
+    and exists (select 1 from fights f
+                join ufc_events e on e.id = f.event_id
+                where f.id = fight_id
+                  and e.starts_at > now()
+                  and not f.scratched)
+  );
+alter policy fp_delete_own on fight_picks to authenticated
+  using (
+    user_id = (select auth.uid())
+    and exists (select 1 from ufc_events e
+                where e.id = event_id and e.starts_at > now())
+  );

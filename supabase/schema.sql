@@ -4,7 +4,8 @@
 --
 -- ARCHIVED 2026-10-20: the pool is closed and read-only. See the "Archive"
 -- section at the bottom for what was switched off and the pool_archive table,
--- and the section after it for the pool-scoped pool_members read policy.
+-- and the dated sections after it for later policy changes. Needs
+-- core.sql's profiles table first.
 -- ════════════════════════════════════════════════════════════════════════════
 
 -- ── Tables ──────────────────────────────────────────────────────────────────
@@ -248,3 +249,46 @@ create policy pm_select on pool_members for select to authenticated
 -- pool-scoped get_pool_members('wc2026') from octagon.sql, which returns a
 -- pool's roster only to that pool's members. Nothing calls the zero-arg one.
 drop function if exists get_pool_members();
+
+-- ════════════════════════════════════════════════════════════════════════════
+-- Policies for signed-in users, helpers once per statement (applied 2026-10-27)
+-- ════════════════════════════════════════════════════════════════════════════
+-- The helpers above are no longer executable by anon: the `revoke ... from
+-- public` lines never removed anon's direct grant, so octagon.sql's
+-- "Hardening" section revokes it. The policies that call them are now TO
+-- authenticated, so a signed-out read gets no rows rather than a permission
+-- error. auth.uid() and the row-independent helpers are wrapped in
+-- (select …) so they run once per statement, not once per row;
+-- is_member_of(pool_id) depends on the row and stays unwrapped. Otherwise
+-- each policy is unchanged.
+alter policy m_select on matches to authenticated
+  using ((select is_pool_member()));
+alter policy p_select on predictions to authenticated
+  using (
+    user_id = (select auth.uid())
+    or ((select is_pool_member())
+        and exists (select 1 from matches m where m.id = match_id and m.kickoff_at <= now()))
+  );
+alter policy p_insert_own on predictions to authenticated
+  with check (
+    user_id = (select auth.uid())
+    and (select is_pool_member())
+    and exists (select 1 from matches m
+                where m.id = match_id
+                  and m.kickoff_at > now()
+                  and not m.excluded
+                  and m.team_a_locked and m.team_b_locked)
+  );
+alter policy p_update_own on predictions to authenticated
+  using (user_id = (select auth.uid()) and locked_at is null)
+  with check (
+    user_id = (select auth.uid())
+    and exists (select 1 from matches m
+                where m.id = match_id
+                  and m.kickoff_at > now()
+                  and not m.excluded)
+  );
+alter policy pa_select on pool_archive to authenticated
+  using (is_member_of(pool_id));
+alter policy pm_select on pool_members to authenticated
+  using (user_id = (select auth.uid()) or is_member_of(pool_id));

@@ -5,7 +5,17 @@ puzzles every day; signed-in players build streaks.
 
 ## Stack & commands
 - React 19 + Vite 8, React Router 7, plain inline styles (no CSS framework).
-- Supabase — Google OAuth + a `game_results` table (RLS is configured & verified).
+- Supabase — Google OAuth + `profiles` and `game_results` (RLS is configured &
+  verified). Their schema is `supabase/core.sql`: own-row policies, no UPDATE
+  policy on results, and CHECKs (`game` must be one of the nine keys, so **a
+  new game's key goes into `game_results_game_check`, live and in core.sql**,
+  or its saves fail; `games.test.js` checks the repo copy; dates from launch
+  to tomorrow; avatars only on `lh*.googleusercontent.com`, a trigger nulls
+  anything else). No DB function is executable by anon or PUBLIC: a new
+  function in `public` gets EXECUTE for authenticated and service_role only
+  (outside `public`, for nobody but postgres), so an RPC guests must call
+  needs an explicit `grant execute … to anon`, and an RLS helper in another
+  schema needs one to authenticated.
 - Deployed on Vercel; **pushing to `master` auto-deploys, through a gate**:
   `vercel.json`'s `buildCommand` is `npm run verify` = `npm run lint` →
   `npm run test:coverage` (Vitest + the v8 coverage thresholds in
@@ -92,7 +102,8 @@ puzzles every day; signed-in players build streaks.
   Games call `saveResult({ game, puzzleDate: seedDate, … })` only when `isToday`;
   it records today or yesterday only and keeps the day's FIRST result
   (insert-if-absent), so a replay elsewhere can't flip a win or a loss
-  (`saveResult.test.js`, `archiveReplay.test.jsx`). It writes the row to a
+  (`saveResult.test.js`, `archiveReplay.test.jsx`); the DB has no UPDATE
+  policy on `game_results`, so that holds server-side too. It writes the row to a
   localStorage outbox (`streakle-pending-results`) synchronously, before its
   first await, and drops it once written; guest results, failed writes and
   writes cut short by a closed page are sent by `sendPendingResults`, which
@@ -279,8 +290,13 @@ functions in `src/octagon/scoring.js` (tested).
   a saved UFC 323 fixture in `src/octagon/fixtures/` (the wiki test runs in
   happy-dom via a vitest env pragma).
 - DB: `supabase/octagon.sql` (already applied) — `ufc_events` (`starts_at` =
-  the pick lock), `fights`, `fight_picks` (`event_id` trigger-filled; one lock
-  per event via a partial unique index) + RLS. Pool-scoped helpers
+  the pick lock), `fights`, `fight_picks` (a trigger sets `event_id` from the
+  fight and `created_at` on every insert and update, so the created_at
+  tie-break can't be forged; one lock per event via a partial unique index) +
+  RLS, `to authenticated` with `auth.uid()` and the helpers wrapped in
+  `(select …)` (once per statement). The SECURITY DEFINER RPCs/helpers are
+  EXECUTE for authenticated only, and `join_pool` returns false with no
+  `auth.uid()` (all in `octagon.sql`'s 2026-10-27 "Hardening" section). Pool-scoped helpers
   `is_member_of(pool)`/`is_admin_of(pool)` and arity-overloaded
   `join_pool(pool, code)`/`get_pool_members(pool)` RPCs replaced the wc
   originals (both since dropped); the wc helpers `is_pool_member/admin()`
