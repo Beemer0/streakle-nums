@@ -20,8 +20,9 @@ puzzles every day; signed-in players build streaks.
   puzzle checker with its time limits, one at a time), `npm run test:coverage`
   (`-- --coverage.reporter=html` writes a per-file report to `coverage/`).
   Vitest loads `src/test-setup.js` (sets `IS_REACT_ACT_ENVIRONMENT`, so React
-  reports state updates outside `act()` — keep stderr clean) and skips
-  `.claude/**` and `dist/**`. The checkers' flags are strict
+  reports state updates outside `act()` — keep stderr clean; a test that
+  drives React outside `act()` on purpose turns it off meanwhile, as Mines'
+  `outsideAct` does) and skips `.claude/**` and `dist/**`. The checkers' flags are strict
   (`scripts/cli.mjs`): an unknown flag or a bad `--from`/`--to`/`--days`/
   `--dump` exits 2 before checking anything.
 - After a deploy, `bash scripts/check-deploy.sh` checks every route's status

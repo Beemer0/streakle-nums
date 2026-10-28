@@ -444,6 +444,12 @@ const onLaidOut = (el, then) => new Promise(resolve => {
   const seen = new MutationObserver(() => { seen.disconnect(); then(); resolve() })
   seen.observe(el, { attributes: true, childList: true, subtree: true })
 })
+// Runs `run` with React told not to expect act() (test-setup.js turns that
+// on), for the tests below that drive it through its scheduler on purpose.
+async function outsideAct(run) {
+  globalThis.IS_REACT_ACT_ENVIRONMENT = false
+  try { await run() } finally { globalThis.IS_REACT_ACT_ENVIRONMENT = true }
+}
 
 describe('Mines focus after a clear, a new rung and the end of the day (2.4.3)', () => {
   it('moves focus off the cleared board to Next, then to the new board\'s opening cell', async () => {
@@ -486,10 +492,12 @@ describe('Mines focus after a clear, a new rung and the end of the day (2.4.3)',
     // before that tick's effects have run, so the clear's own render runs
     // them first: they must leave the clear's focus move to it.
     const clock = host.querySelector('[aria-label^="Time "]')
-    const dug = onLaidOut(clock, () => cell(last).click())
-    vi.advanceTimersByTime(1000)
-    await dug
-    await settle()
+    await outsideAct(async () => {
+      const dug = onLaidOut(clock, () => cell(last).click())
+      vi.advanceTimersByTime(1000)
+      await dug
+      await settle()
+    })
     expect(grid().getAttribute('aria-disabled')).toBe('true')
     expect(nextButton()).toBeDefined()
     expect(document.activeElement).toBe(nextButton())
@@ -504,10 +512,12 @@ describe('Mines focus after a clear, a new rung and the end of the day (2.4.3)',
     // The clear is said a beat after its focus move, from a timer; Next is
     // pressed as that lands.
     const live = host.querySelector('.mn-sr-only[aria-live]')
-    const pressed = onLaidOut(live, () => nextButton().click())
-    vi.advanceTimersByTime(BEAT_MS)
-    await pressed
-    await settle()
+    await outsideAct(async () => {
+      const pressed = onLaidOut(live, () => nextButton().click())
+      vi.advanceTimersByTime(BEAT_MS)
+      await pressed
+      await settle()
+    })
     const medium = generateBoard(TODAY, 1)
     expect(rungName()).toBe('Medium')
     expect(document.activeElement).toBe(cell(medium.open))
