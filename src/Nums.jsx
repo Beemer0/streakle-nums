@@ -65,6 +65,9 @@ function scramble(sol, rng) {
 }
 
 const CHECKPOINT_KEY = 'streakle-nums';
+// Swaps a day's board comes with; each one left at the solve is a star, and
+// past it the count runs on as "over budget".
+const SWAP_BUDGET = 20;
 
 // Same 7×7 shape as the day's scramble, the same (hidden) inactive cells, and
 // the same numbers in the active cells, in any order.
@@ -94,7 +97,7 @@ function readCheckpoint(date, start) {
     if (!raw) return null;
     const cp = JSON.parse(raw);
     if (!cp || cp.v !== 1 || cp.date !== date || !sameTiles(cp.board, start)) return null;
-    if (!Number.isInteger(cp.swaps) || cp.swaps > 20) return null;
+    if (!Number.isInteger(cp.swaps) || cp.swaps > SWAP_BUDGET) return null;
     return { board: cp.board, swaps: cp.swaps };
   } catch { return null; }
 }
@@ -116,7 +119,7 @@ function formatDate(dateStr) {
 }
 
 function buildShareText(swaps, solved, dateStr) {
-  const used = 20 - swaps;
+  const used = SWAP_BUDGET - swaps;
   const over = swaps < 0;
   const header = `NUMS by Streakle 🔥 — ${formatDate(dateStr)}`;
   const result = solved
@@ -124,11 +127,12 @@ function buildShareText(swaps, solved, dateStr) {
            : `Solved in ${used} swap${used!==1?'s':''}! ${swaps} remaining`
     : `Still solving today's puzzle`;
   const stars = solved ? '⭐'.repeat(Math.max(0, swaps)) || '—' : '🔥';
-  return `${header}\n${result}\n${stars}\n\nPlay at: playstreakle.com`;
+  return `${header}\n${result}\n${stars}\n\nPlay at: playstreakle.com/nums`;
 }
 
 const GAP = 4;
 const SWAP_MS = 380; // the two tiles' flight; the board swap lands when it ends
+const TOAST_MS = 1800;
 
 // Web Animations ignore the CSS reduced-motion rule, so check it.
 const prefersReducedMotion = () => Boolean(window.matchMedia?.('(prefers-reduced-motion: reduce)').matches);
@@ -138,7 +142,7 @@ const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
 const cellName = (r, c) => `row ${r + 1}, column ${c + 1}`;
 const capital = t => t[0].toUpperCase() + t.slice(1);
 const budgetText = s => s >= 0 ? `${plural(s, 'swap')} left` : `${plural(-s, 'swap')} over budget`;
-const solvedText = s => `Solved in ${plural(20 - s, 'swap')}, ${s >= 0 ? `${s} to spare` : `${-s} over budget`}.`;
+const solvedText = s => `Solved in ${plural(SWAP_BUDGET - s, 'swap')}, ${s >= 0 ? `${s} to spare` : `${-s} over budget`}.`;
 
 // Cell size follows the viewport: 54px on roomy screens, 44px on phones,
 // shrinking further only when 7 cells wouldn't otherwise fit.
@@ -161,8 +165,11 @@ const css = `
 @keyframes fadeIn{from{opacity:0}to{opacity:1}}
 @keyframes slideUp{from{transform:translateY(12px);opacity:0}to{transform:translateY(0);opacity:1}}
 @keyframes dropPulse{0%{transform:scale(1)}50%{transform:scale(1.08)}100%{transform:scale(1)}}
+@keyframes nmToastIn{from{transform:translate(-50%,12px);opacity:0}to{transform:translate(-50%,0);opacity:1}}
 .nm-cell:focus{outline:none}
 .nm-cell:focus-visible{outline:2px solid var(--gold);outline-offset:2px;z-index:1}
+/* Floats over the header's How to play / Archive buttons, so taps go through it. */
+.nm-toast{position:fixed;top:80px;left:50%;transform:translateX(-50%);background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px 20px;font-size:14px;font-weight:600;color:var(--ink);z-index:60;animation:nmToastIn .2s ease;white-space:nowrap;pointer-events:none}
 `;
 
 export default function App() {
@@ -175,7 +182,7 @@ export default function App() {
       Rearrange numbers so every <b>row</b> and <b>column</b> contains <b>1–7</b> once each.<br/><br/>
       <b>Tap</b> a cell to select then tap another to swap — or <b>drag</b> a tile directly onto another. 🟢 Green = correct position.<br/><br/>
       Circles show the <b>sum</b> of the 4 surrounding numbers — use them as clues!<br/><br/>
-      You start with 20 swaps. Going over counts against you — but you can always finish!<br/>
+      You start with {SWAP_BUDGET} swaps. Going over counts against you — but you can always finish!<br/>
       <span style={{ color: 'var(--muted)' }}>Keyboard: arrow keys move, Enter selects and swaps, Esc clears the selection.</span>
     </>
   )
@@ -213,7 +220,7 @@ function NumsBoard({ seedDate, isToday, streak }) {
 
   // Today's board resumes from its checkpoint; a replay always starts fresh.
   const [initial] = useState(() =>
-    (isToday && readCheckpoint(seedDate, pz.sc)) || { board: pz.sc.map(r => [...r]), swaps: 20 });
+    (isToday && readCheckpoint(seedDate, pz.sc)) || { board: pz.sc.map(r => [...r]), swaps: SWAP_BUDGET });
   const [board, setBoard] = useState(initial.board);
   const [sel, setSel] = useState(null);
   const [swaps, setSwaps] = useState(initial.swaps);
@@ -225,6 +232,7 @@ function NumsBoard({ seedDate, isToday, streak }) {
   const [dragOver, setDragOver] = useState(null); // [r,c] being hovered
   const [dragging, setDragging] = useState(null); // [r,c] being dragged
   const [focusIdx, setFocusIdx] = useState(0); // the board's one Tab stop (r*7+c)
+  const [toast, setToast] = useState(null); // { n, text }: a short note over the page
   const [announce, liveRegion] = useAnnouncer();
   const statusId = useId();
   const resultRef = useRef(null);
@@ -249,6 +257,18 @@ function NumsBoard({ seedDate, isToday, streak }) {
     if (wasSolved.current === false && solved) resultRef.current?.focus();
     wasSolved.current = solved;
   }, [solved]);
+
+  // Each note shows for TOAST_MS from its own start (a repeat restarts it).
+  useEffect(() => {
+    if (!toast) return;
+    const id = setTimeout(() => setToast(null), TOAST_MS);
+    return () => clearTimeout(id);
+  }, [toast]);
+  // Shown to the eye; screen readers hear it through the live region.
+  const showToast = text => {
+    setToast(t => ({ n: (t?.n ?? 0) + 1, text }));
+    announce(text);
+  };
 
   const spawnConfetti = () => {
     const items = Array.from({length:30},(_,i)=>({
@@ -278,7 +298,7 @@ function NumsBoard({ seedDate, isToday, streak }) {
     if (corrKeys.length) triggerCellAnim(corrKeys,'correctPulse',600);
 
     if (isSolved(nb)) {
-      if (isToday) saveResult({ game: 'nums', puzzleDate: seedDate, completed: true, swaps_used: 20 - newSwaps });
+      if (isToday) saveResult({ game: 'nums', puzzleDate: seedDate, completed: true, swaps_used: SWAP_BUDGET - newSwaps });
       setTimeout(()=>{ spawnConfetti(); setStarsAnim(true); },100);
       announce(solvedText(newSwaps));
     } else {
@@ -297,6 +317,8 @@ function NumsBoard({ seedDate, isToday, streak }) {
     setSel(null);
     setDragging(null);
     setDragOver(null);
+    // Two equal numbers: the board would not change, so it costs nothing.
+    if (board[r1][c1] === board[r2][c2]) { showToast('Same number — no swap used'); return; }
     // Reduced motion: no flight, the tiles swap in place at once.
     if (prefersReducedMotion()) { landSwap(r1, c1, r2, c2); return; }
     // Keyed by source cell: unique within a swap, and the list empties before
@@ -396,8 +418,16 @@ function NumsBoard({ seedDate, isToday, streak }) {
   const handleDragOver = (e, r, c) => {
     if (!isActive(r,c) || !dragging) return;
     e.preventDefault();
+    // A green tile (locked) is no target: the no-drop cursor, no highlight
+    // (which would hide the green), no drop. The dragged tile itself isn't
+    // lit either, but keeps the move cursor the drag starts over.
+    if (isLocked(r,c)) {
+      e.dataTransfer.dropEffect = 'none';
+      setDragOver(null);
+      return;
+    }
     e.dataTransfer.dropEffect = 'move';
-    setDragOver([r,c]);
+    setDragOver(dragging[0]===r && dragging[1]===c ? null : [r,c]);
   };
 
   const handleDragLeave = () => setDragOver(null);
@@ -534,7 +564,7 @@ function NumsBoard({ seedDate, isToday, streak }) {
             </div>
           )}
           <div className="rc-detail">
-            {20-swaps} swap{20-swaps!==1?'s':''} used{swaps<0?` (${Math.abs(swaps)} over budget)`:''}
+            {SWAP_BUDGET-swaps} swap{SWAP_BUDGET-swaps!==1?'s':''} used{swaps<0?` (${Math.abs(swaps)} over budget)`:''}
           </div>
         </ResultCard>
       )}
@@ -544,6 +574,8 @@ function NumsBoard({ seedDate, isToday, streak }) {
           <ShareButton getText={shareText} label="Share progress" isPrimary={false} />
         </div>
       )}
+
+      {toast && <div key={toast.n} className="nm-toast" aria-hidden="true">{toast.text}</div>}
 
       {!solved&&sel&&!dragging&&(
         <div style={{fontSize:13,color:'var(--text-2)',marginTop:8,animation:'fadeIn 0.3s ease'}}>

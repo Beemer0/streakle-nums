@@ -156,7 +156,74 @@ function churnPair(board, sol) {
   throw new Error('no churn pair')
 }
 
+// Two misplaced tiles that hold the same number.
+function equalPair(board, sol) {
+  for (const [r1, c1] of ACTIVE) for (const [r2, c2] of ACTIVE) {
+    if ((r1 !== r2 || c1 !== c2) && board[r1][c1] === board[r2][c2] &&
+      board[r1][c1] !== sol[r1][c1] && board[r2][c2] !== sol[r2][c2]) return [[r1, c1], [r2, c2]]
+  }
+  throw new Error('no equal pair')
+}
+
+// What a share button copies, on a device with no share sheet.
+async function sharedText(label) {
+  const writeText = vi.fn(async () => {})
+  Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true })
+  Object.defineProperty(navigator, 'share', { value: undefined, configurable: true })
+  try {
+    await click(button(label))
+    expect(writeText).toHaveBeenCalledTimes(1)
+    return writeText.mock.calls[0][0]
+  } finally {
+    delete navigator.clipboard
+    delete navigator.share
+  }
+}
+
+describe('Nums share text', () => {
+  const HEADER = 'NUMS by Streakle 🔥 — October 21, 2026'
+  const LINK = 'Play at: playstreakle.com/nums'
+
+  it('shares a solve with swaps to spare as stars, linking to Nums', async () => {
+    localStorage.setItem(KEY, JSON.stringify({ v: 1, date: TODAY, board: PZ.sol, swaps: 4 }))
+    await mount()
+    expect(await sharedText('Share result')).toBe(`${HEADER}\nSolved in 16 swaps! 4 remaining\n⭐⭐⭐⭐\n\n${LINK}`)
+  })
+
+  it('shares a solve over budget, linking to Nums', async () => {
+    await mount()
+    for (const m of PLAN) await swap(m)
+    expect(PLAN.length).toBeGreaterThan(20)
+    expect(host.textContent).toContain(`${PLAN.length} swaps used (${PLAN.length - 20} over budget)`)
+    expect(await sharedText('Share result'))
+      .toBe(`${HEADER}\nSolved in ${PLAN.length} swaps (${PLAN.length - 20} over budget)\n—\n\n${LINK}`)
+  })
+
+  it('shares progress over budget, linking to Nums', async () => {
+    await mount()
+    const pair = churnPair(PZ.sc, PZ.sol)
+    for (let i = 0; i < 21; i++) await swap(pair)
+    expect(await sharedText('Share progress')).toBe(`${HEADER}\nStill solving today's puzzle\n🔥\n\n${LINK}`)
+  })
+})
+
 describe('Nums daily checkpoint', () => {
+  it('spends nothing on a same-number swap, and a reload agrees', async () => {
+    await mount()
+    await swap(PLAN[0])
+    const before = localStorage.getItem(KEY)
+    expect(JSON.parse(before).swaps).toBe(19)
+
+    await swap(equalPair(applySwap(PZ.sc, PLAN[0]), PZ.sol))
+    expect(boardNow()).toEqual(applySwap(PZ.sc, PLAN[0]))
+    expect(host.textContent).toContain('19 swaps remaining')
+    expect(localStorage.getItem(KEY)).toBe(before)
+
+    await reload()
+    expect(host.textContent).toContain('19 swaps remaining')
+    expect(saveResult).not.toHaveBeenCalled()
+  })
+
   it('starts today fresh with no checkpoint', async () => {
     await mount()
     expect(boardNow()).toEqual(PZ.sc)

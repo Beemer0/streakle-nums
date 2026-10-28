@@ -76,6 +76,15 @@ function churnPair(board, sol) {
   throw new Error('no churn pair')
 }
 
+// Two misplaced tiles that hold the same number.
+function equalPair(board, sol) {
+  for (const [r1, c1] of ACTIVE) for (const [r2, c2] of ACTIVE) {
+    if ((r1 !== r2 || c1 !== c2) && board[r1][c1] === board[r2][c2] &&
+      board[r1][c1] !== sol[r1][c1] && board[r2][c2] !== sol[r2][c2]) return [[r1, c1], [r2, c2]]
+  }
+  throw new Error('no equal pair')
+}
+
 // Node 25's own localStorage (no --localstorage-file, so no methods) shadows
 // happy-dom's; each test gets a fresh in-memory one that survives its reloads.
 function memoryStorage() {
@@ -165,6 +174,32 @@ async function swap([[r1, c1], [r2, c2]]) {
   await click(cell(r2, c2))
   await tick(400)
 }
+
+// HTML5 drag and drop: happy-dom has no DataTransfer, so each drag carries a
+// stand-in that records what the page sets on it. A browser starts dropEffect
+// at the drag's effectAllowed ('move' here) on every dragover.
+const transfer = () => ({ dropEffect: 'move', effectAllowed: 'uninitialized', setData() {}, getData: () => '', setDragImage() {} })
+const drag = (type, el, dataTransfer) => act(async () => {
+  const e = new Event(type, { bubbles: true, cancelable: true })
+  Object.defineProperty(e, 'dataTransfer', { value: dataTransfer })
+  el.dispatchEvent(e)
+})
+const dragOver = async (el, dt) => { dt.dropEffect = 'move'; await drag('dragover', el, dt) }
+// Drop `from` on `to`, as a browser does when the last dragover allowed it.
+async function dragSwap(from, to) {
+  const dt = transfer()
+  await drag('dragstart', from, dt)
+  await tick(0)
+  await dragOver(to, dt)
+  if (dt.dropEffect !== 'none') await drag('drop', to, dt)
+  await drag('dragend', from, dt)
+  await tick(400)
+}
+// A tile lit up as the drop target (it also hides a green tile's colour).
+const isDropTarget = (el) => el.style.transform === 'scale(1.08)'
+const toast = () => host.querySelector('.nm-toast')
+const boardText = () => ACTIVE.map(([r, c]) => cell(r, c).textContent).join(',')
+const scText = ACTIVE.map(([r, c]) => PZ.sc[r][c]).join(',')
 
 describe('Nums board semantics', () => {
   it('is a labelled 7×7 grid of rows and cells, described by the swaps left', async () => {
@@ -365,6 +400,118 @@ describe('Nums keyboard', () => {
     expect(cell(...target).getAttribute('aria-disabled')).toBe('true')
     expect(cell(...target).getAttribute('tabindex')).toBe('0')
     expect(document.activeElement).toBe(cell(...target))
+  })
+})
+
+describe('Nums same-number swaps', () => {
+  const PAIR = equalPair(PZ.sc, PZ.sol)
+
+  it('costs nothing to swap two tiles holding the same number, and says so', async () => {
+    const animate = vi.spyOn(Element.prototype, 'animate')
+    await mount()
+    const [a, b] = PAIR
+    await click(cell(...a))
+    await click(cell(...b))
+    expect(animate).not.toHaveBeenCalled() // no flight for a swap that changes nothing
+    await tick(400)
+    expect(boardText()).toBe(scText)
+    expect(host.textContent).toContain('20 swaps remaining')
+    expect(localStorage.getItem(KEY)).toBeNull()
+    expect(spoken()).toContain('Same number — no swap used')
+    expect(grid().querySelector('[aria-selected="true"]')).toBeNull()
+
+    // The next real swap still costs one.
+    await swap(PLAN[0])
+    expect(host.textContent).toContain('19 swaps remaining')
+  })
+
+  it('costs nothing by keyboard or with reduced motion either', async () => {
+    preferReducedMotion(true)
+    await mount()
+    const [a, b] = PAIR
+    await focus(cell(...a))
+    await press('Enter')
+    await focus(cell(...b))
+    await press('Enter')
+    expect(boardText()).toBe(scText)
+    expect(host.textContent).toContain('20 swaps remaining')
+    expect(spoken()).toContain('Same number — no swap used')
+    expect(document.activeElement).toBe(cell(...b)) // focus stays put
+  })
+
+  it('costs nothing when one is dragged onto the other', async () => {
+    await mount()
+    const [a, b] = PAIR
+    await dragSwap(cell(...a), cell(...b))
+    expect(boardText()).toBe(scText)
+    expect(host.textContent).toContain('20 swaps remaining')
+    expect(spoken()).toContain('Same number — no swap used')
+  })
+
+  it('shows the note briefly, to the eye only, and lets taps through to whatever it covers', async () => {
+    await mount()
+    await click(cell(...PAIR[0]))
+    await click(cell(...PAIR[1]))
+    expect(toast().textContent).toBe('Same number — no swap used')
+    expect(toast().getAttribute('aria-hidden')).toBe('true') // the live region speaks it
+    // It floats over the header's How to play / Archive buttons.
+    expect(getComputedStyle(toast()).pointerEvents).toBe('none')
+    await tick(1700)
+    expect(toast()).not.toBeNull()
+    await tick(200)
+    expect(toast()).toBeNull()
+  })
+})
+
+describe('Nums drag and drop', () => {
+  const LOCKED = ACTIVE.find(([r, c]) => PZ.sc[r][c] === PZ.sol[r][c])
+
+  it('offers a misplaced tile as a drop target, and the drop swaps', async () => {
+    await mount()
+    const [a, b] = PLAN[0]
+    const dt = transfer()
+    await drag('dragstart', cell(...a), dt)
+    await dragOver(cell(...b), dt)
+    expect(dt.dropEffect).toBe('move')
+    expect(isDropTarget(cell(...b))).toBe(true)
+    await drag('drop', cell(...b), dt)
+    await drag('dragend', cell(...a), dt)
+    await tick(400)
+    expect(host.textContent).toContain('19 swaps remaining')
+  })
+
+  it('never offers a green tile as a drop target, so it keeps its colour and nothing is spent', async () => {
+    await mount()
+    const [a] = PLAN[0]
+    const green = cell(...LOCKED).style.background
+    expect(green).toBe('var(--correct-deep)')
+    const dt = transfer()
+    await drag('dragstart', cell(...a), dt)
+    await dragOver(cell(...LOCKED), dt)
+    expect(dt.dropEffect).toBe('none') // the browser shows its no-drop cursor
+    expect(isDropTarget(cell(...LOCKED))).toBe(false)
+    expect(cell(...LOCKED).style.background).toBe(green)
+
+    // Moving on to a misplaced tile and back takes the highlight off again.
+    await dragOver(cell(...PLAN[0][1]), dt)
+    expect(isDropTarget(cell(...PLAN[0][1]))).toBe(true)
+    await dragOver(cell(...LOCKED), dt)
+    expect([...grid().querySelectorAll('[role="gridcell"]')].some(isDropTarget)).toBe(false)
+
+    await drag('dragend', cell(...a), dt)
+    await tick(400)
+    expect(boardText()).toBe(scText)
+    expect(host.textContent).toContain('20 swaps remaining')
+  })
+
+  it('never lights the dragged tile as its own drop target, but keeps the move cursor over it', async () => {
+    await mount()
+    const [a] = PLAN[0]
+    const dt = transfer()
+    await drag('dragstart', cell(...a), dt)
+    await dragOver(cell(...a), dt)
+    expect(dt.dropEffect).toBe('move')
+    expect(isDropTarget(cell(...a))).toBe(false)
   })
 })
 
