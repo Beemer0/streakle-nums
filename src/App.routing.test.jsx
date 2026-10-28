@@ -68,6 +68,9 @@ describe('an unknown URL', () => {
   }
 
   it('shows the not-found page, marked noindex with no canonical link, and links every game', async () => {
+    // Load the lazy route first, so it resolves inside renderAt's act(); on a
+    // slow machine it otherwise lands after, an update React flags.
+    await import('./NotFound.jsx')
     await renderAt('/no-such-page')
     await vi.waitFor(() => expect(host.querySelector('h1')?.textContent).toBe('PAGE NOT FOUND'))
     // useSeo writes the head in an effect, which can run after the h1 shows.

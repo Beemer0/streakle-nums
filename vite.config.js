@@ -12,6 +12,8 @@ export default defineConfig({
     // The slowest DOM tests take ~2 s on a desktop; the 5 s default timed them
     // out on a busy machine, and the deploy gate runs on Vercel's builders.
     testTimeout: 15000,
+    // Every core: the default (cores - 1) ran Vercel's 2-core builder on one.
+    maxWorkers: '100%',
     // npm run test:coverage (the deploy gate runs it). The thresholds sit
     // just under the first run's 89.44 / 82.47 / 86.3 / 93.02 % (2026-10-27):
     // raise them as tests land; never lower them to get a deploy through.
