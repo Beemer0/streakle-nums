@@ -24,9 +24,10 @@ describe('Link schedule', () => {
   //               second valid splits (#17 #33 #36 #37 #53 #56) and groups
   //               repeated from another puzzle (#61 #4, and 3-word overlaps
   //               #0 #3). Each change is in that commit's message.
+  //   2026-11-09  #42 Japanese exports: LEICA -> CANON (Leica is German)
   it("changes a shipped puzzle's content only by a logged correction", () => {
     expect(createHash('sha256').update(JSON.stringify(PUZZLES.slice(0, 71))).digest('hex'))
-      .toBe('9455c26d7ca4860e76fc1ceabb253b40b21c6e748e32128e8c4eeb4675b89133')
+      .toBe('20deb3476165c1e8dc75abb8071f5b117ddaecd440c4a3785197a52d169635d1')
   })
 
   it('pins the rotation from the cutover', () => {

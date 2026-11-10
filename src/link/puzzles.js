@@ -346,7 +346,7 @@ export const PUZZLES = [
   {
     categories: [
       { label: "Apple varieties", words: ["GALA", "FUJI", "BRAEBURN", "JAZZ"] },
-      { label: "Japanese exports", words: ["NIKON", "LEICA", "TOYOTA", "SONY"] },
+      { label: "Japanese exports", words: ["NIKON", "CANON", "TOYOTA", "SONY"] },
       { label: "Gala ___", words: ["DINNER", "NIGHT", "EVENT", "DAY"] },
       { label: "Deadly sins", words: ["ENVY", "PRIDE", "WRATH", "SLOTH"] },
     ]
