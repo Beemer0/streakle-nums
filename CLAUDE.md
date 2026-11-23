@@ -11,7 +11,10 @@ puzzles every day; signed-in players build streaks.
   new game's key goes into `game_results_game_check`, live and in core.sql**,
   or its saves fail; `games.test.js` checks the repo copy; dates from launch
   to tomorrow; avatars only on `lh*.googleusercontent.com`, a trigger nulls
-  anything else). No DB function is executable by anon or PUBLIC: a new
+  anything else). A profile is created with its account by a trigger on
+  `auth.users` (`handle_new_user`) and players can only read their own, so
+  the client never writes one; that trigger runs inside every sign-up, so
+  an error in it blocks them all. No DB function is executable by anon or PUBLIC: a new
   function in `public` gets EXECUTE for authenticated and service_role only
   (outside `public`, for nobody but postgres), so an RPC guests must call
   needs an explicit `grant execute … to anon`, and an RLS helper in another
@@ -107,8 +110,8 @@ puzzles every day; signed-in players build streaks.
   localStorage outbox (`streakle-pending-results`) synchronously, before its
   first await, and drops it once written; guest results, failed writes and
   writes cut short by a closed page are sent by `sendPendingResults`, which
-  `AuthProvider` runs on every sign-in/load (after `createProfile`, since
-  results reference the profile). All nine games keep the live day's board in
+  `AuthProvider` runs on every sign-in/load (results reference the profile,
+  which the database creates along with the account). All nine games keep the live day's board in
   localStorage (`streakle-<game>`, never replaced by an older day's), so a
   reload never refunds a move or wipes a finished board; because the outbox
   write comes first, "saveResult, then checkpoint the finish" can't lose a day.

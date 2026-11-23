@@ -10,12 +10,18 @@
 -- the UPDATE policy on game_results dropped, and policies made TO
 -- authenticated with auth.uid() wrapped in (select …). Before that the
 -- policies were TO public and called auth.uid() directly.
+--
+-- Since 2026-11-17 the database creates each profile with its account
+-- (handle_new_user, on auth.users), and players can only read their own:
+-- before, the client inserted it (AuthProvider.jsx createProfile) under
+-- insert/update policies, so a player could rename themselves after another
+-- member in the standings.
 -- ════════════════════════════════════════════════════════════════════════════
 
 -- ── profiles: one row per account ───────────────────────────────────────────
--- The client inserts it on first sign-in (AuthProvider.jsx createProfile),
--- from the Google user metadata. Pool members see each other's display_name
--- and avatar_url through get_pool_members (octagon.sql), and the avatar goes
+-- Created with the account from Google's metadata (handle_new_user, below);
+-- no client writes it. Pool members see each other's display_name and
+-- avatar_url through get_pool_members (octagon.sql), and the avatar goes
 -- straight into an <img src>.
 create table profiles (
   id           uuid primary key references auth.users on delete cascade,
@@ -33,8 +39,7 @@ create table profiles (
 
 -- Cleans a row before the checks see it: an over-long name is cut, and an
 -- avatar off Google's host is dropped (the UI shows the initial instead).
--- Rejecting the row would fail the sign-in insert, and since game_results
--- references profiles, that player could then never save a result.
+-- Rejecting the row would fail the sign-up that creates it.
 create or replace function sanitize_profile() returns trigger
 language plpgsql set search_path = public as $$
 begin
@@ -50,6 +55,30 @@ revoke execute on function sanitize_profile() from public, anon, authenticated, 
 create or replace trigger profiles_sanitize
   before insert or update on profiles
   for each row execute function sanitize_profile();
+
+-- Creates the profile with the account, from Google's metadata: the full
+-- name, else the email; the avatar. It runs inside the sign-up transaction,
+-- so no account exists without its profile (game_results references it). An
+-- error here would block every sign-up, so nothing in it can fail on data:
+-- profiles_sanitize cleans the row first, and an existing row is left alone.
+create or replace function handle_new_user() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  insert into profiles (id, email, display_name, avatar_url)
+  values (
+    new.id,
+    new.email,
+    coalesce(nullif(new.raw_user_meta_data ->> 'full_name', ''),
+             nullif(new.raw_user_meta_data ->> 'name', ''),
+             new.email),
+    coalesce(new.raw_user_meta_data ->> 'avatar_url', new.raw_user_meta_data ->> 'picture'))
+  on conflict (id) do nothing;
+  return new;
+end $$;
+revoke execute on function handle_new_user() from public, anon, authenticated, service_role;
+create or replace trigger on_auth_user_created
+  after insert on auth.users
+  for each row execute function handle_new_user();
 
 -- ── game_results: one row per player, game and day ──────────────────────────
 -- saveResult.js inserts a row only if it's absent (ON CONFLICT DO NOTHING),
@@ -87,10 +116,8 @@ alter table game_results enable row level security;
 
 create policy "Users can view own profile" on profiles for select to authenticated
   using ((select auth.uid()) = id);
-create policy "Users can insert own profile" on profiles for insert to authenticated
-  with check ((select auth.uid()) = id);
-create policy "Users can update own profile" on profiles for update to authenticated
-  using ((select auth.uid()) = id);
+-- No insert, update or delete policy: handle_new_user writes profiles, so no
+-- player can take another member's name in the standings.
 
 create policy "Users can view own results" on game_results for select to authenticated
   using ((select auth.uid()) = user_id);

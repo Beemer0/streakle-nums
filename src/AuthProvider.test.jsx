@@ -77,11 +77,13 @@ const fire = (session) => act(async () => {
   await new Promise(r => setTimeout(r, 10))
 })
 
-it("sends the user's waiting results once their profile row exists", async () => {
+// The database creates the profile with the account (supabase/core.sql), and
+// players can't write it: the client only sends what is waiting.
+it("sends the user's waiting results on sign-in, and never touches their profile", async () => {
   await mount()
   await vi.waitFor(() => expect(events).toHaveLength(1))
   await fire({ user: { id: 'u-1', email: 'a@b.c', user_metadata: {} } })
-  expect(calls).toEqual(['profile:read', 'profile:create', 'send:u-1'])
+  expect(calls).toEqual(['send:u-1'])
 })
 
 it('sends nothing without a signed-in user', async () => {
