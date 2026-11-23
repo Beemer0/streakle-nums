@@ -305,9 +305,12 @@ functions in `src/octagon/scoring.js` (tested).
   originals (both since dropped); the wc helpers `is_pool_member/admin()`
   are now explicitly scoped to `'wc2026'`. Members may delete their own
   picks pre-start (frees a Lock
-  stranded on a scratched fight — updates there are RLS-blocked). Invite code
-  seeded as `octagon`:
-  `update pool_config set invite_code = '…' where pool_id = 'octagon'`.
+  stranded on a scratched fight — updates there are RLS-blocked). The invite
+  code lives only in `pool_config` (octagon.sql seeds a random one; the repo
+  is public, so never write a real code into it). The owner rotates it in the
+  dashboard and shares it privately: `update pool_config set invite_code =
+  encode(extensions.gen_random_bytes(12), 'hex') where pool_id = 'octagon'
+  returning invite_code;`.
 
 ## Pool History (`/pools`)
 The account menu (`UserMenu.jsx`) shows pool members a "🏆 Pool History"

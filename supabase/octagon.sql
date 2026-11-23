@@ -67,7 +67,11 @@ create trigger fight_picks_event
 
 -- ── Pool machinery ──────────────────────────────────────────────────────────
 
-insert into pool_config (pool_id, invite_code) values ('octagon', 'octagon')
+-- A random code nobody knows, so a fresh pool lets nobody in until the admin
+-- reads it (or sets one) and shares it. This repo is public: never seed or
+-- write a real code here.
+insert into pool_config (pool_id, invite_code)
+  values ('octagon', encode(extensions.gen_random_bytes(12), 'hex'))
   on conflict (pool_id) do nothing;
 
 -- Scope the ORIGINAL wc2026 helpers to their pool. Before this, any pool's
@@ -193,8 +197,10 @@ insert into pool_members (pool_id, user_id, is_admin)
 select 'octagon', id, true from auth.users where email = 'lucaboemio@gmail.com'
 on conflict (pool_id, user_id) do update set is_admin = true;
 
--- To change the invite code later:
---   update pool_config set invite_code = 'NEW-CODE' where pool_id = 'octagon';
+-- To change the invite code (in the dashboard's SQL editor; it prints the
+-- new code to share with members privately):
+--   update pool_config set invite_code = encode(extensions.gen_random_bytes(12), 'hex')
+--   where pool_id = 'octagon' returning invite_code;
 
 -- ════════════════════════════════════════════════════════════════════════════
 -- Hardening (applied 2026-10-27)
